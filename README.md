@@ -79,6 +79,12 @@ $env:DEVKITARM = "C:\devkitPro\devkitARM"
 - [显示层与模式](docs/06-GBA显示层与模式.md)
 - [简化版编辑器](docs/04-简化版编辑器.md)
 
-## 第三方
+## 许可证
 
-ImGui、miniaudio 和内置字体的许可证见 [third_party/NOTICE.md](third_party/NOTICE.md)。
+项目代码使用 MIT License，见 [LICENSE](LICENSE)。
+
+第三方代码和字体不适用 MIT，保留各自许可证：
+
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+- [third_party/NOTICE.md](third_party/NOTICE.md)
+- [third_party/font/README.md](third_party/font/README.md)
