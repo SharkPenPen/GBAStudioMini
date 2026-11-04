@@ -1,0 +1,8 @@
+Font: ChangBanDianSong-12 (长坂点宋 12)
+Upstream: https://github.com/yzdnn/ChangBanDianSong-12
+File: Sources/ChangBanDianSong-12.bdf
+Raw: https://raw.githubusercontent.com/yzdnn/ChangBanDianSong-12/HEAD/Sources/ChangBanDianSong-12.bdf
+License: OFL-1.1
+License file: https://raw.githubusercontent.com/yzdnn/ChangBanDianSong-12/HEAD/OFL.txt
+Downloaded: 2026-11-04
+SHA256(font.bdf): c223d13f717ea1cd88c378967c9dfd6ad4d74522a2a7a31ab30c012992c586bb

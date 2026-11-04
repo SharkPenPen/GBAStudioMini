@@ -1,0 +1,8 @@
+Font: ZhengGeDianHei-16 (正格点黑 16)
+Upstream: https://github.com/yzdnn/ZhengGeDianHei-16
+File: Sources/ZhengGeDianHei-16.bdf
+Raw: https://raw.githubusercontent.com/yzdnn/ZhengGeDianHei-16/HEAD/Sources/ZhengGeDianHei-16.bdf
+License: OFL-1.1
+License file: https://raw.githubusercontent.com/yzdnn/ZhengGeDianHei-16/HEAD/OFL.txt
+Downloaded: 2026-11-04
+SHA256(font.bdf): 3a212ba548894f5339046dcbbdf622832ba515e9a3a17a1a1bb563326017b55a

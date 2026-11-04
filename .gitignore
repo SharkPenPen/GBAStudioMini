@@ -1,0 +1,24 @@
+# build outputs
+/build/
+/dist/
+# local toolchain / emulator (deployed, not versioned)
+/toolchain/
+# user projects
+/projects/
+# logs / local state
+*.log
+*.ini
+editor-theme.txt
+# generated game data / atlases
+*.p3d
+*.gba
+*.elf
+/font-atlas/
+# objects
+*.elf
+*.o
+*.map
+*.sav
+# spike screenshots
+spike/g0-hello/g0-screen.png
+spike/g0-cpp/g0-cpp.png

@@ -1,0 +1,47 @@
+{
+  "format_version": 1,
+  "purpose": "game_bitmap_generation_only",
+  "gui_usage": false,
+  "note": "Fonts are source material for generating in-game bitmap atlases. They are not used by the editor GUI.",
+  "fonts": [
+    {
+      "id": "changban12",
+      "name": "长坂点宋 12",
+      "native_px": 12,
+      "format": "bdf",
+      "script": "zh-Hans",
+      "style": "song",
+      "file": "changban12/font.bdf",
+      "license": "OFL-1.1",
+      "license_file": "changban12/OFL.txt",
+      "source_file": "changban12/SOURCE.txt",
+      "sha256": "c223d13f717ea1cd88c378967c9dfd6ad4d74522a2a7a31ab30c012992c586bb"
+    },
+    {
+      "id": "firefly14",
+      "name": "Firefly 萤火飞点阵新宋 14",
+      "native_px": 14,
+      "format": "ebdt-ttf",
+      "script": "zh-Hans",
+      "style": "song",
+      "file": "firefly14/font.ttf",
+      "license": "Arphic Public License",
+      "license_file": "firefly14/ARPHIC-LICENSE.txt",
+      "source_file": "firefly14/SOURCE.txt",
+      "sha256": "06b1af510de7a396b694b8c2ac0d71a6d1dc1b35c66409c7d8070a7b3515ad56"
+    },
+    {
+      "id": "zhengge16",
+      "name": "正格点黑 16",
+      "native_px": 16,
+      "format": "bdf",
+      "script": "zh-Hans",
+      "style": "hei",
+      "file": "zhengge16/font.bdf",
+      "license": "OFL-1.1",
+      "license_file": "zhengge16/OFL.txt",
+      "source_file": "zhengge16/SOURCE.txt",
+      "sha256": "3a212ba548894f5339046dcbbdf622832ba515e9a3a17a1a1bb563326017b55a"
+    }
+  ]
+}

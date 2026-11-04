@@ -1,0 +1,43 @@
+# GBAStudioMini —— PC 编辑器 + PC 预览 + GBA 导出
+cmake_minimum_required(VERSION 3.20)
+
+project(GBAStudioMini
+        VERSION 0.1.0
+        DESCRIPTION "GBA 版 PGMMV Lite"
+        LANGUAGES C CXX)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+
+if(MSVC)
+  add_compile_options(/EHs-c- /GR-)
+else()
+  add_compile_options(
+    -fno-exceptions
+    -fno-rtti
+    -fno-threadsafe-statics
+    -ffunction-sections
+    -fdata-sections
+  )
+  add_link_options(-Wl,--gc-sections)
+  add_compile_options(-Wall -Wextra -Werror=switch)
+endif()
+
+add_custom_target(check-include-deps
+  COMMAND ${CMAKE_COMMAND}
+          -DROOT=${CMAKE_SOURCE_DIR}
+          -P ${CMAKE_SOURCE_DIR}/cmake/check-include-deps.cmake
+  COMMENT "check-include-deps: engine must not include editor"
+  VERBATIM)
+
+add_subdirectory(engine)
+add_subdirectory(runtime)
+add_subdirectory(pgmmv)
+add_subdirectory(editor)
