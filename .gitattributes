@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.ttf binary
+*.bdf text eol=lf
+*.png binary
+*.gba binary
+*.p3d binary
