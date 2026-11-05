@@ -10,9 +10,8 @@ add_library(pgmmv STATIC
   scene.cpp
   tileset.cpp
   export.cpp
-  gba_export.cpp
 )
 
 # 公开项目根，这样源码/编辑器/测试都统一写 "pgmmv/..."
 target_include_directories(pgmmv PUBLIC "${CMAKE_SOURCE_DIR}")
-target_link_libraries(pgmmv PUBLIC engine p3d_format)
+target_link_libraries(pgmmv PUBLIC engine_core p3d_format)

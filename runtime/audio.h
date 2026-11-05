@@ -1,5 +1,5 @@
 // runtime/audio.h
-// 最小音效接口；PC 用 miniaudio，GBA v1 不做音频。
+// 最小音效接口；PC 用 miniaudio。
 #pragma once
 
 #include <cstddef>

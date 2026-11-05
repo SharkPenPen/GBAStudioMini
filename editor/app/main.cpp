@@ -33,7 +33,6 @@
 #include "base/log.h"
 #include "base/version.h"
 #include "pgmmv/export.h"
-#include "pgmmv/gba_export.h"
 #include "pgmmv/project.h"
 #include "runtime/audio.h"
 #include "theme.h"
@@ -49,7 +48,7 @@ namespace {
 
 constexpr UINT kDefaultWidth = 1280;
 constexpr UINT kDefaultHeight = 800;
-constexpr const char* kProduct = "GBAStudioMini";
+constexpr const char* kProduct = "PocketLoom";
 
 struct D3DState {
   ID3D11Device* device = nullptr;
@@ -1368,74 +1367,6 @@ void DoExportP3d() {
   SetStatus("已导出：" + PathText(out));
 }
 
-void DoBuildGba() {
-  if (!g_has_project || g_project.root_dir.empty()) {
-    SetError("构建 GBA：先打开项目");
-    return;
-  }
-  if (g_dirty) {
-    SetError("构建 GBA：项目有未保存修改，先保存再构建");
-    return;
-  }
-  if (g_project.scenes.size() > 4) {
-    SetError("构建 GBA：最多 4 个场景，当前 " +
-             std::to_string(g_project.scenes.size()) + " 个");
-    return;
-  }
-  for (const pgmmv::SceneDoc& sc : g_project.scenes) {
-    if ((sc.map_w != 32 && sc.map_w != 64) ||
-        (sc.map_h != 32 && sc.map_h != 64)) {
-      SetError("构建 GBA：场景 " + sc.id + " 地图 " +
-               std::to_string(sc.map_w) + "x" + std::to_string(sc.map_h) +
-               "，GBA 地图上限 512x512（64x64 格）");
-      return;
-    }
-  }
-  wchar_t exe_buf[MAX_PATH] = {};
-  const DWORD n = GetModuleFileNameW(nullptr, exe_buf, MAX_PATH);
-  if (n == 0) {
-    SetError("构建 GBA：找不到编辑器路径");
-    return;
-  }
-  std::filesystem::path root = std::filesystem::path(exe_buf).parent_path() / ".." / ".." / "..";
-  std::filesystem::path script = root / "tools" / "build-gba-project.ps1";
-  std::error_code ec;
-  script = std::filesystem::weakly_canonical(script, ec);
-  if (ec || !std::filesystem::exists(script)) {
-    SetError("构建 GBA：缺少 tools/build-gba-project.ps1");
-    return;
-  }
-  const std::filesystem::path project = g_project.root_dir / "project.json";
-  const std::filesystem::path log =
-      std::filesystem::path(exe_buf).parent_path() / ".." / ".." / ".." /
-      "build" / "gba" / "build.log";
-  std::wstring cmd = L"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"" +
-                     script.wstring() + L"\" -Project \"" + project.wstring() +
-                     L"\" *> \"" + log.wstring() + L"\" 2>&1";
-  STARTUPINFOW si = {};
-  si.cb = sizeof(si);
-  PROCESS_INFORMATION pi = {};
-  SetStatus("构建 GBA：导出场景 + 编译中…");
-  if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE,
-                      CREATE_NO_WINDOW, nullptr, g_project.root_dir.wstring().c_str(),
-                      &si, &pi)) {
-    SetError("构建 GBA：启动 PowerShell 失败");
-    return;
-  }
-  WaitForSingleObject(pi.hProcess, INFINITE);
-  DWORD code = 1;
-  GetExitCodeProcess(pi.hProcess, &code);
-  CloseHandle(pi.hThread);
-  CloseHandle(pi.hProcess);
-  if (code != 0) {
-    SetError("构建 GBA 失败，退出码 " + std::to_string(code) +
-             "，日志：" + PathText(log));
-    return;
-  }
-  SetStatus("GBA ROM：" + PathText(std::filesystem::path(exe_buf).parent_path() /
-                                   ".." / ".." / ".." / "build" / "gba" / "game.gba"));
-}
-
 void DoPlay() {
   std::filesystem::path p3d;
   std::string err;
@@ -1450,7 +1381,7 @@ void DoPlay() {
     return;
   }
   const std::filesystem::path player =
-      std::filesystem::path(exe_buf).parent_path() / "GBAStudioMini-Play.exe";
+      std::filesystem::path(exe_buf).parent_path() / "PocketLoom-Play.exe";
   if (!std::filesystem::exists(player)) {
     SetError("试玩失败：缺少 " + PathText(player));
     return;
@@ -1737,7 +1668,7 @@ void DrawProjectSettingsModal() {
       ImGui::EndCombo();
     }
     ImGui::Separator();
-    ImGui::TextDisabled("屏幕：240x160（GBA 固定）");
+    ImGui::TextDisabled("屏幕：240x160");
     ImGui::Separator();
     if (ImGui::Button("关闭", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
     ImGui::EndPopup();
@@ -1852,14 +1783,13 @@ void DrawMenuBar() {
     ImGui::EndMenu();
   }
   if (ImGui::BeginMenu("帮助")) {
-    ImGui::MenuItem("GBA：编辑器 / 运行时", nullptr, false, false);
     ImGui::TextDisabled("%s  %s", kProduct, eng::version_string());
     ImGui::EndMenu();
   }
 
   const char* name = g_has_project ? g_project.name.c_str() : "未打开项目";
   char right[256];
-  std::snprintf(right, sizeof(right), "%s%s  |  GBA", name, g_dirty ? " *" : "");
+  std::snprintf(right, sizeof(right), "%s%s", name, g_dirty ? " *" : "");
   const float tw = ImGui::CalcTextSize(right).x;
   ImGui::SameLine(ImGui::GetWindowWidth() - tw - 12.0f);
   ImGui::TextDisabled("%s", right);
@@ -4603,10 +4533,10 @@ void DrawScenePageRight() {
     }
   }
   ImGui::TextDisabled("出生点 = 场景里玩家对象实例的位置");
-  ImGui::TextUnformatted("GBA 地图尺寸（最大 512px）");
+  ImGui::TextUnformatted("地图尺寸（最大 512px）");
   ImGui::SetNextItemWidth(-1.0f);
   const bool is64x64 = (s->map_w == 64 && s->map_h == 64);
-  if (ImGui::BeginCombo("##gba_map", is64x64 ? "64 × 64（512×512）"
+  if (ImGui::BeginCombo("##map_size", is64x64 ? "64 × 64（512×512）"
                                             : "64 × 32（512×256）")) {
     if (ImGui::Selectable("64 × 32（512×256）", !is64x64)) {
       PushUndo();
@@ -4669,7 +4599,7 @@ void DrawScenePageRight() {
     }
     ImGui::EndCombo();
   }
-  ImGui::TextDisabled("GBA 槽位：BG%d", layer.bg_slot);
+  ImGui::TextDisabled("槽位：%d", layer.bg_slot);
   {
     bool en = layer.enabled;
     if (ImGui::Checkbox("启用该层", &en)) {
@@ -6864,79 +6794,6 @@ void DrawObjectPageRight() {
   DrawFormulaLibrary();
 }
 
-struct GbaBudget {
-  int bg_tiles = 0;
-  int obj_tiles = 0;
-  int palettes = 0;
-  int oam = 0;
-};
-
-constexpr int kGbaBgTileLimit = 1024;
-constexpr int kGbaObjTileLimit = 1024;
-constexpr int kGbaPaletteLimit = 32;
-constexpr int kGbaOamLimit = 128;
-
-GbaBudget ComputeGbaBudget() {
-  GbaBudget b;
-  const pgmmv::SceneDoc* s = CurrentScene();
-  if (s == nullptr) return b;
-
-  std::set<std::pair<std::string, int>> bg_tiles;
-  for (const pgmmv::SceneLayer& layer : s->layers) {
-    for (const auto& entry : layer.chunks) {
-      for (int cell : entry.second.cells) {
-        if (cell < 0) continue;
-        const int slot = pgmmv::CellSlot(cell);
-        if (slot < 0 || slot >= static_cast<int>(s->tilesets.size())) continue;
-        bg_tiles.insert(std::make_pair(s->tilesets[static_cast<size_t>(slot)],
-                                       pgmmv::CellIndex(cell)));
-      }
-    }
-  }
-  b.bg_tiles = static_cast<int>(bg_tiles.size());
-
-  std::set<std::string> images;
-  for (const std::string& id : s->tilesets) {
-    const pgmmv::TilesetDoc* ts = g_project.FindTileset(id);
-    if (ts != nullptr && !ts->image.empty()) images.insert(ts->image);
-  }
-
-  std::set<std::string> used_objects;
-  for (const pgmmv::SceneObject& o : s->objects) {
-    if (!o.object.empty()) used_objects.insert(o.object);
-  }
-  for (const std::string& id : used_objects) {
-    const pgmmv::ObjectDoc* od = g_project.FindObject(id);
-    if (od == nullptr) continue;
-    const pgmmv::AnimationDoc* ad = pgmmv::FindAnimation(g_project, od->animation);
-    int fw = od->frame.w;
-    int fh = od->frame.h;
-    std::set<int> oframes;
-    if (ad != nullptr) {
-      fw = ad->frame_w;
-      fh = ad->frame_h;
-      if (!ad->image.empty()) images.insert(ad->image);
-      auto add_dir = [&](const pgmmv::DirectionDef& d) {
-        for (const pgmmv::ActionFrame& f : d.frames) {
-          oframes.insert(f.image);
-        }
-      };
-      for (const pgmmv::ActionDef& a : ad->actions) {
-        add_dir(a);
-        for (const pgmmv::DirectionDef& d : a.directions) add_dir(d);
-      }
-    }
-    if (fw < 8) fw = 8;
-    if (fh < 8) fh = 8;
-    const int per = ((fw + 7) / 8) * ((fh + 7) / 8);
-    const int frame_count = std::max(1, static_cast<int>(oframes.size()));
-    b.obj_tiles += per * frame_count;
-  }
-  b.oam = static_cast<int>(s->objects.size());
-  b.palettes = static_cast<int>(images.size());
-  return b;
-}
-
 void DrawShell() {
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->Pos);
@@ -6958,8 +6815,6 @@ void DrawShell() {
   ImGui::SameLine();
   ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 12.0f);
   if (ImGui::Button("试玩 (F5)", ImVec2(96, 30)) && g_has_project) DoPlay();
-  ImGui::SameLine();
-  if (ImGui::Button("构建 GBA", ImVec2(96, 30)) && g_has_project) DoBuildGba();
   ImGui::PopStyleVar();
 
   const float status_h = 32.0f;
@@ -7028,32 +6883,9 @@ void DrawShell() {
   ImGui::PopStyleVar();
 
   ImGui::Separator();
-  static GbaBudget gba_budget;
-  static int gba_budget_tick = 0;
-  if ((gba_budget_tick++ % 30) == 0) gba_budget = ComputeGbaBudget();
-  const bool over_budget =
-      gba_budget.bg_tiles > kGbaBgTileLimit ||
-      gba_budget.obj_tiles > kGbaObjTileLimit ||
-      gba_budget.palettes > kGbaPaletteLimit ||
-      gba_budget.oam > kGbaOamLimit;
-  char gba_buf[192];
-  std::snprintf(gba_buf, sizeof(gba_buf),
-                "GBA  BG %d/%d  OBJ %d/%d  PAL %d/%d  OAM %d/%d",
-                gba_budget.bg_tiles, kGbaBgTileLimit,
-                gba_budget.obj_tiles, kGbaObjTileLimit,
-                gba_budget.palettes, kGbaPaletteLimit,
-                gba_budget.oam, kGbaOamLimit);
   ImGui::TextDisabled("%s  |  %s",
                       g_has_project ? g_project.name.c_str() : "未打开项目",
                       ToolName(g_current_tool));
-  ImGui::SameLine();
-  ImGui::TextColored(over_budget ? ImVec4(0.95f, 0.45f, 0.35f, 1.0f)
-                                 : ImVec4(0.45f, 0.72f, 0.50f, 1.0f),
-                     "%s", gba_buf);
-  if (ImGui::IsItemHovered()) {
-    ImGui::SetTooltip("按当前场景估算：BG 图块 / OBJ 图块 / 图集（每组至少 16 色）/ OAM\n"
-                      "BG 上限按 1024 块算，OBJ 1024 块，OAM 128；红色=超预算");
-  }
   ImGui::SameLine(ImGui::GetWindowWidth() - 260.0f);
   ImGui::TextDisabled("%s", g_has_project ? ProjectFilePath(g_project).u8string().c_str() : "");
   ImGui::End();
@@ -7071,7 +6903,6 @@ int main(int argc, char** argv) {
   bool list_scenes = false;
   std::string import_png;
   std::string export_p3d;
-  std::string export_gba;
   std::string scene_id;
   std::string theme_path;
   std::string ini_path;
@@ -7095,8 +6926,6 @@ int main(int argc, char** argv) {
       import_png = argv[++i];
     } else if (a == "--export-p3d" && i + 1 < argc) {
       export_p3d = argv[++i];
-    } else if (a == "--export-gba" && i + 1 < argc) {
-      export_gba = argv[++i];
     } else if (a == "--scene" && i + 1 < argc) {
       scene_id = argv[++i];
     } else if (a == "--theme" && i + 1 < argc) {
@@ -7113,10 +6942,10 @@ int main(int argc, char** argv) {
   wc.lpfnWndProc = WndProc;
   wc.hInstance = GetModuleHandleW(nullptr);
   wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-  wc.lpszClassName = L"GBAStudioMiniEditor";
+  wc.lpszClassName = L"PocketLoomEditor";
   RegisterClassExW(&wc);
 
-  HWND hwnd = CreateWindowW(wc.lpszClassName, L"GBAStudioMini Editor",
+  HWND hwnd = CreateWindowW(wc.lpszClassName, L"PocketLoom Editor",
                             WS_OVERLAPPEDWINDOW, 30, 30, 1920, 1017, nullptr,
                             nullptr, wc.hInstance, nullptr);
   if (hwnd == nullptr) return 1;
@@ -7189,21 +7018,7 @@ int main(int argc, char** argv) {
     std::printf("[editor] exported %s\n", export_p3d.c_str());
     return 0;
   }
-  if (!export_gba.empty()) {
-    pgmmv::SceneDoc* sc = CurrentScene();
-    if (sc == nullptr) {
-      std::fprintf(stderr, "[editor] export-gba: no scene\n");
-      return 4;
-    }
-    std::string gerr;
-    if (!pgmmv::ExportGbaScene(g_project, *sc,
-                               std::filesystem::path(export_gba), &gerr)) {
-      std::fprintf(stderr, "[editor] export-gba failed: %s\n", gerr.c_str());
-      return 5;
-    }
-    std::printf("[editor] exported GBA header %s\n", export_gba.c_str());
-    return 0;
-  }
+
   if (!import_png.empty()) {
     std::string ierr;
     if (ImportPngAt(std::filesystem::path(import_png), &ierr)) {

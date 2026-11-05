@@ -12,4 +12,4 @@ cmake --build $Build --parallel
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
-Write-Host "Editor : $Build\bin\GBAStudioMini-Editor.exe"
+Write-Host "Editor : $Build\bin\PocketLoom-Editor.exe"

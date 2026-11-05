@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
   std::fprintf(stderr, "game_pc: mirrored scene y (y-up data -> screen space)\n");
 
   eng::PlatformConfig cfg;
-  cfg.title = "GBAStudioMini Player";
+  cfg.title = "PocketLoom Player";
   cfg.window_scale = scale > 0 ? scale : 2;
   if (!eng::Platform().init(cfg)) {
     std::fprintf(stderr, "game_pc: platform init failed\n");

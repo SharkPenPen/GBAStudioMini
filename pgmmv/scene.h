@@ -131,7 +131,7 @@ struct SceneDoc {
   std::string name;
   std::vector<std::string> tilesets;  // 本关用到的图块组；下标 = 格子里的槽位
   std::vector<SceneLayer> layers;  // 固定 4 层（BG0..BG3）
-  int map_w = 64;  // GBA 地图格数，最大 64（512px）
+  int map_w = 64;  // 地图格数，最大 64（512px）
   int map_h = 32;
   SceneCollision collision;
   std::vector<SceneObject> objects;

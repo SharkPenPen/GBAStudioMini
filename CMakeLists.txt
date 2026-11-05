@@ -1,9 +1,9 @@
-# GBAStudioMini —— PC 编辑器 + PC 预览 + GBA 导出
+# PocketLoom —— PC 编辑器 + PC 预览
 cmake_minimum_required(VERSION 3.20)
 
-project(GBAStudioMini
+project(PocketLoom
         VERSION 0.1.0
-        DESCRIPTION "GBA 版 PGMMV Lite"
+        DESCRIPTION "PocketLoom - lightweight 2D handheld engine"
         LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)

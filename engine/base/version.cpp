@@ -1,5 +1,5 @@
 // engine/base/version.cpp
-// 与顶层 CMakeLists 的 project(GBAStudioMini VERSION ...) 保持一致。
+// 与顶层 CMakeLists 的 project(PocketLoom VERSION ...) 保持一致。
 #include "base/version.h"
 
 namespace eng {

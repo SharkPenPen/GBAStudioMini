@@ -26,14 +26,14 @@ set(EDITOR_SOURCES
 )
 
 add_executable(editor ${EDITOR_SOURCES})
-set_target_properties(editor PROPERTIES OUTPUT_NAME "gbaedit")
+set_target_properties(editor PROPERTIES OUTPUT_NAME "ploom")
 
 add_executable(editor_gui WIN32 ${EDITOR_SOURCES} winmain.cpp)
-set_target_properties(editor_gui PROPERTIES OUTPUT_NAME "GBAStudioMini-Editor")
+set_target_properties(editor_gui PROPERTIES OUTPUT_NAME "PocketLoom-Editor")
 
 foreach(_t editor editor_gui)
   target_include_directories(${_t} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
   target_include_directories(${_t} PRIVATE "${CMAKE_SOURCE_DIR}/third_party/audio")
-  target_link_libraries(${_t} PRIVATE engine pgmmv imgui comdlg32 shell32 ole32 winmm)
+  target_link_libraries(${_t} PRIVATE engine_core pgmmv imgui comdlg32 shell32 ole32 winmm)
   target_link_options(${_t} PRIVATE -static -static-libgcc -static-libstdc++)
 endforeach()

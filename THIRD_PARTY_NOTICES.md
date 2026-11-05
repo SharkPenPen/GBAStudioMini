@@ -21,7 +21,7 @@ original licenses continue to apply.
 
 These fonts are source material for generating in-game bitmap glyph atlases.
 They are not editor GUI fonts and are not embedded as original font files in
-GBA ROMs.
+games.
 
 - `third_party/font/changban12` — OFL-1.1
 - `third_party/font/firefly14` — Arphic Public License

@@ -1,5 +1,5 @@
 // runtime/p3d.h
-// 运行时预编译包 game.p3d（PC 预览用）；GBA 导出走 gba_export。
+// 运行时预编译包 game.p3d（PC 预览用）。
 #pragma once
 
 #include <cstddef>

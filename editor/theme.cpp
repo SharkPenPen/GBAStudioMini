@@ -191,7 +191,7 @@ bool ThemeWriteDefault(const char* path) {
     return false;  // ★ 只读目录等 —— 由调用方明确报出来，不静默 ★
   }
   const Theme t = ThemeDefault();
-  std::fprintf(f, "# GBAStudioMini 主题（语义色）\n");
+  std::fprintf(f, "# PocketLoom 主题（语义色）\n");
   std::fprintf(f, "# 格式：键 = #RRGGBB   ★ 未知键与坏值会被跳过（但会计数报告）★\n");
   std::fprintf(f, "# 只写想改的键即可，其余用默认值。\n\n");
   for (int i = 0; i < kThemeKeyCount; ++i) {

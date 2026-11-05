@@ -1,7 +1,7 @@
 // engine/platform/platform.h
 //
 // 平台层唯一入口：窗口、软帧缓冲、输入、计时。
-// GBA 版只有一块 240x160 屏幕。
+// 单屏 240x160。
 #pragma once
 
 #include "base/log.h"
@@ -13,7 +13,7 @@ struct PlatformConfig {
   int width = 240;
   int height = 160;
   int window_scale = 3;
-  const char* title = "GBAStudioMini";
+  const char* title = "PocketLoom";
 };
 
 struct SoftFrameBuffer {

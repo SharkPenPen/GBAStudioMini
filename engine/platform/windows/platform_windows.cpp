@@ -1,6 +1,6 @@
 // engine/platform/windows/platform_windows.cpp
 //
-// PC 平台：单窗口 240x160（GBA），GDI 呈现 + 键盘 + 计时。
+// PC 平台：单窗口 240x160，GDI 呈现 + 键盘 + 计时。
 #include "platform/platform.h"
 
 #include <cstdio>
@@ -148,7 +148,7 @@ bool PlatInit(const PlatformConfig& cfg) {
   wc.lpfnWndProc = WndProc;
   wc.hInstance = GetModuleHandleW(nullptr);
   wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-  wc.lpszClassName = L"GBAStudioMiniPlatform";
+  wc.lpszClassName = L"PocketLoomPlatform";
   if (RegisterClassExW(&wc) == 0) {
     std::fprintf(stderr, "[platform] RegisterClassExW 失败\n");
     return false;

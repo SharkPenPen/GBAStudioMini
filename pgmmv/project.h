@@ -51,15 +51,15 @@ struct Asset {
   JsonValue raw;    // 该资源对象的原始 JSON，保留未知字段
 };
 
-// GBA 固定单屏；工程文件里的旧 400x240/320x240 会在加载时被归一到这两个值。
-constexpr int kGbaScreenWidth = 240;
-constexpr int kGbaScreenHeight = 160;
+// 固定单屏；工程文件里的旧 400x240/320x240 会在加载时被归一到这两个值。
+constexpr int kScreenWidth = 240;
+constexpr int kScreenHeight = 160;
 
 struct ProjectSettings {
   int tile_size = 16;
   std::string initial_scene;
-  int top_width = kGbaScreenWidth;
-  int top_height = kGbaScreenHeight;
+  int top_width = kScreenWidth;
+  int top_height = kScreenHeight;
   int player_count = 1;
 };
 

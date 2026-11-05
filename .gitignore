@@ -11,7 +11,6 @@
 editor-theme.txt
 # generated game data / atlases
 *.p3d
-*.gba
 *.elf
 /font-atlas/
 # objects
