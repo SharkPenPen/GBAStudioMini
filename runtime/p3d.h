@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 83;  // 83: 删掉 win/lose 与 win_score
+constexpr uint32_t kP3dVersion = 84;  // 84: 删掉 lives / Game Over
+                                      // 83: 删掉 win/lose 与 win_score
                                       // 82: 删掉旧触发器动作列表
                                       // 81: 区域规则
                                       // 80: 标题界面 / 按钮仅存档可见
@@ -308,7 +309,6 @@ struct Scene {
   int camera_offset_y = 0;
   int camera_deadzone_w = 0;
   int camera_deadzone_h = 0;
-  int lives = 3;  // v8
   int scroll_speed = 30;  // v13: horizontal shooter
   int scroll_speed_y = 0; // v65: vertical scroller (positive = content moves down)
   int scroll_end_x = 0;   // v66: scroll this far then switch scene

@@ -316,8 +316,6 @@ void Game::SetScene(int index) {
   } else {
     camera_profile_ = CameraProfile::kFollow;
   }
-  lives_ = std::max(1, s.lives);
-  game_over_ = false;
   shooter_time_ = 0.0f;
   shooter_fire_timer_ = 0.0f;
   shooter_dive_timer_ = 0.0f;
@@ -439,26 +437,14 @@ void Game::InitShooter() {
 }
 
 void Game::ShooterHitPlayer() {
-  if (invuln_ > 0.0f || game_over_) return;
-  --lives_;
+  if (invuln_ > 0.0f) return;
   AudioPlay(Sfx::kHurt);
-  if (player_object_ >= 0 &&
-      player_object_ < static_cast<int>(p3d_->objects.size())) {
-  }
   invuln_ = 1.5f;
   toast_ = "OUCH";
   toast_timer_ = 1.0f;
-  if (lives_ <= 0) {
-    lives_ = 0;
-    game_over_ = true;
-    toast_.clear();  // GAME OVER 由渲染层的横幅统一画
-    toast_timer_ = 0.0f;
-    AudioPlay(Sfx::kClear);
-  } else if (player_object_ >= 0) {
-    const Object& po = p3d_->objects[player_object_];
+  if (player_object_ >= 0) {
     player_.x = 200.0f;
     player_.y = 208.0f;
-    (void)po;
   }
 }
 
@@ -513,31 +499,20 @@ void Game::InitHShooter() {
 }
 
 void Game::HShooterHitPlayer() {
-  if (invuln_ > 0.0f || game_over_) return;
-  --lives_;
+  if (invuln_ > 0.0f) return;
   AudioPlay(Sfx::kHurt);
   invuln_ = 1.5f;
   toast_ = "OUCH";
   toast_timer_ = 1.0f;
-  if (lives_ <= 0) {
-    lives_ = 0;
-    game_over_ = true;
-    toast_.clear();
-    toast_timer_ = 0.0f;
-    AudioPlay(Sfx::kClear);
-    return;
-  }
   if (player_object_ >= 0) {
-    const Object& po = p3d_->objects[player_object_];
     player_.x = hscroll_x_ + 80.0f;
     player_.y = 120.0f;
-    (void)po;
   }
 }
 
 void Game::UpdateHShooter(float dt, const eng::InputState& input) {
   shooter_time_ += dt;
-  if (p3d_ == nullptr || player_object_ < 0 || game_over_) return;
+  if (p3d_ == nullptr || player_object_ < 0) return;
   if (invuln_ > 0.0f) invuln_ -= dt;
   if (toast_timer_ > 0.0f) toast_timer_ -= dt;
   const Scene& s = p3d_->scenes[scene_index_];
@@ -716,7 +691,6 @@ void Game::DrawToast(eng::DrawList& dl, const eng::TextureId* textures,
 int Game::UiValue(const char* name) const {
   if (name == nullptr || name[0] == '\0') return 0;
   if (std::strcmp(name, "score") == 0) return score_;
-  if (std::strcmp(name, "lives") == 0) return lives_;
   auto it = variables_.find(name);
   if (it != variables_.end()) return it->second;
   auto at = player_.attrs.find(name);
@@ -799,7 +773,6 @@ bool Game::LoadBytes(const std::string& data) {
   globals_seeded_ = true;
   player_.x = static_cast<float>(px);
   player_.y = static_cast<float>(py);
-  game_over_ = false;
   toast_.clear();
   toast_timer_ = 0.0f;
   UpdateCamera(0.0f);
@@ -1135,14 +1108,11 @@ void Game::RenderHShooter(eng::DrawList& dl, const eng::TextureId* textures,
                b.from_player ? 0xFFFFFFFFu : 0xFF80A0FFu);
     }
   }
-  if (game_over_) {
-    UiDrawTextLine(dl, 0, 150, "GAME OVER", 0xFFFF5050u, 1, view_w_);
-  }
 }
 
 void Game::UpdateShooter(float dt, const eng::InputState& input) {
   shooter_time_ += dt;
-  if (game_over_) return;
+  
   if (invuln_ > 0.0f) invuln_ -= dt;
   if (toast_timer_ > 0.0f) toast_timer_ -= dt;
   if (p3d_ == nullptr || player_object_ < 0) return;
@@ -1324,7 +1294,7 @@ void Game::UpdateShooter(float dt, const eng::InputState& input) {
     const float py1 = py0 + static_cast<float>(po.col_h);
     if (px1 > ex0 && px0 < ex1 && py1 > ey0 && py0 < ey1) {
       ShooterHitPlayer();
-      if (game_over_) return;
+      
     }
 
     if (shooter_bullet_object_ >= 0) {
@@ -1417,7 +1387,7 @@ void Game::UpdateShooter(float dt, const eng::InputState& input) {
   for (const ShooterEnemy& e : shooter_enemies_) {
     if (e.alive) { any_alive = true; break; }
   }
-  if (!any_alive && !shooter_enemies_.empty() && !game_over_) {
+  if (!any_alive && !shooter_enemies_.empty()) {
     ShooterEnemy* none = nullptr;
     (void)none;
     for (ShooterEnemy& e : shooter_enemies_) {
@@ -1788,8 +1758,7 @@ bool Game::CheckCondition(const Condition& c, const eng::InputState& input) cons
     case 7:  // timer ticks
       return player_.anim_time * 60.0f >= static_cast<float>(c.value);
     case 8: return score_ >= c.value;
-    case 9: return lives_ <= c.value;
-    case 10: {
+    case 9: {
       auto it = variables_.find(c.key);
       return (it == variables_.end() ? 0 : it->second) == c.value;
     }
@@ -2991,9 +2960,6 @@ void Game::RenderShooter(eng::DrawList& dl, const eng::TextureId* textures,
              b.from_player ? 0xFFFFFFFFu : 0xFFFFB0B0u);
   }
 
-  if (game_over_) {
-    UiDrawTextLine(dl, 0, 150, "GAME OVER", 0xFFFF5050u, 1, view_w_);
-  }
 }
 
 void Game::RenderPlatformer(eng::DrawList& dl, const eng::TextureId* textures,

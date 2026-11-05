@@ -492,9 +492,6 @@ JsonValue ConditionToJson(const FlowCondition& c) {
     case ConditionType::kScoreGe:
       o.Set("score_ge", JsonValue::Number(static_cast<double>(c.value)));
       break;
-    case ConditionType::kLivesLe:
-      o.Set("lives_le", JsonValue::Number(static_cast<double>(c.value)));
-      break;
     case ConditionType::kVariable:
       o.Set("variable", JsonValue::String(c.key));
       o.Set("value", JsonValue::Number(static_cast<double>(c.value)));
@@ -557,12 +554,6 @@ bool ParseCondition(const JsonValue& v, FlowCondition* out, std::string* error) 
     out->value = static_cast<int>(sg->number);
     return true;
   }
-  const JsonValue* ll = v.Find("lives_le");
-  if (ll != nullptr && ll->IsNumber()) {
-    out->type = ConditionType::kLivesLe;
-    out->value = static_cast<int>(ll->number);
-    return true;
-  }
   const JsonValue* var = v.Find("variable");
   if (var != nullptr && var->IsString()) {
     const JsonValue* val = v.Find("value");
@@ -588,7 +579,6 @@ const char* ConditionTypeName(ConditionType t) {
     case ConditionType::kAlways: return "always";
     case ConditionType::kTimer: return "timer";
     case ConditionType::kScoreGe: return "score_ge";
-    case ConditionType::kLivesLe: return "lives_le";
     case ConditionType::kVariable: return "variable";
   }
   return "key";
@@ -604,7 +594,6 @@ bool ConditionTypeFromName(const std::string& name, ConditionType* out) {
   if (name == "always") { *out = ConditionType::kAlways; return true; }
   if (name == "timer") { *out = ConditionType::kTimer; return true; }
   if (name == "score_ge") { *out = ConditionType::kScoreGe; return true; }
-  if (name == "lives_le") { *out = ConditionType::kLivesLe; return true; }
   if (name == "variable") { *out = ConditionType::kVariable; return true; }
   return false;
 }

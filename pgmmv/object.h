@@ -183,7 +183,6 @@ enum class ConditionType {
   kAlways,
   kTimer,
   kScoreGe,
-  kLivesLe,
   kVariable,
 };
 

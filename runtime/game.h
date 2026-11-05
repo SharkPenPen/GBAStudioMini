@@ -238,8 +238,6 @@ class Game {
   std::vector<ShooterExplosion> shooter_explosions_;
   ControlProfile control_ = ControlProfile::kPlatformer;
   CameraProfile camera_profile_ = CameraProfile::kFollow;
-  int lives_ = 3;
-  bool game_over_ = false;
   int shooter_bullet_object_ = -1;
   int shooter_player_image_ = -1;
   int shooter_effect_object_ = -1;

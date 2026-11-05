@@ -328,7 +328,6 @@ bool ReadScene(Reader& r, Scene* s, std::string* error) {
   }
   s->tilesets.resize(pn);
   for (uint16_t i = 0; i < pn; ++i) s->tilesets[i] = r.I32();
-  s->lives = r.I32();
   s->camera_mode = r.Str();
   s->camera_offset_x = r.I32();
   s->camera_offset_y = r.I32();
@@ -940,7 +939,6 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
     w.Str(s.bgm);
     w.U16(static_cast<uint16_t>(s.tilesets.size()));
     for (int ti : s.tilesets) w.I32(ti);
-    w.I32(s.lives);
     w.Str(s.camera_mode);
     w.I32(s.camera_offset_x);
     w.I32(s.camera_offset_y);

@@ -396,7 +396,6 @@ SceneDoc SceneCreateDefault(const std::string& id, const std::string& name,
   s.camera.follow = "player";
   s.gravity = 900;
   s.camera_mode = "follow";
-  s.lives = 3;
   return s;
 }
 
@@ -625,9 +624,6 @@ bool SceneLoad(const std::filesystem::path& path, SceneDoc* out,
   if (!ReadString(root, "bgm", &s.bgm, &found, error)) return false;
   if (!ReadString(root, "camera_mode", &s.camera_mode, &found, error)) return false;
   if (s.camera_mode.empty()) s.camera_mode = "follow";
-  int lives = 0;
-  if (!ReadInt(root, "lives", &lives, &found, error)) return false;
-  if (found) s.lives = lives;
   int scroll_speed = 0;
   if (!ReadInt(root, "scroll_speed", &scroll_speed, &found, error)) return false;
   if (found) s.scroll_speed = scroll_speed;
@@ -856,7 +852,6 @@ void SceneSyncRaw(SceneDoc* s) {
   root.Set("bgm", JsonValue::String(s->bgm));
   root.Set("camera_mode", JsonValue::String(
       s->camera_mode.empty() ? "follow" : s->camera_mode));
-  root.Set("lives", JsonValue::Number(static_cast<double>(s->lives)));
   root.Set("scroll_speed", JsonValue::Number(static_cast<double>(s->scroll_speed)));
   if (s->scroll_speed_y != 0) {
     root.Set("scroll_speed_y", JsonValue::Number(static_cast<double>(s->scroll_speed_y)));
