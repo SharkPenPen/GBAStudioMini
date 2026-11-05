@@ -89,7 +89,8 @@ struct RuleCond {
 
 struct RuleEffect {
   uint8_t type = 0;   // 0 move,1 move_px,2 anim,3 flip,4 gravity,5 sfx,6 spawn,
-                      // 7 destroy,8 attr_add,9 attr_set,10 damage,11 move_add
+                      // 7 destroy,8 attr_add,9 attr_set,10 damage,11 move_add,
+                      // 12 move_input,13 var_add,14 var_set
   int x = 0;
   int y = 0;
   std::string text;

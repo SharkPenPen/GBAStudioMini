@@ -206,6 +206,8 @@ enum class RuleAct : unsigned char {
   kDamage,     // 造成伤害（公式）
   kMoveAdd,    // 速度叠加（惯性/击退；不会被覆盖）
   kMoveInput,  // 按方向键移动（俯视角用：自动归一化，斜向不加速）
+  kVarAdd,     // 变量 += value（全局变量表）
+  kVarSet,     // 变量 = value（全局变量表）
 };
 
 struct AttrDef {

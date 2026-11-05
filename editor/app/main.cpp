@@ -4786,15 +4786,15 @@ void DrawScenePageRight() {
         pgmmv::TriggerAction& a = (*list)[i];
         ImGui::PushID(static_cast<int>(i) + 5000);
         const char* types[] = {"change_scene", "attr_add", "play_sfx", "set_variable",
-                               "open_ui", "close_ui", "save", "load"};
-        const char* labels[] = {"切场景", "改属性", "音效", "改变量",
-                                "打开界面", "关闭界面", "存档", "读档"};
+                               "add_variable", "open_ui", "close_ui", "save", "load"};
+        const char* labels[] = {"切场景", "改属性", "音效", "设变量",
+                                "加变量", "打开界面", "关闭界面", "存档", "读档"};
         int ti = 0;
-        for (int k = 0; k < 8; ++k) {
+        for (int k = 0; k < 9; ++k) {
           if (a.type == types[k]) ti = k;
         }
         ImGui::SetNextItemWidth(90.0f);
-        if (ImGui::Combo("##t", &ti, labels, 8)) {
+        if (ImGui::Combo("##t", &ti, labels, 9)) {
           a.type = types[ti];
           MarkDirty();
         }
@@ -5009,10 +5009,9 @@ void DrawScenePageRight() {
               MarkDirty();
             }
             for (const auto& kv : g_project.variables) {
-              const std::string full = "g:" + kv.first;
-              if (ImGui::Selectable((full + "  (全局)").c_str(),
-                                    trg.interaction.require_variable == full)) {
-                trg.interaction.require_variable = full;
+              if (ImGui::Selectable(kv.first.c_str(),
+                                    trg.interaction.require_variable == kv.first)) {
+                trg.interaction.require_variable = kv.first;
                 MarkDirty();
               }
             }
@@ -5054,7 +5053,7 @@ void DrawScenePageRight() {
             a.target = abuf;
             MarkDirty();
           }
-          if (a.type == "set_variable") {
+          if (a.type == "set_variable" || a.type == "add_variable") {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(70.0f);
             if (ImGui::InputInt("##aval", &a.value)) MarkDirty();
@@ -5063,9 +5062,8 @@ void DrawScenePageRight() {
             const char* cva = a.target.empty() ? "(选择变量)" : a.target.c_str();
             if (ImGui::BeginCombo("##avarc", cva)) {
               for (const auto& kv : g_project.variables) {
-                const std::string full = "g:" + kv.first;
-                if (ImGui::Selectable((full + "  (全局)").c_str(), a.target == full)) {
-                  a.target = full;
+                if (ImGui::Selectable(kv.first.c_str(), a.target == kv.first)) {
+                  a.target = kv.first;
                   MarkDirty();
                 }
               }
@@ -5124,7 +5122,7 @@ void DrawScenePageRight() {
       std::string remove_g;
       for (auto& kv : g_project.variables) {
         ImGui::PushID(("g_" + kv.first).c_str());
-        ImGui::Text("g:%s", kv.first.c_str());
+        ImGui::Text("%s", kv.first.c_str());
         ImGui::SameLine();
         ImGui::SetNextItemWidth(80.0f);
         if (ImGui::InputInt("##gv", &kv.second, 0, 0)) MarkDirty();
@@ -5799,7 +5797,7 @@ void DrawPlaceholder(const char* title) {
 // ------------------------- 规则编辑器（对象页中间） -------------------------
 namespace ruledui {
 
-enum class PKind { kNone, kKey, kAttr, kAnim, kOp, kNum, kFlip, kSfx };
+enum class PKind { kNone, kKey, kAttr, kVarName, kAnim, kOp, kNum, kFlip, kSfx };
 const char* kOpLabels[] = {"<", "<=", "=", ">=", ">"};
 
 struct CondUI { const char* label; pgmmv::RuleCond type; PKind a; PKind b; };
@@ -5816,7 +5814,7 @@ const CondUI kConds[] = {
     {"属性 <=", pgmmv::RuleCond::kAttrLe, PKind::kAttr, PKind::kNum},
     {"每 N 帧", pgmmv::RuleCond::kTimer, PKind::kNum, PKind::kNone},
     {"长按", pgmmv::RuleCond::kKeyHeld, PKind::kKey, PKind::kNum},
-    {"属性比较", pgmmv::RuleCond::kVarCmp, PKind::kAttr, PKind::kOp},
+    {"变量比较", pgmmv::RuleCond::kVarCmp, PKind::kVarName, PKind::kOp},
     {"离玩家 <", pgmmv::RuleCond::kPlayerDistLt, PKind::kNum, PKind::kNone},
     {"可推动", pgmmv::RuleCond::kPushable, PKind::kNone, PKind::kNone},
 };
@@ -5834,6 +5832,8 @@ const ActUI kActs[] = {
     {"按方向键移动", pgmmv::RuleAct::kMoveInput, PKind::kNone},
     {"生成", pgmmv::RuleAct::kSpawn, PKind::kNone},
     {"销毁", pgmmv::RuleAct::kDestroy, PKind::kNone},
+    {"变量加减", pgmmv::RuleAct::kVarAdd, PKind::kNone},
+    {"变量赋值", pgmmv::RuleAct::kVarSet, PKind::kNone},
 };
 
 const char* kKeys[] = {"left", "right", "up", "down", "jump", "attack"};
@@ -5937,6 +5937,16 @@ void DrawCond(pgmmv::ObjectDoc* obj, pgmmv::Cond* c, int uid) {
   switch (kConds[idx].a) {
     case PKind::kKey: KeyCombo("##k", &c->key); break;
     case PKind::kAttr: AttrCombo("##a", obj, &c->name); break;
+    case PKind::kVarName: {
+      char vb[64];
+      std::snprintf(vb, sizeof(vb), "%s", c->name.c_str());
+      ImGui::SetNextItemWidth(120.0f);
+      if (ImGui::InputTextWithHint("##v", "变量名", vb, sizeof(vb))) {
+        c->name = vb;
+        MarkDirty();
+      }
+      break;
+    }
     case PKind::kNum: {
       ImGui::SetNextItemWidth(70.0f);
       if (ImGui::InputInt("##n", &c->value)) MarkDirty();
@@ -6091,6 +6101,22 @@ void DrawAct(pgmmv::ObjectDoc* obj, pgmmv::Effect* e, int uid) {
       ImGui::SameLine();
       ImGui::SetNextItemWidth(70.0f);
       if (ImGui::InputInt("##ad", &e->y)) MarkDirty();
+      break;
+    }
+    case pgmmv::RuleAct::kVarAdd:
+    case pgmmv::RuleAct::kVarSet: {
+      char vb[64];
+      std::snprintf(vb, sizeof(vb), "%s", e->text.c_str());
+      ImGui::SetNextItemWidth(120.0f);
+      if (ImGui::InputTextWithHint("##var", "变量名", vb, sizeof(vb))) {
+        e->text = vb;
+        MarkDirty();
+      }
+      ImGui::SameLine();
+      ImGui::TextDisabled("值");
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(70.0f);
+      if (ImGui::InputInt("##varv", &e->y)) MarkDirty();
       break;
     }
     case pgmmv::RuleAct::kDamage: {

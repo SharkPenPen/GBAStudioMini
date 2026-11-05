@@ -158,6 +158,8 @@ const char* ActName(RuleAct t) {
     case RuleAct::kDamage: return "damage";
     case RuleAct::kMoveAdd: return "move_add";
     case RuleAct::kMoveInput: return "move_input";
+    case RuleAct::kVarAdd: return "var_add";
+    case RuleAct::kVarSet: return "var_set";
   }
   return "move";
 }
@@ -176,6 +178,8 @@ bool ActFromName(const std::string& s, RuleAct* out) {
   if (s == "damage") { *out = RuleAct::kDamage; return true; }
   if (s == "move_add") { *out = RuleAct::kMoveAdd; return true; }
   if (s == "move_input") { *out = RuleAct::kMoveInput; return true; }
+  if (s == "var_add") { *out = RuleAct::kVarAdd; return true; }
+  if (s == "var_set") { *out = RuleAct::kVarSet; return true; }
   return false;
 }
 

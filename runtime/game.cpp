@@ -230,17 +230,12 @@ void Game::SetScene(int index) {
   pending_actions_.clear();
   scene_index_ = index;
   const Scene& s = p3d_->scenes[index];
-  // 场景级变量重置；全局（g: 前缀）保留
-  for (auto it = variables_.begin(); it != variables_.end();) {
-    if (it->first.rfind("g:", 0) == 0) ++it;
-    else it = variables_.erase(it);
-  }
-  for (const auto& entry : s.variables) variables_[entry.first] = entry.second;
-  // 首次进入时播种全局变量
+  // 变量一律全局保存；场景里的 variables 只作为初始值，不覆盖已有变量。
   if (!globals_seeded_ && p3d_ != nullptr) {
     globals_seeded_ = true;
-    for (const auto& kv : p3d_->global_vars) variables_["g:" + kv.first] = kv.second;
+    for (const auto& kv : p3d_->global_vars) variables_.emplace(kv.first, kv.second);
   }
+  for (const auto& entry : s.variables) variables_.emplace(entry.first, entry.second);
   // ★ 出生点 = 场景里那个"玩家对象实例"的位置 ★
   //   不再用场景的 start_x/start_y：那是和实例位置重复的一份数据，
   //   拖动实例却改不了出生点，两个值迟早对不上。
@@ -399,18 +394,12 @@ bool Game::SaveBytes(std::string* out) const {
   if (out == nullptr || p3d_ == nullptr || p3d_->scenes.empty()) return false;
   out->clear();
   out->append("PLSV", 4);
-  PutU16(out, 1);  // version
+  PutU16(out, 2);  // version：所有变量都全局保存
   PutStr(out, p3d_->scenes[static_cast<size_t>(scene_index_)].id);
   PutI32(out, static_cast<int>(std::lround(player_.x)));
   PutI32(out, static_cast<int>(std::lround(player_.y)));
-  std::vector<std::pair<std::string, int>> globals;
+  PutU16(out, static_cast<unsigned>(variables_.size()));
   for (const auto& kv : variables_) {
-    if (kv.first.rfind("g:", 0) == 0) {
-      globals.emplace_back(kv.first.substr(2), kv.second);
-    }
-  }
-  PutU16(out, static_cast<unsigned>(globals.size()));
-  for (const auto& kv : globals) {
     PutStr(out, kv.first);
     PutI32(out, kv.second);
   }
@@ -435,7 +424,7 @@ bool Game::LoadBytes(const std::string& data) {
   if (data.compare(0, 4, "PLSV") != 0) return false;
   size_t pos = 4;
   unsigned version = 0;
-  if (!GetU16(data, &pos, &version) || version != 1) return false;
+  if (!GetU16(data, &pos, &version) || version != 2) return false;
   std::string scene_id;
   int px = 0;
   int py = 0;
@@ -461,11 +450,8 @@ bool Game::LoadBytes(const std::string& data) {
   }
   if (scene_index < 0) return false;
   SetScene(scene_index);
-  for (auto it = variables_.begin(); it != variables_.end();) {
-    if (it->first.rfind("g:", 0) == 0) it = variables_.erase(it);
-    else ++it;
-  }
-  for (const auto& kv : globals) variables_["g:" + kv.first] = kv.second;
+  variables_.clear();
+  for (const auto& kv : globals) variables_[kv.first] = kv.second;
   globals_seeded_ = true;
   player_.x = static_cast<float>(px);
   player_.y = static_cast<float>(py);
@@ -1080,6 +1066,10 @@ bool Game::RunTriggerList(const Trigger& trigger,
       variables_[action.target] = action.value;
       continue;
     }
+    if (action.type == 13) {  // add_variable
+      variables_[action.target] += action.value;
+      continue;
+    }
     if (action.type == 11) {  // save
       SaveToFile(save_path_);
       continue;
@@ -1620,6 +1610,12 @@ void Game::RunPlayerRules(const Object& o, const eng::InputState& input, float d
           }
           break;
         }
+        case 13:  // var_add（全局变量）
+          if (!e.text.empty()) variables_[e.text] += e.y;
+          break;
+        case 14:  // var_set（全局变量）
+          if (!e.text.empty()) variables_[e.text] = e.y;
+          break;
         case 1:  // move_px
           player_.x += static_cast<float>(e.x);
           player_.y += static_cast<float>(e.y);
@@ -1791,6 +1787,12 @@ void Game::RunEnemyRules(const Object& o, EnemyState& e, float dt) {
           }
           break;
         }
+        case 13:  // var_add
+          if (!ef.text.empty()) variables_[ef.text] += ef.y;
+          break;
+        case 14:  // var_set
+          if (!ef.text.empty()) variables_[ef.text] = ef.y;
+          break;
         case 7:  // destroy
           e.dead = true;
           break;

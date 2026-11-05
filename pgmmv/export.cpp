@@ -29,6 +29,7 @@ void ExportTriggerActionType(const std::string& type, int* out) {
   else if (type == "play_sfx") *out = 6;
   else if (type == "set_respawn") *out = 1;
   else if (type == "set_variable") *out = 2;
+  else if (type == "add_variable") *out = 13;
   else if (type == "open_ui") *out = 9;
   else if (type == "close_ui") *out = 10;
   else if (type == "save") *out = 11;
