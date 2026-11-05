@@ -1422,19 +1422,42 @@ void Game::UpdateCamera(float dt) {
   // ★ 世界矩形按所有 chunk 的 min/max 算，不能只看 max ★
   //   地图往左/上扩到负坐标时，只取 max 会把相机钳在 0，
   //   x<0 的内容永远进不了视野（无限地图的一半就废了）。
+  // 世界范围按“有内容的格子”算，不能按 chunk 的 16 格边界算：
+  // 地图 60x34 时最后一个 chunk 会补到 64x48，固定相机会被多出来的空格推偏。
   int min_c = 0, min_r = 0, max_c = 0, max_r = 0;
   bool any_chunk = false;
   for (const SceneLayer& l : s.layers) {
     for (const SceneChunk& c : l.chunks) {
-      const int c0 = c.cx * kP3dChunkCells;
-      const int r0 = c.cy * kP3dChunkCells;
-      const int c1 = c0 + kP3dChunkCells;
-      const int r1 = r0 + kP3dChunkCells;
-      if (!any_chunk) {
-        min_c = c0; max_c = c1; min_r = r0; max_r = r1; any_chunk = true;
-      } else {
-        min_c = std::min(min_c, c0); max_c = std::max(max_c, c1);
-        min_r = std::min(min_r, r0); max_r = std::max(max_r, r1);
+      for (int ly = 0; ly < kP3dChunkCells; ++ly) {
+        for (int lx = 0; lx < kP3dChunkCells; ++lx) {
+          const size_t i = static_cast<size_t>(ly * kP3dChunkCells + lx);
+          if (i >= c.cells.size() || c.cells[i] < 0) continue;
+          const int col = c.cx * kP3dChunkCells + lx;
+          const int row = c.cy * kP3dChunkCells + ly;
+          if (!any_chunk) {
+            min_c = col; max_c = col + 1; min_r = row; max_r = row + 1;
+            any_chunk = true;
+          } else {
+            min_c = std::min(min_c, col); max_c = std::max(max_c, col + 1);
+            min_r = std::min(min_r, row); max_r = std::max(max_r, row + 1);
+          }
+        }
+      }
+    }
+  }
+  if (!any_chunk) {
+    for (const SceneLayer& l : s.layers) {
+      for (const SceneChunk& c : l.chunks) {
+        const int c0 = c.cx * kP3dChunkCells;
+        const int r0 = c.cy * kP3dChunkCells;
+        const int c1 = c0 + kP3dChunkCells;
+        const int r1 = r0 + kP3dChunkCells;
+        if (!any_chunk) {
+          min_c = c0; max_c = c1; min_r = r0; max_r = r1; any_chunk = true;
+        } else {
+          min_c = std::min(min_c, c0); max_c = std::max(max_c, c1);
+          min_r = std::min(min_r, r0); max_r = std::max(max_r, r1);
+        }
       }
     }
   }

@@ -39,12 +39,12 @@
       "split_y": 1
     },
     {
-      "id": "grass",
-      "name": "grass",
+      "id": "space",
+      "name": "space",
       "type": "image",
-      "path": "assets/grass.png",
-      "width": 16,
-      "height": 16,
+      "path": "assets/space.png",
+      "width": 8,
+      "height": 8,
       "split_x": 1,
       "split_y": 1
     }

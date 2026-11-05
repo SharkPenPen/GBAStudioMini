@@ -7,13 +7,12 @@ os.makedirs(OUT, exist_ok=True)
 def save(name, img):
     img.save(f"{OUT}/{name}")
 
-# 16x16 grass tile
-g = Image.new("RGBA", (16, 16), (70, 120, 70, 255))
+# 8x8 space tile
+g = Image.new("RGBA", (8, 8), (10, 14, 30, 255))
 d = ImageDraw.Draw(g)
-d.rectangle([0, 0, 15, 15], outline=(50, 95, 55, 255))
-d.line([(4, 4), (4, 7)], fill=(95, 150, 85, 255))
-d.line([(11, 10), (11, 13)], fill=(95, 150, 85, 255))
-save("grass.png", g)
+for x, y in [(1, 1), (6, 2), (3, 5), (7, 7), (2, 6)]:
+    d.point((x, y), fill=(210, 225, 255, 255))
+save("space.png", g)
 
 # player: 16x16 blue gardener
 p = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
