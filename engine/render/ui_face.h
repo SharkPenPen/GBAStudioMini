@@ -8,7 +8,7 @@ namespace eng {
 // only the first H bits are used. Bit x of a row = pixel at x.
 struct UiFaceGlyph {
   uint32_t code;
-  uint16_t rows[16];
+  uint16_t rows[20];
   uint8_t advance;
 };
 

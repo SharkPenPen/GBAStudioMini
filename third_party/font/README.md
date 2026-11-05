@@ -18,8 +18,8 @@ size; a font at 12px is not a 14/16px font.
 
 | id | native px | format | license | role |
 |---|---:|---|---|---|
-| changban12 | 12 | BDF | OFL-1.1 | Simplified Chinese, Song |
-| firefly14 | 14 | EBDT in TTF | Arphic Public License | Simplified Chinese, Song |
+| changban12 | 12 | BDF | OFL-1.1 | Simplified Chinese, Song（保留；当前 12px UI 改用 Firefly 渲染） |
+| firefly14 | 14 | EBDT in TTF | Arphic Public License | Simplified Chinese, Song；也用于生成 12px UI 面 |
 | zhengge16 | 16 | BDF | OFL-1.1 | Simplified Chinese, Hei |
 
 The font files are original upstream files. The catalog repository
