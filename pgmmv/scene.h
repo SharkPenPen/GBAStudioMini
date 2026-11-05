@@ -123,7 +123,7 @@ struct SceneDoc {
   std::vector<SceneObject> objects;
   SceneCamera camera;
   int gravity = 900;
-  std::string bgm;  // 背景音乐资源 id  // platformer / free2d
+  std::string bgm;  // 背景音乐资源 id
   std::string camera_mode = "follow";     // follow / fixed / auto_scroll
   bool objects_locked = false;  // 编辑器只读：对象层锁定
   std::map<std::string, int> variables;  // 场景初始变量

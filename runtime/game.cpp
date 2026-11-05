@@ -304,8 +304,8 @@ void Game::SetScene(int index) {
     player_.hp = player_.attrs["hp"];  // 运行时血量从属性表出发
 
   }
-  camera_profile_ = (s.camera_mode == "fixed") ? CameraProfile::kFixed
-                                                 : CameraProfile::kFollow;
+  camera_mode_ = (s.camera_mode == "fixed") ? CameraMode::kFixed
+                                                 : CameraMode::kFollow;
   InitSceneRuntime();
   UpdateCamera(0.016f);
   PlaySceneBgm();
@@ -1499,7 +1499,7 @@ void Game::UpdateCamera(float dt) {
   //   结果框内相机会偷偷跟过去 —— 死区等于没生效。
   float desired_x = camera_x_;
   float desired_y = camera_y_;
-  if (camera_profile_ == CameraProfile::kFollow) {
+  if (camera_mode_ == CameraMode::kFollow) {
   if (s.camera_deadzone_w > 0) {
     const float screen_x = player_.x - camera_x_;
     const float left = view_w_ * 0.5f - static_cast<float>(s.camera_deadzone_w) * 0.5f;
@@ -1544,12 +1544,12 @@ void Game::UpdateCamera(float dt) {
   const float world_b = static_cast<float>(max_r) * 8.0f;
   const float ww = world_r - world_l;
   const float wh = world_b - world_t;
-  if (camera_profile_ == CameraProfile::kFixed) {
+  if (camera_mode_ == CameraMode::kFixed) {
     camera_x_ = world_l - (static_cast<float>(view_w_) - ww) * 0.5f;
     camera_y_ = world_t - (static_cast<float>(view_h_) - wh) * 0.5f;
     return;
   }
-  if (camera_profile_ != CameraProfile::kFollow) return;
+  if (camera_mode_ != CameraMode::kFollow) return;
   if (ww > static_cast<float>(view_w_)) {
     desired_x = std::clamp(desired_x, world_l, world_r - static_cast<float>(view_w_));
   } else {
@@ -1888,7 +1888,7 @@ void Game::RunEnemyRules(const Object& o, EnemyState& e, float dt) {
   }
 }
 
-void Game::UpdatePlatformer(float dt, const eng::InputState& input) {
+void Game::UpdateSimulation(float dt, const eng::InputState& input) {
   if (p3d_ == nullptr || player_object_ < 0) return;
   if (invuln_ > 0.0f) invuln_ -= dt;
   if (toast_timer_ > 0.0f) toast_timer_ -= dt;
@@ -2102,11 +2102,11 @@ void Game::Update(float dt, const eng::InputState& input) {
     prev_input_ = input;
     return;
   }
-  UpdatePlatformer(dt, input);
+  UpdateSimulation(dt, input);
   prev_input_ = input;  // 下一帧算 key_up 用
 }
 
-void Game::RenderPlatformer(eng::DrawList& dl, const eng::TextureId* textures,
+void Game::RenderWorld(eng::DrawList& dl, const eng::TextureId* textures,
                             int texture_count) const {
   if (p3d_ == nullptr) return;
   const Scene& s = p3d_->scenes[scene_index_];
@@ -2289,7 +2289,7 @@ void Game::Render(eng::DrawList& dl, const eng::TextureId* textures,
   // 注意：DrawToast 在 const 方法里不能调用，这里用 const_cast（只为画字，不改状态）
   Game* self = const_cast<Game*>(this);
   if (p3d_ == nullptr) return;
-  RenderPlatformer(dl, textures, texture_count);
+  RenderWorld(dl, textures, texture_count);
   self->DrawToast(dl, textures, texture_count);
 }
 

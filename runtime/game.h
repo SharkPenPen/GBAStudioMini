@@ -79,7 +79,7 @@ struct Player {
   std::map<std::string, int> attrs;  // 实例属性（规则读写）
 };
 
-enum class CameraProfile {
+enum class CameraMode {
   kFollow,
   kFixed,
 };
@@ -149,8 +149,8 @@ class Game {
   void InitEnemies();
   void InitSceneRuntime();
   void UpdateEnemies(float dt);
-  void UpdatePlatformer(float dt, const eng::InputState& input);
-  void RenderPlatformer(eng::DrawList& dl, const eng::TextureId* textures,
+  void UpdateSimulation(float dt, const eng::InputState& input);
+  void RenderWorld(eng::DrawList& dl, const eng::TextureId* textures,
                         int texture_count) const;
   void SpawnProjectiles(const Object& owner, float ox, float oy, float ovx, float ovy,
                         bool from_player, int parent_scene_object);
@@ -185,7 +185,7 @@ class Game {
   std::vector<unsigned int> trigger_tick_;     // 在区域内的帧数（持续效果用）
   float player_attack_active_ = 0.0f;
   float player_attack_cooldown_ = 0.0f;
-  CameraProfile camera_profile_ = CameraProfile::kFollow;
+  CameraMode camera_mode_ = CameraMode::kFollow;
   std::map<std::string, int> variables_;
   std::string save_path_ = "save0.dat";
   std::vector<int> modal_stack_;
