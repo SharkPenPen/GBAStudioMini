@@ -2,7 +2,7 @@
 add_library(p3d_format STATIC p3d.cpp)
 target_include_directories(p3d_format PUBLIC "${CMAKE_SOURCE_DIR}")
 
-add_library(runtime_core STATIC game.cpp)
+add_library(runtime_core STATIC game.cpp ui.cpp)
 target_link_libraries(runtime_core PUBLIC p3d_format engine_core)
 
 add_executable(game_pc pc_main.cpp audio_miniaudio.cpp)

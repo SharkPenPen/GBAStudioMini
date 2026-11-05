@@ -1,11 +1,16 @@
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <string>
+#include <vector>
 
 #include "engine/platform/platform.h"
+#include "engine/render/font.h"
+#include "engine/render/texture.h"
 #include "runtime/game.h"
 #include "runtime/p3d.h"
+#include "runtime/ui.h"
 
 namespace {
 int g_failures = 0;
@@ -189,6 +194,84 @@ void TestMirrorY() {
   CHECK(p.scenes[0].objects[0].y == 252);
 }
 
+int UiValueCb(void*, const char* name) {
+  return std::strcmp(name, "hp") == 0 ? 50 : 0;
+}
+
+void TestUiLayout() {
+  const r4::UiRect screen = r4::UiLayoutRect(r4::UiLayout::kScreen, 480, 272);
+  CHECK(screen.x == 0 && screen.y == 0 && screen.w == 480 && screen.h == 272);
+  const r4::UiRect safe = r4::UiLayoutRect(r4::UiLayout::kSafe, 480, 272);
+  CHECK(safe.x == 40 && safe.y == 16 && safe.w == 400 && safe.h == 240);
+}
+
+void TestUiAnchor() {
+  r4::UiElement e;
+  e.anchor = r4::UiAnchor::kBottomRight;
+  e.w = 100;
+  e.h = 50;
+  const r4::UiRect r = r4::UiAnchorRect(e, {0, 0, 480, 272}, 0, 0);
+  CHECK(r.x == 380 && r.y == 222);
+  e.anchor = r4::UiAnchor::kCenter;
+  const r4::UiRect c = r4::UiAnchorRect(e, {0, 0, 480, 272}, 0, 0);
+  CHECK(c.x == 190 && c.y == 111);
+}
+
+void TestUiWrap() {
+  CHECK(eng::FontInit());
+  const std::vector<std::string> lines =
+      r4::UiWrapText("hello world hello", 40, 10, 0);
+  CHECK(lines.size() >= 2);
+  for (const std::string& line : lines) {
+    CHECK(r4::UiTextWidth(line, 10, 0) <= 40 || line.size() <= 1);
+  }
+}
+
+void TestUiNineSlice() {
+  std::vector<unsigned char> px(24 * 24 * 4, 255);
+  const eng::TextureId tex = eng::TextureCreate(px.data(), 24, 24);
+  CHECK(tex != 0);
+  eng::DrawList dl;
+  dl.ResetScreenSizes();
+  dl.SetScreenSize(480, 272);
+  r4::UiScreen screen;
+  r4::UiElement panel;
+  panel.kind = r4::UiKind::kPanel;
+  panel.w = 80;
+  panel.h = 80;
+  panel.texture = tex;
+  panel.slice = r4::UiNineSlice{8, 8, 8, 8, true};
+  screen.elements.push_back(panel);
+  r4::UiDrawContext ctx;
+  ctx.dl = &dl;
+  ctx.view_w = 480;
+  ctx.view_h = 272;
+  r4::UiDrawScreen(screen, ctx);
+  CHECK(dl.count() > 9);
+  eng::TextureDestroy(tex);
+}
+
+void TestUiValueBar() {
+  eng::DrawList dl;
+  dl.ResetScreenSizes();
+  dl.SetScreenSize(480, 272);
+  r4::UiScreen screen;
+  r4::UiElement bar;
+  bar.kind = r4::UiKind::kValueBar;
+  bar.w = 100;
+  bar.h = 8;
+  bar.binding.name = "hp";
+  bar.binding.out_max = 100;
+  screen.elements.push_back(bar);
+  r4::UiDrawContext ctx;
+  ctx.dl = &dl;
+  ctx.view_w = 480;
+  ctx.view_h = 272;
+  ctx.value = UiValueCb;
+  r4::UiDrawScreen(screen, ctx);
+  CHECK(dl.count() >= 2);
+}
+
 }  // namespace
 
 int main() {
@@ -199,6 +282,11 @@ int main() {
   std::printf("camera...\n"); TestFixedCameraCenters();
   std::printf("p3d roundtrip...\n"); TestP3dRoundTrip();
   std::printf("mirror...\n"); TestMirrorY();
+  std::printf("ui layout...\n"); TestUiLayout();
+  std::printf("ui anchor...\n"); TestUiAnchor();
+  std::printf("ui wrap...\n"); TestUiWrap();
+  std::printf("ui nine-slice...\n"); TestUiNineSlice();
+  std::printf("ui value bar...\n"); TestUiValueBar();
   if (g_failures != 0) {
     std::printf("%d check(s) failed\n", g_failures);
     return 1;
