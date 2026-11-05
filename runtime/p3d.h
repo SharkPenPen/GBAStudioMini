@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 82;  // 82: 删掉旧触发器动作列表
+constexpr uint32_t kP3dVersion = 83;  // 83: 删掉 win/lose 与 win_score
+                                      // 82: 删掉旧触发器动作列表
                                       // 81: 区域规则
                                       // 80: 标题界面 / 按钮仅存档可见
                                       // 79: UI 淡出帧数
@@ -313,7 +314,6 @@ struct Scene {
   int scroll_end_x = 0;   // v66: scroll this far then switch scene
   int scroll_end_y = 0;
   std::string scroll_next;
-  int win_score = 0;      // v67: score target for shooter levels
   std::map<std::string, int> variables;  // v12: scene initial variables
   std::vector<Trigger> triggers;  // v14
   int controlled = -1;  // v27: scene.objects 下标；-1 = 无

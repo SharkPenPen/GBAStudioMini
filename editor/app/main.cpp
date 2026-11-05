@@ -4732,17 +4732,15 @@ void DrawScenePageRight() {
         pgmmv::TriggerAction& a = (*list)[i];
         ImGui::PushID(static_cast<int>(i) + 5000);
         const char* types[] = {"change_scene", "attr_add", "play_sfx", "set_variable",
-                               "win", "lose", "open_ui", "close_ui", "save",
-                               "load"};
+                               "open_ui", "close_ui", "save", "load"};
         const char* labels[] = {"切场景", "改属性", "音效", "改变量",
-                                "胜利", "失败", "打开界面", "关闭界面",
-                                "存档", "读档"};
+                                "打开界面", "关闭界面", "存档", "读档"};
         int ti = 0;
-        for (int k = 0; k < 10; ++k) {
+        for (int k = 0; k < 8; ++k) {
           if (a.type == types[k]) ti = k;
         }
         ImGui::SetNextItemWidth(90.0f);
-        if (ImGui::Combo("##t", &ti, labels, 10)) {
+        if (ImGui::Combo("##t", &ti, labels, 8)) {
           a.type = types[ti];
           MarkDirty();
         }

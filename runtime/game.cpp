@@ -289,7 +289,6 @@ void Game::SetScene(int index) {
   player_.hp = 100;
   player_.action = 0;
   player_.facing = 1;
-  won_ = false;
   finished_ = false;
   invuln_ = 0.0f;
 
@@ -544,12 +543,6 @@ void Game::UpdateHShooter(float dt, const eng::InputState& input) {
   const Scene& s = p3d_->scenes[scene_index_];
   hscroll_x_ += static_cast<float>(std::max(0, s.scroll_speed)) * dt;
   vscroll_y_ += static_cast<float>(s.scroll_speed_y) * dt;  // 正值 = 内容向下
-  // 射击关卡通关分数线
-  if (s.win_score > 0 && score_ >= s.win_score) {
-    won_ = true;
-    toast_.clear();
-    toast_timer_ = 0.0f;
-  }
   // 卷轴关卡结束：卷到指定距离就切场景
   if (!s.scroll_next.empty() &&
       ((s.scroll_end_x > 0 && hscroll_x_ >= static_cast<float>(s.scroll_end_x)) ||
@@ -806,7 +799,6 @@ bool Game::LoadBytes(const std::string& data) {
   globals_seeded_ = true;
   player_.x = static_cast<float>(px);
   player_.y = static_cast<float>(py);
-  won_ = false;
   game_over_ = false;
   toast_.clear();
   toast_timer_ = 0.0f;
@@ -1856,10 +1848,6 @@ void Game::UpdateAnimation(float dt) {
 
 bool Game::RunTriggerList(const Trigger& trigger,
                           const std::vector<TriggerAction>& list) {
-  bool has_win = false;
-  for (const TriggerAction& a : list) {
-    if (a.type == 3) has_win = true;
-  }
   for (size_t ai = 0; ai < list.size(); ++ai) {
     const TriggerAction& action = list[ai];
     if (action.type == 1) {  // set_respawn
@@ -1900,8 +1888,6 @@ bool Game::RunTriggerList(const Trigger& trigger,
       continue;
     }
     if (action.type == 0) {  // change_scene
-      // 同一触发器里同时有胜利时，胜利优先；否则切场景会把 win 吞掉。
-      if (has_win) continue;
       int target = -1;
       for (int i = 0; i < static_cast<int>(p3d_->scenes.size()); ++i) {
         if (p3d_->scenes[i].id == action.target) {
@@ -1934,24 +1920,12 @@ bool Game::RunTriggerList(const Trigger& trigger,
       SpawnById(action.target, player_.x, player_.y, player_.facing, false);
       continue;
     }
-    if (action.type == 3) {  // win：胜利横幅由渲染层统一画，别再挂一条 toast
-      won_ = true;
-      toast_.clear();
-      toast_timer_ = 0.0f;
-      continue;
-    }
-    if (action.type == 4) {  // lose：同上，避免 GAME OVER 出现两份
-      game_over_ = true;
-      toast_.clear();
-      toast_timer_ = 0.0f;
-      continue;
-    }
   }
   return false;
 }
 
 void Game::UpdateTriggers() {
-  if (p3d_ == nullptr || player_object_ < 0 || won_) return;
+  if (p3d_ == nullptr || player_object_ < 0) return;
   const Scene& s = p3d_->scenes[scene_index_];
   if (trigger_done_.size() != s.triggers.size()) {
     trigger_done_.assign(s.triggers.size(), 0);
@@ -2703,7 +2677,6 @@ void Game::RunEnemyRules(const Object& o, EnemyState& e, float dt) {
 
 void Game::UpdatePlatformer(float dt, const eng::InputState& input) {
   if (p3d_ == nullptr || player_object_ < 0) return;
-  if (won_) return;
   if (invuln_ > 0.0f) invuln_ -= dt;
   if (toast_timer_ > 0.0f) toast_timer_ -= dt;
   if (player_attack_active_ > 0.0f) player_attack_active_ -= dt;
@@ -2762,7 +2735,6 @@ void Game::UpdatePlatformer(float dt, const eng::InputState& input) {
   }
 
   UpdateInteraction(input);
-  if (won_) return;
   const Object& pc = p3d_->objects[player_object_];
   for (CheckpointState& cp : checkpoints_) {
     if (cp.active || cp.object < 0 || cp.object >= static_cast<int>(p3d_->objects.size())) continue;
@@ -2922,7 +2894,7 @@ void Game::Update(float dt, const eng::InputState& input) {
     UpdateShooter(dt, input);
     UpdateProjectiles(dt);
     UpdateAnimation(dt);
-    if (!won_) UpdateTriggers();
+    UpdateTriggers();
     prev_input_ = input;
     return;
   }
@@ -3199,9 +3171,6 @@ void Game::RenderPlatformer(eng::DrawList& dl, const eng::TextureId* textures,
 
   draw_layers(true);
 
-  if (won_) {
-    UiDrawTextLine(dl, 0, 92, "CLEAR!", 0xFFFFFFFFu, 1, view_w_);
-  }
 
 }
 

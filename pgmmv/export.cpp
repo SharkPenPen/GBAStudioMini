@@ -29,8 +29,6 @@ void ExportTriggerActionType(const std::string& type, int* out) {
   else if (type == "play_sfx") *out = 6;
   else if (type == "set_respawn") *out = 1;
   else if (type == "set_variable") *out = 2;
-  else if (type == "win") *out = 3;
-  else if (type == "lose") *out = 4;
   else if (type == "open_ui") *out = 9;
   else if (type == "close_ui") *out = 10;
   else if (type == "save") *out = 11;
@@ -897,7 +895,6 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
     rs.scroll_end_x = s.scroll_end_x;
     rs.scroll_end_y = s.scroll_end_y;
     rs.scroll_next = s.scroll_next;
-    rs.win_score = s.win_score;
     rs.variables = s.variables;
     for (const TriggerDef& t : s.triggers) {
       r4::Trigger rt;

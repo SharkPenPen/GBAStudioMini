@@ -641,9 +641,6 @@ bool SceneLoad(const std::filesystem::path& path, SceneDoc* out,
   if (!ReadInt(root, "scroll_end_y", &scroll_end_y, &found, error)) return false;
   if (found) s.scroll_end_y = scroll_end_y;
   if (!ReadString(root, "scroll_next", &s.scroll_next, &found, error)) return false;
-  int win_score = 0;
-  if (!ReadInt(root, "win_score", &win_score, &found, error)) return false;
-  if (found) s.win_score = win_score;
   if (!ReadBool(root, "objects_locked", &s.objects_locked, &found, error)) return false;
   const JsonValue* triggers = root.Find("triggers");
   if (triggers != nullptr && triggers->IsArray()) {
@@ -868,9 +865,6 @@ void SceneSyncRaw(SceneDoc* s) {
     root.Set("scroll_end_x", JsonValue::Number(static_cast<double>(s->scroll_end_x)));
     root.Set("scroll_end_y", JsonValue::Number(static_cast<double>(s->scroll_end_y)));
     root.Set("scroll_next", JsonValue::String(s->scroll_next));
-  }
-  if (s->win_score != 0) {
-    root.Set("win_score", JsonValue::Number(static_cast<double>(s->win_score)));
   }
   root.Set("objects_locked", JsonValue::Bool(s->objects_locked));
   JsonValue variables = JsonValue::Object();

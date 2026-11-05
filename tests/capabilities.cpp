@@ -337,30 +337,6 @@ void TestCollisionBlock() {
   CHECK(game.player().x > 140.0f);
 }
 
-void TestTriggerWin() {
-  r4::P3d p = BaseP3d();
-  r4::Trigger trigger;
-  trigger.x = 80;
-  trigger.y = 80;
-  trigger.w = 80;
-  trigger.h = 80;
-  trigger.once = true;
-  r4::TriggerAction action;
-  action.type = 3;  // win
-  r4::TriggerRule rule;
-  rule.mode = 0;
-  rule.actions.push_back(action);
-  trigger.rules.push_back(rule);
-  p.scenes[0].triggers.push_back(trigger);
-
-  r4::Game game;
-  std::string err;
-  CHECK(game.Init(p, &err));
-  const eng::InputState in = EmptyInput();
-  game.Update(1.0f / 60.0f, in);
-  CHECK(game.won());
-}
-
 void TestFixedCameraCenters() {
   r4::P3d p = BaseP3d();
   p.scenes[0].camera_mode = "fixed";
@@ -596,7 +572,6 @@ int main() {
   std::setvbuf(stdout, nullptr, _IONBF, 0);
   std::printf("movement...\n"); TestMovement();
   std::printf("collision...\n"); TestCollisionBlock();
-  std::printf("trigger...\n"); TestTriggerWin();
   std::printf("modal...\n"); TestModalStack();
   std::printf("save/load...\n"); TestSaveLoad();
   std::printf("zone rule...\n"); TestZoneRule();

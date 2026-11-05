@@ -148,7 +148,6 @@ class Game {
   int score() const { return score_; }
   float camera_x() const { return camera_x_; }
   float camera_y() const { return camera_y_; }
-  bool won() const { return won_; }
   const std::string& toast() const { return toast_; }
   const Player& player() const { return player_; }
   const std::vector<EnemyState>& enemies() const { return enemies_; }
@@ -272,7 +271,6 @@ class Game {
   int key_hold_[eng::kKeyCount] = {};  // 按住帧数（长按用）
   bool finished_ = false;
   int score_ = 0;
-  bool won_ = false;
   float invuln_ = 0.0f;
   std::string toast_;
   float toast_timer_ = 0.0f;
