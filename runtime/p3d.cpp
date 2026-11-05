@@ -233,26 +233,6 @@ bool ReadObject(Reader& r, Object* o, std::string* error) {
   for (uint16_t i = 0; i < lc; ++i) {
     if (!ReadLink(r, &o->links[i], error)) return false;
   }
-  const uint16_t sc = r.U16();
-  if (!r.ok || sc > 64) {
-    SetErr(error, "p3d: bad spawner count");
-    return false;
-  }
-  o->spawners.resize(sc);
-  for (uint16_t i = 0; i < sc; ++i) {
-    Spawner& sp = o->spawners[i];
-    sp.object = r.I32();
-    sp.offset_x = r.I32();
-    sp.offset_y = r.I32();
-    sp.vx = static_cast<float>(r.I32());
-    sp.vy = static_cast<float>(r.I32());
-    sp.lifetime = r.I32();
-    sp.count = r.I32();
-    sp.spread = r.I32();
-    sp.inherit_velocity = r.U8() != 0;
-    sp.destroy_on_hit = r.U8() != 0;
-    sp.destroy_with_parent = r.U8() != 0;
-  }
   const uint16_t an = r.U16();
   if (!r.ok || an > 64) {
     SetErr(error, "p3d: bad attr count");
@@ -874,20 +854,6 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
         w.Str(c.key);
         w.I32(c.value);
       }
-    }
-    w.U16(static_cast<uint16_t>(o.spawners.size()));
-    for (const Spawner& sp : o.spawners) {
-      w.I32(sp.object);
-      w.I32(sp.offset_x);
-      w.I32(sp.offset_y);
-      w.I32(static_cast<int>(sp.vx));
-      w.I32(static_cast<int>(sp.vy));
-      w.I32(sp.lifetime);
-      w.I32(sp.count);
-      w.I32(sp.spread);
-      w.U8(sp.inherit_velocity ? 1 : 0);
-      w.U8(sp.destroy_on_hit ? 1 : 0);
-      w.U8(sp.destroy_with_parent ? 1 : 0);
     }
     w.U16(static_cast<uint16_t>(o.attrs.size()));
     for (const ObjectAttr& a : o.attrs) {

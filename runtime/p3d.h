@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 86;  // 86: 删掉 score / score_ge
+constexpr uint32_t kP3dVersion = 87;  // 87: 删掉 Spawner
+                                      // 86: 删掉 score / score_ge
                                       // 85: 删掉自动卷轴
                                       // 84: 删掉 lives / Game Over
                                       // 83: 删掉 win/lose 与 win_score
@@ -154,20 +155,6 @@ struct Link {
   std::vector<Condition> conditions;
 };
 
-struct Spawner {
-  int object = -1;
-  int offset_x = 0;
-  int offset_y = 0;
-  float vx = 0.0f;
-  float vy = 0.0f;
-  int lifetime = 60;
-  int count = 1;
-  int spread = 0;
-  bool inherit_velocity = false;
-  bool destroy_on_hit = true;
-  bool destroy_with_parent = false;
-};
-
 struct Object {
   std::string id;
   std::string name;
@@ -193,7 +180,6 @@ struct Object {
   uint8_t limit_screen = 0;  // v61：移动夹在屏幕内
   uint8_t pushable = 0;      // v72：实体碰撞时可被玩家推动
   std::vector<Action> actions;
-  std::vector<Spawner> spawners;
   std::vector<ObjectAttr> attrs;   // v45
   std::vector<Rule> rules;         // v45  // v18
   int default_action = 0;

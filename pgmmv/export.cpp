@@ -560,19 +560,6 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
       }
     }
   }
-  bool grew = true;
-  while (grew) {
-    grew = false;
-    for (const ObjectDoc& o : project.objects) {
-      if (used_objects.count(o.id) == 0) continue;
-      for (const SpawnerDef& sp : o.spawners) {
-        if (!sp.object.empty() && used_objects.count(sp.object) == 0) {
-          used_objects.insert(sp.object);
-          grew = true;
-        }
-      }
-    }
-  }
   std::map<std::string, int> object_index;
   for (const ObjectDoc& o : project.objects) {
     if (used_objects.count(o.id) != 0) {
@@ -747,24 +734,6 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
       for (const DirectionDef& d : ad.directions) {
         emit_action(ad.name + "@" + d.name, d);
       }
-    }
-    for (const SpawnerDef& sp : o.spawners) {
-      r4::Spawner rs;
-      rs.object = -1;
-      auto sit = object_index.find(sp.object);
-      if (sit != object_index.end()) rs.object = sit->second;
-      if (rs.object < 0) continue;
-      rs.offset_x = sp.offset_x;
-      rs.offset_y = sp.offset_y;
-      rs.vx = sp.vx;
-      rs.vy = sp.vy;
-      rs.lifetime = sp.lifetime;
-      rs.count = sp.count;
-      rs.spread = sp.spread;
-      rs.inherit_velocity = sp.inherit_velocity;
-      rs.destroy_on_hit = sp.destroy_on_hit;
-      rs.destroy_with_parent = sp.destroy_with_parent;
-      ro.spawners.push_back(rs);
     }
     ro.default_action = FindAction(ro, o.default_action);
     for (const FlowLink& fl : o.links) {

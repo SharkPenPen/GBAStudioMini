@@ -776,34 +776,6 @@ bool ObjectLoad(const std::filesystem::path& path, ObjectDoc* out,
   if (!has_hp) o.attrs.push_back(AttrDef{"hp", 100});
   if (!ReadString(root, "animation", &o.animation, &found, error)) return false;
 
-  const JsonValue* spawners = root.Find("spawners");
-  if (spawners != nullptr && spawners->IsArray()) {
-    for (const JsonValue& sv : spawners->items) {
-      if (!sv.IsObject()) continue;
-      SpawnerDef sp;
-      if (!ReadString(sv, "object", &sp.object, &found, error)) return false;
-      int v = 0;
-      if (!ReadInt(sv, "offset_x", &v, &found, error)) return false;
-      if (found) sp.offset_x = v;
-      if (!ReadInt(sv, "offset_y", &v, &found, error)) return false;
-      if (found) sp.offset_y = v;
-      const JsonValue* vx = sv.Find("vx");
-      if (vx != nullptr && vx->IsNumber()) sp.vx = static_cast<float>(vx->number);
-      const JsonValue* vy = sv.Find("vy");
-      if (vy != nullptr && vy->IsNumber()) sp.vy = static_cast<float>(vy->number);
-      if (!ReadInt(sv, "lifetime", &v, &found, error)) return false;
-      if (found) sp.lifetime = v;
-      if (!ReadInt(sv, "count", &v, &found, error)) return false;
-      if (found) sp.count = v;
-      if (!ReadInt(sv, "spread", &v, &found, error)) return false;
-      if (found) sp.spread = v;
-      if (!ReadBool(sv, "inherit_velocity", &sp.inherit_velocity, &found, error)) return false;
-      if (!ReadBool(sv, "destroy_on_hit", &sp.destroy_on_hit, &found, error)) return false;
-      if (!ReadBool(sv, "destroy_with_parent", &sp.destroy_with_parent, &found, error)) return false;
-      o.spawners.push_back(std::move(sp));
-    }
-  }
-
   const JsonValue* flow = root.Find("flow");
   if (flow != nullptr) {
     if (!flow->IsObject()) {
@@ -921,24 +893,6 @@ void ObjectSyncRaw(ObjectDoc* o) {
       }
     }
   }
-
-  JsonValue spawners = JsonValue::Array();
-  for (const SpawnerDef& sp : o->spawners) {
-    JsonValue sv = JsonValue::Object();
-    sv.Set("object", JsonValue::String(sp.object));
-    SetInt(&sv, "offset_x", sp.offset_x);
-    SetInt(&sv, "offset_y", sp.offset_y);
-    sv.Set("vx", JsonValue::Number(static_cast<double>(sp.vx)));
-    sv.Set("vy", JsonValue::Number(static_cast<double>(sp.vy)));
-    SetInt(&sv, "lifetime", sp.lifetime);
-    SetInt(&sv, "count", sp.count);
-    SetInt(&sv, "spread", sp.spread);
-    SetBool(&sv, "inherit_velocity", sp.inherit_velocity);
-    SetBool(&sv, "destroy_on_hit", sp.destroy_on_hit);
-    SetBool(&sv, "destroy_with_parent", sp.destroy_with_parent);
-    spawners.Push(std::move(sv));
-  }
-  root.Set("spawners", std::move(spawners));
 
   JsonValue flow =
       (root.Find("flow") != nullptr && root.Find("flow")->IsObject())

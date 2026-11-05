@@ -200,20 +200,6 @@ struct FlowLink {
   std::vector<FlowCondition> conditions;
 };
 
-struct SpawnerDef {
-  std::string object;
-  int offset_x = 0;
-  int offset_y = 0;
-  float vx = 0.0f;
-  float vy = 0.0f;
-  int lifetime = 60;  // tick
-  int count = 1;
-  int spread = 0;     // 角度扩散
-  bool inherit_velocity = false;
-  bool destroy_on_hit = true;
-  bool destroy_with_parent = false;
-};
-
 
 
 // ---- 规则：条件 + 动作 ----
@@ -294,7 +280,6 @@ struct ObjectDoc {
   std::vector<Rule> rules;               // 规则表
   // 动作不在对象里：对象只引用一个动画资源（animation），动作在 animations/*.json
   std::string animation;
-  std::vector<SpawnerDef> spawners;
   std::string default_action = "idle";
   std::vector<FlowLink> links;
   JsonValue raw;

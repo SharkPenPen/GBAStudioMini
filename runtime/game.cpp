@@ -751,9 +751,6 @@ void Game::UpdateEnemies(float dt) {
           e.anim_time = 0.0f;
           e.frame = 0;
         }
-        SpawnProjectiles(eo, e.x, e.y,
-                         e.dir * (eo.speed > 0 ? static_cast<float>(eo.speed) * 0.45f : 0.0f),
-                         0.0f, false, e.scene_object);
       }
       if (e.attacking) {
         e.attack_hold -= dt;
@@ -1317,36 +1314,6 @@ void Game::SpawnById(const std::string& id, float x, float y, int dir, bool from
     p.from_player = from_player;
     projectiles_.push_back(p);
     return;
-  }
-}
-
-void Game::SpawnProjectiles(const Object& owner, float ox, float oy, float ovx, float ovy,
-                            bool from_player, int parent_scene_object) {
-  if (p3d_ == nullptr) return;
-  for (const Spawner& sp : owner.spawners) {
-    if (sp.object < 0 || sp.object >= static_cast<int>(p3d_->objects.size())) continue;
-    const Object& target = p3d_->objects[sp.object];
-    const float base_angle = std::atan2(sp.vy, sp.vx);
-    const int count = std::max(1, sp.count);
-    for (int i = 0; i < count; ++i) {
-      const float spread = static_cast<float>(sp.spread) * 3.14159265f / 180.0f;
-      const float t = count > 1 ? (static_cast<float>(i) / (count - 1) - 0.5f) : 0.0f;
-      const float angle = base_angle + t * spread;
-      ProjectileState p;
-      p.object = sp.object;
-      p.x = ox + static_cast<float>(sp.offset_x);
-      p.y = oy + static_cast<float>(sp.offset_y);
-      const float speed = std::sqrt(sp.vx * sp.vx + sp.vy * sp.vy);
-      p.vx = std::cos(angle) * speed + (sp.inherit_velocity ? ovx : 0.0f);
-      p.vy = std::sin(angle) * speed + (sp.inherit_velocity ? ovy : 0.0f);
-      p.life = static_cast<float>(std::max(1, sp.lifetime)) / 60.0f;
-      p.damage = ObjIntAttr(target, "atk", 1);
-      p.parent_scene_object = parent_scene_object;
-      p.destroy_on_hit = sp.destroy_on_hit;
-      p.destroy_with_parent = sp.destroy_with_parent;
-      p.from_player = from_player;
-      projectiles_.push_back(p);
-    }
   }
 }
 
