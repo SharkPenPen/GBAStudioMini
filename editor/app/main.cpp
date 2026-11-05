@@ -4773,24 +4773,41 @@ void DrawScenePageRight() {
         pgmmv::TriggerAction& a = (*list)[i];
         ImGui::PushID(static_cast<int>(i) + 5000);
         const char* types[] = {"change_scene", "attr_add", "play_sfx", "set_variable",
-                               "win", "lose"};
-        const char* labels[] = {"切场景", "改属性", "音效", "改变量", "胜利", "失败"};
+                               "win", "lose", "open_ui", "close_ui"};
+        const char* labels[] = {"切场景", "改属性", "音效", "改变量",
+                                "胜利", "失败", "打开界面", "关闭界面"};
         int ti = 0;
-        for (int k = 0; k < 6; ++k) {
+        for (int k = 0; k < 8; ++k) {
           if (a.type == types[k]) ti = k;
         }
         ImGui::SetNextItemWidth(90.0f);
-        if (ImGui::Combo("##t", &ti, labels, 6)) {
+        if (ImGui::Combo("##t", &ti, labels, 8)) {
           a.type = types[ti];
           MarkDirty();
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(110.0f);
-        char tb[64];
-        std::snprintf(tb, sizeof(tb), "%s", a.target.c_str());
-        if (ImGui::InputTextWithHint("##tg", "对象/属性/音效", tb, sizeof(tb))) {
-          a.target = tb;
-          MarkDirty();
+        ImGui::SetNextItemWidth(130.0f);
+        if (a.type == "open_ui") {
+          const char* cur = a.target.empty() ? "(选界面)" : a.target.c_str();
+          if (ImGui::BeginCombo("##tg", cur)) {
+            for (const pgmmv::UiScreenDoc& us : g_project.ui_screens) {
+              const std::string label = us.name.empty() ? us.id : us.name;
+              if (ImGui::Selectable(label.c_str(), a.target == us.id)) {
+                a.target = us.id;
+                MarkDirty();
+              }
+            }
+            ImGui::EndCombo();
+          }
+        } else if (a.type == "close_ui") {
+          ImGui::TextDisabled("(无需目标)");
+        } else {
+          char tb[64];
+          std::snprintf(tb, sizeof(tb), "%s", a.target.c_str());
+          if (ImGui::InputTextWithHint("##tg", "对象/属性/音效", tb, sizeof(tb))) {
+            a.target = tb;
+            MarkDirty();
+          }
         }
         ImGui::SameLine();
         ImGui::SetNextItemWidth(60.0f);

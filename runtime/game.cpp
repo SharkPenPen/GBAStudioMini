@@ -170,6 +170,7 @@ void Game::PlayClipById(const std::string& id) {
 void Game::SetScene(int index) {
   if (p3d_ == nullptr) return;
   if (index < 0 || index >= static_cast<int>(p3d_->scenes.size())) return;
+  modal_stack_.clear();
   scene_index_ = index;
   const Scene& s = p3d_->scenes[index];
   // 场景级变量重置；全局（g: 前缀）保留
@@ -697,6 +698,41 @@ void Game::DrawUiScreens(eng::DrawList& dl, const eng::TextureId* textures,
                          textures, texture_count);
     UiDrawScreen(screen, ctx);
   }
+  if (!modal_stack_.empty()) {
+    dl.DrawRect(eng::Rect2{eng::Vec2{0.0f, 0.0f},
+                           eng::Vec2{static_cast<float>(view_w_),
+                                     static_cast<float>(view_h_)}},
+                0x80000000u);
+    for (int idx : modal_stack_) {
+      if (idx < 0 || idx >= static_cast<int>(p3d_->ui_screens.size())) continue;
+      const UiScreen screen =
+          UiScreenFromData(p3d_->ui_screens[static_cast<size_t>(idx)], textures,
+                           texture_count);
+      UiDrawScreen(screen, ctx);
+    }
+  }
+}
+
+bool Game::UiModalActive() const {
+  if (p3d_ == nullptr || modal_stack_.empty()) return false;
+  const int idx = modal_stack_.back();
+  return idx >= 0 && idx < static_cast<int>(p3d_->ui_screens.size()) &&
+         p3d_->ui_screens[static_cast<size_t>(idx)].modal;
+}
+
+void Game::OpenUiById(const std::string& id) {
+  if (p3d_ == nullptr || id.empty()) return;
+  for (int i = 0; i < static_cast<int>(p3d_->ui_screens.size()); ++i) {
+    if (p3d_->ui_screens[static_cast<size_t>(i)].id == id) {
+      if (!modal_stack_.empty() && modal_stack_.back() == i) return;
+      modal_stack_.push_back(i);
+      return;
+    }
+  }
+}
+
+void Game::CloseUi() {
+  if (!modal_stack_.empty()) modal_stack_.pop_back();
 }
 
 void Game::RenderHShooter(eng::DrawList& dl, const eng::TextureId* textures,
@@ -1506,6 +1542,14 @@ bool Game::RunTriggerList(const Trigger& trigger,
     }
     if (action.type == 2) {  // set_variable
       variables_[action.target] = action.value;
+      continue;
+    }
+    if (action.type == 9) {  // open_ui
+      OpenUiById(action.target);
+      continue;
+    }
+    if (action.type == 10) {  // close_ui
+      CloseUi();
       continue;
     }
     if (action.type == 0) {  // change_scene
@@ -2478,6 +2522,15 @@ void Game::Update(float dt, const eng::InputState& input) {
   ++tick_;
   if (dt < 0.0f) dt = 0.0f;
   if (dt > 0.05f) dt = 0.05f;
+  if (UiModalActive()) {
+    if (input.pressed[static_cast<int>(eng::Key::kA)] ||
+        input.pressed[static_cast<int>(eng::Key::kB)] ||
+        input.pressed[static_cast<int>(eng::Key::kStart)]) {
+      CloseUi();
+    }
+    prev_input_ = input;
+    return;
+  }
   if (control_ == ControlProfile::kFree2d &&
       camera_profile_ == CameraProfile::kFixed) {
     UpdateShooter(dt, input);

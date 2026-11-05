@@ -31,6 +31,8 @@ void ExportTriggerActionType(const std::string& type, int* out) {
   else if (type == "set_variable") *out = 2;
   else if (type == "win") *out = 3;
   else if (type == "lose") *out = 4;
+  else if (type == "open_ui") *out = 9;
+  else if (type == "close_ui") *out = 10;
   else *out = 0;
 }
 

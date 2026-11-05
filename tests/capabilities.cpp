@@ -108,6 +108,37 @@ void TestMovement() {
   CHECK(game.player().x > 200.0f);
 }
 
+void TestModalStack() {
+  r4::P3d p = BaseP3d();
+  r4::UiScreenData modal;
+  modal.id = "pause";
+  modal.name = "Pause";
+  modal.modal = true;
+  p.ui_screens.push_back(modal);
+  r4::Trigger trigger;
+  trigger.x = 80;
+  trigger.y = 80;
+  trigger.w = 80;
+  trigger.h = 80;
+  trigger.once = true;
+  r4::TriggerAction action;
+  action.type = 9;  // open_ui
+  action.target = "pause";
+  trigger.actions.push_back(action);
+  p.scenes[0].triggers.push_back(trigger);
+
+  r4::Game game;
+  std::string err;
+  CHECK(game.Init(p, &err));
+  game.Update(1.0f / 60.0f, EmptyInput());
+  CHECK(game.UiModalActive());
+
+  eng::InputState confirm;
+  confirm.pressed[static_cast<int>(eng::Key::kA)] = true;
+  game.Update(1.0f / 60.0f, confirm);
+  CHECK(!game.UiModalActive());
+}
+
 void TestCollisionBlock() {
   r4::P3d p = BaseP3d();
   r4::SceneCollisionChunk chunk;
@@ -326,6 +357,7 @@ int main() {
   std::printf("movement...\n"); TestMovement();
   std::printf("collision...\n"); TestCollisionBlock();
   std::printf("trigger...\n"); TestTriggerWin();
+  std::printf("modal...\n"); TestModalStack();
   std::printf("camera...\n"); TestFixedCameraCenters();
   std::printf("p3d roundtrip...\n"); TestP3dRoundTrip();
   std::printf("mirror...\n"); TestMirrorY();

@@ -149,6 +149,7 @@ class Game {
   const Scene& scene() const { return p3d_->scenes[scene_index_]; }
   const std::string& scene_id() const { return scene().id; }
   bool finished() const { return finished_; }
+  bool UiModalActive() const;
   uint32_t tick() const { return tick_; }
 
   // 当前帧上某个连接点的世界坐标（没有这个点就返回 false）
@@ -161,6 +162,8 @@ class Game {
                  int texture_count);
   void DrawUiScreens(eng::DrawList& dl, const eng::TextureId* textures,
                      int texture_count) const;
+  void OpenUiById(const std::string& id);
+  void CloseUi();
   void UpdateInteraction(const eng::InputState& input);
   void RunPlayerRules(const Object& o, const eng::InputState& input, float dt);
   void RunEnemyRules(const Object& o, EnemyState& e, float dt);
@@ -235,6 +238,7 @@ class Game {
   int shooter_player_image_ = -1;
   int shooter_effect_object_ = -1;
   std::map<std::string, int> variables_;
+  std::vector<int> modal_stack_;
   float shooter_time_ = 0.0f;
   float hscroll_x_ = 0.0f;
   float vscroll_y_ = 0.0f;  // 纵版卷轴累计偏移（正 = 内容往下走）
