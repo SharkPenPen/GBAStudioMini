@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "id": "door",
+  "name": "Door",
+  "type": "prop",
+  "image": "assets/door.png",
+  "frame": {
+    "w": 16,
+    "h": 16
+  },
+  "collision": {
+    "x": -8,
+    "y": -16,
+    "w": 16,
+    "h": 16
+  },
+  "hurt": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+  },
+  "attack": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+  },
+  "team": "neutral",
+  "physics": {
+    "speed": 0,
+    "gravity": 0,
+    "limit_screen": false
+  },
+  "attrs": [
+    {
+      "name": "hp",
+      "value": 1
+    }
+  ],
+  "animation": "door_anim",
+  "flow": {
+    "default": "idle"
+  }
+}

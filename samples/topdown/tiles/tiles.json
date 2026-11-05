@@ -1,0 +1,11 @@
+{
+  "format_version": 2,
+  "id": "tiles",
+  "name": "Tiles",
+  "image": "assets/tiles.png",
+  "tile_w": 8,
+  "tile_h": 8,
+  "columns": 2,
+  "offset_x": 0,
+  "offset_y": 0
+}

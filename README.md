@@ -21,6 +21,8 @@
 - p3d 直接导出，PC 播放器不需要模拟器。
 - `samples/demo/demo.p3d`：最小可玩示例（地砖 + 玩家方块 + HUD）。
 - `samples/bee/`：规则驱动的“打蜜蜂”示例（场景 + 对象规则 + 子弹 + HUD）。
+- `samples/platformer/`：平台跳跃示例（重力 / 跳跃 / 碰撞 / 场景切换）。
+- `samples/topdown/`：俯视探索示例（四向移动 / NPC 对话 / 门）。
 
 ## 快速开始
 

@@ -36,6 +36,33 @@ d.ellipse([6, 6, 8, 8], fill=(20, 20, 20, 255))
 d.ellipse([2, 13, 5, 14], fill=(90, 60, 20, 255))
 save("bee.png", b)
 
+# combined 16x8 tiles: 1 = space, 2 = brick
+t = Image.new("RGBA", (16, 8), (0, 0, 0, 0))
+d = ImageDraw.Draw(t)
+d.rectangle([0, 0, 7, 7], fill=(10, 14, 30, 255))
+for x, y in [(1, 1), (5, 3), (3, 6)]:
+    d.point((x, y), fill=(210, 225, 255, 255))
+d.rectangle([8, 0, 15, 7], fill=(105, 75, 55, 255))
+d.rectangle([8, 0, 15, 1], fill=(145, 105, 75, 255))
+d.line([(8, 4), (15, 4)], fill=(70, 50, 40, 255))
+save("tiles.png", t)
+
+# npc: 16x16 green
+n = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+d = ImageDraw.Draw(n)
+d.ellipse([3, 1, 12, 9], fill=(120, 200, 120, 255))
+d.rectangle([4, 9, 11, 14], fill=(70, 150, 80, 255))
+d.ellipse([6, 5, 9, 8], fill=(20, 20, 20, 255))
+save("npc.png", n)
+
+# door: 16x16 brown
+dr = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+d = ImageDraw.Draw(dr)
+d.rectangle([3, 2, 12, 15], fill=(120, 80, 40, 255))
+d.rectangle([5, 5, 10, 15], fill=(60, 35, 20, 255))
+d.ellipse([10, 9, 11, 10], fill=(240, 200, 80, 255))
+save("door.png", dr)
+
 # sting: 8x8 yellow
 s = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
 d = ImageDraw.Draw(s)

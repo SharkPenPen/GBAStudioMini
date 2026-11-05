@@ -1,0 +1,166 @@
+{
+  "format_version": 1,
+  "id": "hero",
+  "name": "Hero",
+  "type": "player",
+  "image": "assets/player.png",
+  "frame": {
+    "w": 16,
+    "h": 16
+  },
+  "collision": {
+    "x": -8,
+    "y": -16,
+    "w": 16,
+    "h": 16
+  },
+  "hurt": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+  },
+  "attack": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+  },
+  "team": "player",
+  "physics": {
+    "speed": 120,
+    "gravity": 0,
+    "limit_screen": true
+  },
+  "attrs": [
+    {
+      "name": "hp",
+      "value": 5
+    }
+  ],
+  "rules": [
+    {
+      "name": "idle",
+      "enabled": true,
+      "when": [
+        {
+          "type": "always",
+          "op": 1,
+          "value": 0
+        }
+      ],
+      "do": [
+        {
+          "type": "anim",
+          "x": 0,
+          "y": 0,
+          "text": "idle"
+        }
+      ]
+    },
+    {
+      "name": "right",
+      "enabled": true,
+      "when": [
+        {
+          "type": "key_down",
+          "key": "right",
+          "op": 1,
+          "value": 0
+        }
+      ],
+      "do": [
+        {
+          "type": "move",
+          "x": 120,
+          "y": 0
+        },
+        {
+          "type": "flip",
+          "x": 0,
+          "y": 0,
+          "text": "right"
+        },
+        {
+          "type": "anim",
+          "x": 0,
+          "y": 0,
+          "text": "run"
+        }
+      ]
+    },
+    {
+      "name": "left",
+      "enabled": true,
+      "when": [
+        {
+          "type": "key_down",
+          "key": "left",
+          "op": 1,
+          "value": 0
+        }
+      ],
+      "do": [
+        {
+          "type": "move",
+          "x": -120,
+          "y": 0
+        },
+        {
+          "type": "flip",
+          "x": 0,
+          "y": 0,
+          "text": "left"
+        },
+        {
+          "type": "anim",
+          "x": 0,
+          "y": 0,
+          "text": "run"
+        }
+      ]
+    },
+    {
+      "name": "up",
+      "enabled": true,
+      "when": [
+        {
+          "type": "key_down",
+          "key": "up",
+          "op": 1,
+          "value": 0
+        }
+      ],
+      "do": [
+        {
+          "type": "move",
+          "x": 0,
+          "y": -120
+        }
+      ]
+    },
+    {
+      "name": "down",
+      "enabled": true,
+      "when": [
+        {
+          "type": "key_down",
+          "key": "down",
+          "op": 1,
+          "value": 0
+        }
+      ],
+      "do": [
+        {
+          "type": "move",
+          "x": 0,
+          "y": 120
+        }
+      ]
+    }
+  ],
+  "animation": "hero_anim",
+  "flow": {
+    "default": "idle"
+  }
+}

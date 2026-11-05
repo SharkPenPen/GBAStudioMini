@@ -13,6 +13,8 @@ editor-theme.txt
 *.p3d
 !samples/demo/demo.p3d
 !samples/bee/bee.p3d
+!samples/platformer/game.p3d
+!samples/topdown/game.p3d
 *.elf
 /font-atlas/
 # objects

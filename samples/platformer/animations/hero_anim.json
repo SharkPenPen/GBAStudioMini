@@ -1,0 +1,127 @@
+{
+  "format_version": 1,
+  "id": "hero_anim",
+  "name": "Hero",
+  "image": "assets/player.png",
+  "frame_w": 16,
+  "frame_h": 16,
+  "actions": [
+    {
+      "name": "idle",
+      "frames": [
+        {
+          "image": 0,
+          "hold": 2,
+          "origin": {
+            "x": 8,
+            "y": 16
+          },
+          "collision": {
+            "x": -8,
+            "y": -16,
+            "w": 16,
+            "h": 16
+          },
+          "attack": {
+            "none": true
+          },
+          "hurt": {
+            "none": true
+          }
+        }
+      ],
+      "origin": {
+        "x": 8,
+        "y": 16
+      },
+      "offset": {
+        "x": 0,
+        "y": 0
+      },
+      "flip_h": false,
+      "flip_v": false,
+      "fps": 8,
+      "loop": true,
+      "base_variant": "默认",
+      "directions": []
+    },
+    {
+      "name": "run",
+      "frames": [
+        {
+          "image": 0,
+          "hold": 2,
+          "origin": {
+            "x": 8,
+            "y": 16
+          },
+          "collision": {
+            "x": -8,
+            "y": -16,
+            "w": 16,
+            "h": 16
+          },
+          "attack": {
+            "none": true
+          },
+          "hurt": {
+            "none": true
+          }
+        }
+      ],
+      "origin": {
+        "x": 8,
+        "y": 16
+      },
+      "offset": {
+        "x": 0,
+        "y": 0
+      },
+      "flip_h": false,
+      "flip_v": false,
+      "fps": 8,
+      "loop": true,
+      "base_variant": "默认",
+      "directions": []
+    },
+    {
+      "name": "jump",
+      "frames": [
+        {
+          "image": 0,
+          "hold": 2,
+          "origin": {
+            "x": 8,
+            "y": 16
+          },
+          "collision": {
+            "x": -8,
+            "y": -16,
+            "w": 16,
+            "h": 16
+          },
+          "attack": {
+            "none": true
+          },
+          "hurt": {
+            "none": true
+          }
+        }
+      ],
+      "origin": {
+        "x": 8,
+        "y": 16
+      },
+      "offset": {
+        "x": 0,
+        "y": 0
+      },
+      "flip_h": false,
+      "flip_v": false,
+      "fps": 8,
+      "loop": true,
+      "base_variant": "默认",
+      "directions": []
+    }
+  ]
+}

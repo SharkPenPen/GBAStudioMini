@@ -1,0 +1,52 @@
+{
+  "variables": {},
+  "format_version": 1,
+  "name": "Platformer",
+  "settings": {
+    "initial_scene": "level1"
+  },
+  "persistent_ui": "",
+  "title_ui": "",
+  "assets": [
+    {
+      "id": "player",
+      "name": "player",
+      "type": "image",
+      "path": "assets/player.png",
+      "width": 16,
+      "height": 16,
+      "split_x": 1,
+      "split_y": 1
+    },
+    {
+      "id": "tiles",
+      "name": "tiles",
+      "type": "image",
+      "path": "assets/tiles.png",
+      "width": 16,
+      "height": 8,
+      "split_x": 1,
+      "split_y": 1
+    },
+    {
+      "id": "npc",
+      "name": "npc",
+      "type": "image",
+      "path": "assets/npc.png",
+      "width": 16,
+      "height": 16,
+      "split_x": 1,
+      "split_y": 1
+    },
+    {
+      "id": "door",
+      "name": "door",
+      "type": "image",
+      "path": "assets/door.png",
+      "width": 16,
+      "height": 16,
+      "split_x": 1,
+      "split_y": 1
+    }
+  ]
+}
