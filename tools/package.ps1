@@ -21,12 +21,14 @@ New-Item -ItemType Directory -Force -Path (Join-Path $Stage "licenses") | Out-Nu
 Copy-Item (Join-Path $Build "bin\PocketLoom-Editor.exe") (Join-Path $Stage "bin")
 Copy-Item (Join-Path $Build "bin\PocketLoom-Play.exe") (Join-Path $Stage "bin")
 Copy-Item (Join-Path $Build "bin\ploom.exe") (Join-Path $Stage "bin")
+Copy-Item (Join-Path $Build "bin\make-demo.exe") (Join-Path $Stage "bin")
 Copy-Item (Join-Path $Root "VERSION.txt") $Stage
 Copy-Item (Join-Path $Root "README.md") $Stage
 Copy-Item (Join-Path $Root "LICENSE") $Stage
 Copy-Item (Join-Path $Root "THIRD_PARTY_NOTICES.md") $Stage
 Copy-Item (Join-Path $Root "docs\*") (Join-Path $Stage "docs") -Recurse
 Copy-Item (Join-Path $Root "templates") (Join-Path $Stage "templates") -Recurse
+Copy-Item (Join-Path $Root "samples") (Join-Path $Stage "samples") -Recurse
 
 # Licenses: keep the font source/attribution files even though runtime uses generated headers.
 Copy-Item (Join-Path $Root "THIRD_PARTY_NOTICES.md") (Join-Path $Stage "licenses\THIRD_PARTY_NOTICES.md") -Force

@@ -19,6 +19,7 @@
 - 界面：常驻 / 关卡 / 弹窗三层；平铺九宫格；12/14/16 原生中文点阵；按钮、列表、淡入淡出。
 - 存档：全局变量 + 当前场景 + 玩家位置；标题界面可“继续 / 新游戏”。
 - p3d 直接导出，PC 播放器不需要模拟器。
+- `samples/demo/demo.p3d`：最小可玩示例（地砖 + 玩家方块 + HUD）。
 
 ## 快速开始
 
@@ -44,6 +45,18 @@ build/host/bin/ploom.exe
 
 ~~~powershell
 .\build\host\bin\PocketLoom-Play.exe --p3d path\to\game.p3d
+~~~
+
+## 示例
+
+~~~powershell
+.\build\host\bin\PocketLoom-Play.exe --p3d samples\demo\demo.p3d
+~~~
+
+重新生成：
+
+~~~powershell
+.\build\host\bin\make-demo.exe samples\demo\demo.p3d
 ~~~
 
 ## 操作
@@ -86,7 +99,7 @@ dist/PocketLoom-0.1.0-win64.zip
 dist/PocketLoom-0.1.0-win64.zip.sha256
 ~~~
 
-包内含编辑器、播放器、文档、空白模板、许可证。
+包内含编辑器、播放器、文档、空白模板、示例、许可证。
 
 ## 项目布局
 

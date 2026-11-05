@@ -26,7 +26,7 @@ else()
     -ffunction-sections
     -fdata-sections
   )
-  add_link_options(-Wl,--gc-sections)
+  add_link_options(-Wl,--gc-sections -static)
   add_compile_options(-Wall -Wextra -Werror=switch)
 endif()
 
@@ -43,3 +43,6 @@ add_subdirectory(runtime)
 add_subdirectory(pgmmv)
 add_subdirectory(editor)
 add_subdirectory(tests)
+
+add_executable(make-demo tools/make-demo.cpp)
+target_link_libraries(make-demo PRIVATE p3d_format)

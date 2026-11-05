@@ -11,6 +11,7 @@
 editor-theme.txt
 # generated game data / atlases
 *.p3d
+!samples/demo/demo.p3d
 *.elf
 /font-atlas/
 # objects
