@@ -198,6 +198,10 @@ int g_selected_trigger = -1;
 std::string g_selected_ui_screen;
 int g_selected_ui_element = -1;
 bool g_ui_dragging = false;
+bool g_ui_resizing = false;
+int g_ui_resize_w0 = 0;
+int g_ui_resize_h0 = 0;
+ImVec2 g_ui_resize_mouse0;
 std::set<int> g_placed_multi;
 std::vector<pgmmv::SceneObject> g_scene_clipboard;
 int g_selected_tile = 0;
@@ -6682,6 +6686,85 @@ void DrawUiPageLeft() {
   }
 }
 
+ImU32 UiColor(const pgmmv::UiElementDoc& e) {
+  return IM_COL32((e.color >> 24) & 0xFF, (e.color >> 16) & 0xFF,
+                  (e.color >> 8) & 0xFF, e.color & 0xFF);
+}
+
+// 编辑器预览：按 9-slice 平铺（不拉伸边/中间），和运行时一致。
+void DrawUiPreviewImage(ImDrawList* dl, const pgmmv::UiElementDoc& e, ImVec2 p,
+                        ImVec2 sz) {
+  if (e.image.empty()) return;
+  const pgmmv::Asset* a = g_project.FindAsset(e.image);
+  if (a == nullptr) return;
+  PreviewTexture* pv = AssetPreview(*a);
+  if (pv == nullptr || pv->srv == nullptr || pv->width <= 0 || pv->height <= 0) {
+    return;
+  }
+  const ImTextureID tex = reinterpret_cast<ImTextureID>(pv->srv);
+  const int sw = e.src_w > 0 ? e.src_w : pv->width;
+  const int sh = e.src_h > 0 ? e.src_h : pv->height;
+  if (sw <= 0 || sh <= 0) return;
+  const int sx = e.src_x;
+  const int sy = e.src_y;
+  const ImU32 col = UiColor(e);
+  auto add = [&](ImVec2 dp, ImVec2 ds, int ux, int uy, int uw, int uh) {
+    if (ds.x <= 0.0f || ds.y <= 0.0f) return;
+    dl->AddImage(tex, dp, ImVec2(dp.x + ds.x, dp.y + ds.y),
+                 ImVec2(static_cast<float>(sx + ux) / pv->width,
+                        static_cast<float>(sy + uy) / pv->height),
+                 ImVec2(static_cast<float>(sx + ux + uw) / pv->width,
+                        static_cast<float>(sy + uy + uh) / pv->height),
+                 col);
+  };
+  const int l = e.slice_l;
+  const int r = e.slice_r;
+  const int t = e.slice_t;
+  const int b = e.slice_b;
+  if (l <= 0 || t <= 0 || l + r >= sw || t + b >= sh) {
+    add(p, sz, 0, 0, sw, sh);
+    return;
+  }
+  const float kx = sz.x / static_cast<float>(sw);
+  const float ky = sz.y / static_cast<float>(sh);
+  const float dl_ = l * kx;
+  const float dr = r * kx;
+  const float dt = t * ky;
+  const float db = b * ky;
+  add(p, ImVec2(dl_, dt), 0, 0, l, t);
+  add(ImVec2(p.x + sz.x - dr, p.y), ImVec2(dr, dt), sw - r, 0, r, t);
+  add(ImVec2(p.x, p.y + sz.y - db), ImVec2(dl_, db), 0, sh - b, l, b);
+  add(ImVec2(p.x + sz.x - dr, p.y + sz.y - db), ImVec2(dr, db), sw - r, sh - b,
+      r, b);
+  for (float x = dl_; x < sz.x - dr;) {
+    const float tw = std::min(dl_, sz.x - dr - x);
+    add(ImVec2(p.x + x, p.y), ImVec2(tw, dt), l, 0, l, t);
+    add(ImVec2(p.x + x, p.y + sz.y - db), ImVec2(tw, db), l, sh - b, l, b);
+    x += tw;
+  }
+  for (float y = dt; y < sz.y - db;) {
+    const float th = std::min(dt, sz.y - db - y);
+    add(ImVec2(p.x, p.y + y), ImVec2(dl_, th), 0, t, l, t);
+    add(ImVec2(p.x + sz.x - dr, p.y + y), ImVec2(dr, th), sw - r, t, r, t);
+    y += th;
+  }
+  if (e.slice_tile) {
+    const float cw = (sw - l - r) * kx;
+    const float ch = (sh - t - b) * ky;
+    for (float y = 0; y < sz.y - dt - db; y += ch) {
+      const float th = std::min(ch, sz.y - dt - db - y);
+      for (float x = 0; x < sz.x - dl_ - dr; x += cw) {
+        const float tw = std::min(cw, sz.x - dl_ - dr - x);
+        add(ImVec2(p.x + dl_ + x, p.y + dt + y), ImVec2(tw, th), l, t, sw - l - r,
+            sh - t - b);
+      }
+    }
+  } else {
+    dl->AddRectFilled(ImVec2(p.x + dl_, p.y + dt),
+                      ImVec2(p.x + sz.x - dr, p.y + sz.y - db), col);
+  }
+}
+
 void DrawUiPageCenter() {
   pgmmv::UiScreenDoc* s = CurrentUiScreen();
   if (s == nullptr) {
@@ -6718,19 +6801,51 @@ void DrawUiPageCenter() {
     ImVec2 sz = UiElementSize(e);
     sz = ImVec2(sz.x * scale, sz.y * scale);
     const ImVec2 p = UiElementPos(e, lp, ls, sz);
-    const ImU32 col =
-        IM_COL32((e.color >> 24) & 0xFF, (e.color >> 16) & 0xFF,
-                 (e.color >> 8) & 0xFF, e.color & 0xFF);
-    dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y),
-                      (col & 0x00FFFFFFu) | (50u << 24));
+    const ImU32 col = UiColor(e);
+    if (!e.image.empty() && (e.kind == "panel" || e.kind == "image" ||
+                             e.kind == "value_image")) {
+      DrawUiPreviewImage(dl, e, p, sz);
+    } else {
+      dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y),
+                        (col & 0x00FFFFFFu) | (50u << 24));
+    }
     dl->AddRect(p, ImVec2(p.x + sz.x, p.y + sz.y), col);
     if (e.kind == "text") dl->AddText(p, col, e.text.c_str());
-    if (clicked && ImGui::IsMouseHoveringRect(p, ImVec2(p.x + sz.x, p.y + sz.y))) {
+    if (g_selected_ui_element == i) {
+      const ImVec2 h(p.x + sz.x - 5.0f, p.y + sz.y - 5.0f);
+      dl->AddRectFilled(h, ImVec2(h.x + 10.0f, h.y + 10.0f),
+                        IM_COL32(255, 210, 90, 255));
+      if (clicked && ImGui::IsMouseHoveringRect(h, ImVec2(h.x + 10.0f, h.y + 10.0f))) {
+        g_ui_resizing = true;
+        g_ui_dragging = false;
+        g_ui_resize_w0 = static_cast<int>(UiElementSize(e).x);
+        g_ui_resize_h0 = static_cast<int>(UiElementSize(e).y);
+        g_ui_resize_mouse0 = ImGui::GetIO().MousePos;
+      }
+    }
+    if (!g_ui_resizing && clicked &&
+        ImGui::IsMouseHoveringRect(p, ImVec2(p.x + sz.x, p.y + sz.y))) {
       g_selected_ui_element = i;
       g_ui_dragging = true;
     }
   }
-  if (g_ui_dragging) {
+  if (g_ui_resizing) {
+    if (ImGui::IsMouseDown(0)) {
+      pgmmv::UiElementDoc* e = CurrentUiElement();
+      if (e != nullptr) {
+        const ImVec2 delta = ImGui::GetIO().MousePos;
+        const int nw = g_ui_resize_w0 + static_cast<int>(
+                           std::round((delta.x - g_ui_resize_mouse0.x) / scale));
+        const int nh = g_ui_resize_h0 + static_cast<int>(
+                           std::round((delta.y - g_ui_resize_mouse0.y) / scale));
+        e->w = std::max(1, nw);
+        e->h = std::max(1, nh);
+        MarkDirty();
+      }
+    } else {
+      g_ui_resizing = false;
+    }
+  } else if (g_ui_dragging) {
     if (ImGui::IsMouseDown(0)) {
       const ImVec2 delta = ImGui::GetIO().MouseDelta;
       pgmmv::UiElementDoc* e = CurrentUiElement();
