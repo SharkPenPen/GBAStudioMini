@@ -51,9 +51,9 @@ struct Asset {
   JsonValue raw;    // 该资源对象的原始 JSON，保留未知字段
 };
 
-// 固定单屏；工程文件里的旧 400x240/320x240 会在加载时被归一到这两个值。
-constexpr int kScreenWidth = 240;
-constexpr int kScreenHeight = 160;
+// 新工程默认 480×272；旧工程保留自己保存的视口（240×160 等）。
+constexpr int kScreenWidth = 480;
+constexpr int kScreenHeight = 272;
 
 struct ProjectSettings {
   int tile_size = 16;

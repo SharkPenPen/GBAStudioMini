@@ -1668,7 +1668,7 @@ void DrawProjectSettingsModal() {
       ImGui::EndCombo();
     }
     ImGui::Separator();
-    ImGui::TextDisabled("屏幕：240x160");
+    ImGui::TextDisabled("屏幕：%d×%d", g_project.settings.top_width, g_project.settings.top_height);
     ImGui::Separator();
     if (ImGui::Button("关闭", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
     ImGui::EndPopup();
@@ -4806,10 +4806,10 @@ void DrawScenePageRight() {
     ImGui::SetNextItemWidth(90.0f);
     UndoIntField("##dz_h", &s->camera.deadzone_h, 1);
     ImGui::SameLine();
-    if (ImGui::Button("240×160", ImVec2(80, 22))) {
+    if (ImGui::Button("铺满屏幕", ImVec2(80, 22))) {
       PushUndo();
-      s->camera.deadzone_w = 240;
-      s->camera.deadzone_h = 160;
+      s->camera.deadzone_w = g_project.settings.top_width;
+      s->camera.deadzone_h = g_project.settings.top_height;
       MarkDirty();
     }
     ImGui::TextUnformatted("偏移 X / Y");

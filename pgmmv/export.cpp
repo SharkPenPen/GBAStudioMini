@@ -883,6 +883,8 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
   }
 
   p.initial_scene = 0;
+  p.view_w = project.settings.top_width > 0 ? project.settings.top_width : 480;
+  p.view_h = project.settings.top_height > 0 ? project.settings.top_height : 272;
   for (size_t i = 0; i < project.scenes.size(); ++i) {
     if (project.scenes[i].id == project.settings.initial_scene) {
       p.initial_scene = static_cast<int>(i);

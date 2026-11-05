@@ -350,8 +350,6 @@ void ProjectSyncRaw(Project* p) {
   settings.Set("tile_size", JsonValue::Number(static_cast<double>(p->settings.tile_size)));
   settings.Set("initial_scene", JsonValue::String(p->settings.initial_scene));
 
-  p->settings.top_width = kScreenWidth;
-  p->settings.top_height = kScreenHeight;
   JsonValue screen = JsonValue::Object();
   JsonValue top = JsonValue::Array();
   top.Push(JsonValue::Number(static_cast<double>(p->settings.top_width)));
@@ -544,9 +542,10 @@ bool ProjectLoad(const std::filesystem::path& project_json_path, Project* out,
         }
       }
     }
-    // 固定 240x160；旧双屏工程的 400x240 在加载时归一。
-    p.settings.top_width = kScreenWidth;
-    p.settings.top_height = kScreenHeight;
+    if (p.settings.top_width <= 0 || p.settings.top_height <= 0) {
+      p.settings.top_width = kScreenWidth;
+      p.settings.top_height = kScreenHeight;
+    }
   }
 
   const JsonValue* assets = root.Find("assets");

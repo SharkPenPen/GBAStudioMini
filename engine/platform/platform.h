@@ -10,9 +10,9 @@
 namespace eng {
 
 struct PlatformConfig {
-  int width = 240;
-  int height = 160;
-  int window_scale = 3;
+  int width = 480;
+  int height = 272;
+  int window_scale = 2;
   const char* title = "PocketLoom";
 };
 

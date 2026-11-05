@@ -134,6 +134,8 @@ class Game {
               int texture_count) const;
 
   int scene_index() const { return scene_index_; }
+  int view_w() const { return view_w_; }
+  int view_h() const { return view_h_; }
   int transition_count() const { return transition_count_; }
   int frame_count() const { return frame_count_; }
   int score() const { return score_; }
@@ -198,6 +200,8 @@ class Game {
 
   const P3d* p3d_ = nullptr;
   int scene_index_ = 0;
+  int view_w_ = 480;
+  int view_h_ = 272;
   int player_object_ = -1;
   Player player_;
   std::vector<EnemyState> enemies_;

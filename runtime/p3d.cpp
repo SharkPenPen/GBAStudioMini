@@ -559,6 +559,12 @@ bool P3dLoad(const unsigned char* data, size_t size, P3d* out,
   }
   P3d p;
   p.initial_scene = r.I32();
+  p.view_w = r.I32();
+  p.view_h = r.I32();
+  if (p.view_w <= 0 || p.view_h <= 0) {
+    p.view_w = 480;
+    p.view_h = 272;
+  }
   const uint16_t nform = r.U16();
   if (!r.ok || nform > 512) {
     SetErr(error, "p3d: bad formula count");
@@ -677,6 +683,8 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
   w.U32(kP3dMagic);
   w.U32(kP3dVersion);
   w.I32(p.initial_scene);
+  w.I32(p.view_w);
+  w.I32(p.view_h);
   w.U16(static_cast<uint16_t>(std::min<size_t>(512, p.formulas.size())));
   for (const auto& kv : p.formulas) {
     w.Str(kv.first);

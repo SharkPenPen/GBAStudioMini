@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 72;  // 72: 对象可推动标记
+constexpr uint32_t kP3dVersion = 73;  // 73: 项目视口 view_w/view_h
+                                      // 72: 对象可推动标记
                                       // 69: 单屏，移除旧双屏字段与 UI 按钮动作
                                       // 66: 卷轴关卡结束点（scroll_end_x/y + scroll_next）
                                       // 65: 纵版卷轴 scroll_speed_y + 规则 move_add
@@ -341,6 +342,8 @@ struct P3d {
   // v45：项目级公式库（名字 → 表达式）
   std::map<std::string, std::string> formulas;
   int initial_scene = 0;
+  int view_w = 480;  // v73: 项目逻辑视口宽
+  int view_h = 272;  // v73: 项目逻辑视口高
   std::vector<AudioClip> audio;
   std::vector<Image> images;
   std::vector<Object> objects;

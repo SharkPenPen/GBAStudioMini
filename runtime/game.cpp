@@ -56,8 +56,6 @@ int FindActionIndex(const Object& o, const char* name) {
 
 namespace {
 
-constexpr float kViewW = 240.0f;
-constexpr float kViewH = 160.0f;
 
 int ActionTotalTicks(const Action& a) {
   int total = 0;
@@ -153,6 +151,8 @@ bool Game::Init(const P3d& p3d, std::string* error) {
     return false;
   }
   p3d_ = &p3d;
+  view_w_ = p3d.view_w > 0 ? p3d.view_w : 480;
+  view_h_ = p3d.view_h > 0 ? p3d.view_h : 272;
   scene_index_ = p3d.initial_scene;
   if (scene_index_ < 0 || scene_index_ >= static_cast<int>(p3d.scenes.size())) {
     scene_index_ = 0;
@@ -401,8 +401,8 @@ void Game::InitShooter() {
     const Object& po = p3d_->objects[player_object_];
     const float half_w = static_cast<float>(std::max(4, po.frame_w)) * 0.5f;
     const float half_h = static_cast<float>(std::max(4, po.frame_h)) * 0.5f;
-    player_.x = std::max(half_w, std::min(kViewW - half_w, player_.x));
-    player_.y = std::max(half_h, std::min(kViewH - half_h, player_.y));
+    player_.x = std::max(half_w, std::min(view_w_ - half_w, player_.x));
+    player_.y = std::max(half_h, std::min(view_h_ - half_h, player_.y));
   }
   shooter_fire_timer_ = 0.0f;
   shooter_dive_timer_ = 0.0f;
@@ -548,8 +548,8 @@ void Game::UpdateHShooter(float dt, const eng::InputState& input) {
   player_.x += static_cast<float>(dx) * speed * dt;
   player_.y += static_cast<float>(dy) * speed * dt;
   player_.x = std::max(hscroll_x_ + half_w,
-                       std::min(hscroll_x_ + kViewW - half_w, player_.x));
-  player_.y = std::max(half_h, std::min(kViewH - half_h, player_.y));
+                       std::min(hscroll_x_ + view_w_ - half_w, player_.x));
+  player_.y = std::max(half_h, std::min(view_h_ - half_h, player_.y));
   if (dx != 0) player_.facing = dx > 0 ? 1 : -1;
 
   shooter_fire_timer_ -= dt;
@@ -845,7 +845,7 @@ void Game::DrawToast(eng::DrawList& dl, const eng::TextureId* textures,
   }
   if (toast_timer_ <= 0.0f || toast_.empty()) return;
   const float w = eng::PixelTextWidth(toast_, 2);
-  eng::DrawPixelText(dl, (kViewW - w) * 0.5f, 12.0f, toast_, 0xFFFFFFFFu, 2);
+  eng::DrawPixelText(dl, (view_w_ - w) * 0.5f, 12.0f, toast_, 0xFFFFFFFFu, 2);
 }
 
 void Game::RenderHShooter(eng::DrawList& dl, const eng::TextureId* textures,
@@ -1049,8 +1049,8 @@ void Game::UpdateShooter(float dt, const eng::InputState& input) {
   if (!try_push(move_y, 1)) player_.y = old_y;
   player_.vx = 0.0f;
   player_.vy = 0.0f;
-  player_.x = std::max(half_w, std::min(kViewW - half_w, player_.x));
-  player_.y = std::max(half_h, std::min(kViewH - half_h, player_.y));
+  player_.x = std::max(half_w, std::min(view_w_ - half_w, player_.x));
+  player_.y = std::max(half_h, std::min(view_h_ - half_h, player_.y));
   if (dx != 0) player_.facing = dx > 0 ? 1 : -1;
 
   shooter_fire_timer_ -= dt;
@@ -2064,29 +2064,30 @@ void Game::Damage() {
 void Game::UpdateCamera(float dt) {
   if (p3d_ == nullptr) return;
   const Scene& s = p3d_->scenes[scene_index_];
-  if (camera_profile_ != CameraProfile::kFollow) return;
   // ★ 死区：角色在框里 → 相机不动；出框才推 ★
   //   以前的写法先把 desired 设成"居中跟随"，死区只在出框时改它，
   //   结果框内相机会偷偷跟过去 —— 死区等于没生效。
   float desired_x = camera_x_;
   float desired_y = camera_y_;
+  if (camera_profile_ == CameraProfile::kFollow) {
   if (s.camera_deadzone_w > 0) {
     const float screen_x = player_.x - camera_x_;
-    const float left = kViewW * 0.5f - static_cast<float>(s.camera_deadzone_w) * 0.5f;
-    const float right = kViewW * 0.5f + static_cast<float>(s.camera_deadzone_w) * 0.5f;
+    const float left = view_w_ * 0.5f - static_cast<float>(s.camera_deadzone_w) * 0.5f;
+    const float right = view_w_ * 0.5f + static_cast<float>(s.camera_deadzone_w) * 0.5f;
     if (screen_x < left) desired_x = player_.x - left;
     else if (screen_x > right) desired_x = player_.x - right;
   } else {
-    desired_x = player_.x - kViewW * 0.5f + static_cast<float>(s.camera_offset_x);
+    desired_x = player_.x - view_w_ * 0.5f + static_cast<float>(s.camera_offset_x);
   }
   if (s.camera_deadzone_h > 0) {
     const float screen_y = player_.y - camera_y_;
-    const float top = kViewH * 0.5f - static_cast<float>(s.camera_deadzone_h) * 0.5f;
-    const float bottom = kViewH * 0.5f + static_cast<float>(s.camera_deadzone_h) * 0.5f;
+    const float top = view_h_ * 0.5f - static_cast<float>(s.camera_deadzone_h) * 0.5f;
+    const float bottom = view_h_ * 0.5f + static_cast<float>(s.camera_deadzone_h) * 0.5f;
     if (screen_y < top) desired_y = player_.y - top;
     else if (screen_y > bottom) desired_y = player_.y - bottom;
   } else {
-    desired_y = player_.y - kViewH * 0.5f + static_cast<float>(s.camera_offset_y);
+    desired_y = player_.y - view_h_ * 0.5f + static_cast<float>(s.camera_offset_y);
+  }
   }
   // ★ 世界矩形按所有 chunk 的 min/max 算，不能只看 max ★
   //   地图往左/上扩到负坐标时，只取 max 会把相机钳在 0，
@@ -2111,15 +2112,23 @@ void Game::UpdateCamera(float dt) {
   const float world_t = static_cast<float>(min_r) * 8.0f;
   const float world_r = static_cast<float>(max_c) * 8.0f;
   const float world_b = static_cast<float>(max_r) * 8.0f;
-  if (world_r - world_l > kViewW) {
-    desired_x = std::clamp(desired_x, world_l, world_r - kViewW);
-  } else {
-    desired_x = world_l;  // 世界比视口窄：贴世界左边，不再假设它是 0
+  const float ww = world_r - world_l;
+  const float wh = world_b - world_t;
+  if (camera_profile_ == CameraProfile::kFixed) {
+    camera_x_ = world_l - (static_cast<float>(view_w_) - ww) * 0.5f;
+    camera_y_ = world_t - (static_cast<float>(view_h_) - wh) * 0.5f;
+    return;
   }
-  if (world_b - world_t > kViewH) {
-    desired_y = std::clamp(desired_y, world_t, world_b - kViewH);
+  if (camera_profile_ != CameraProfile::kFollow) return;
+  if (ww > static_cast<float>(view_w_)) {
+    desired_x = std::clamp(desired_x, world_l, world_r - static_cast<float>(view_w_));
   } else {
-    desired_y = world_t;
+    desired_x = world_l - (static_cast<float>(view_w_) - ww) * 0.5f;
+  }
+  if (wh > static_cast<float>(view_h_)) {
+    desired_y = std::clamp(desired_y, world_t, world_b - static_cast<float>(view_h_));
+  } else {
+    desired_y = world_t - (static_cast<float>(view_h_) - wh) * 0.5f;
   }
   const float t = 1.0f - std::exp(-8.0f * dt);
   camera_x_ += (desired_x - camera_x_) * t;
@@ -2500,9 +2509,9 @@ void Game::UpdatePlatformer(float dt, const eng::InputState& input) {
   if (o.limit_screen) {  // 按当前帧的碰撞盒夹在 240x160 内
     const AttackBox cb = ColBoxOf(o, player_.action, player_.frame);
     const float left = -static_cast<float>(cb.x);
-    const float right = kViewW - static_cast<float>(cb.x + cb.w);
+    const float right = view_w_ - static_cast<float>(cb.x + cb.w);
     const float top = -static_cast<float>(cb.y);
-    const float bottom = kViewH - static_cast<float>(cb.y + cb.h);
+    const float bottom = view_h_ - static_cast<float>(cb.y + cb.h);
     player_.x = std::max(left, std::min(right, player_.x));
     player_.y = std::max(top, std::min(bottom, player_.y));
     if (player_.x <= left || player_.x >= right) player_.vx = 0.0f;
@@ -2760,8 +2769,8 @@ void Game::RenderPlatformer(eng::DrawList& dl, const eng::TextureId* textures,
           camera_x_ * static_cast<float>(layer.scroll_x) / 100.0f;
       const float cam_y =
           camera_y_ * static_cast<float>(layer.scroll_y) / 100.0f;
-      const int view_w = kViewW;
-      const int view_h = kViewH;
+      const int view_w = view_w_;
+      const int view_h = view_h_;
       const int c0 = static_cast<int>(std::floor(cam_x / tw)) - 1;
       const int c1 = static_cast<int>(std::ceil((cam_x + view_w) / tw)) + 1;
       const int r0 = static_cast<int>(std::floor(cam_y / th)) - 1;
@@ -2905,7 +2914,7 @@ void Game::RenderPlatformer(eng::DrawList& dl, const eng::TextureId* textures,
     if (won_) {
       const char* clear = "CLEAR!";
       DrawHudText(dl, clear,
-                  kViewW * 0.5f - static_cast<float>(HudTextWidth(clear, 2.0f)) * 0.5f,
+                  view_w_ * 0.5f - static_cast<float>(HudTextWidth(clear, 2.0f)) * 0.5f,
                   92.0f, 2.0f, 0xFFFFFFFFu);
     }
   }

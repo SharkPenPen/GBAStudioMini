@@ -78,11 +78,13 @@ int main(int argc, char** argv) {
     return 3;
   }
   // 场景数据是「左下原点、y 向上」，引擎内部是屏幕系；这里翻一次（唯一转换点）。
-  r4::MirrorSceneYUp(p3d, 160);
+  r4::MirrorSceneYUp(p3d, p3d.view_h);
   std::fprintf(stderr, "game_pc: mirrored scene y (y-up data -> screen space)\n");
 
   eng::PlatformConfig cfg;
   cfg.title = "PocketLoom Player";
+  cfg.width = p3d.view_w;
+  cfg.height = p3d.view_h;
   cfg.window_scale = scale > 0 ? scale : 2;
   if (!eng::Platform().init(cfg)) {
     std::fprintf(stderr, "game_pc: platform init failed\n");
@@ -122,7 +124,7 @@ int main(int argc, char** argv) {
 
   eng::DrawList dl;
   dl.ResetScreenSizes();
-  dl.SetScreenSize(240, 160);
+  dl.SetScreenSize(p3d.view_w, p3d.view_h);
 
   int frames = 0;
   auto last = std::chrono::steady_clock::now();
