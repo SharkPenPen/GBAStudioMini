@@ -134,6 +134,7 @@ class Game {
               int texture_count) const;
 
   int scene_index() const { return scene_index_; }
+  int UiValue(const char* name) const;
   int view_w() const { return view_w_; }
   int view_h() const { return view_h_; }
   int transition_count() const { return transition_count_; }
@@ -159,6 +160,8 @@ class Game {
   int TileWallsAt(int col, int row) const;
   void DrawToast(eng::DrawList& dl, const eng::TextureId* textures,
                  int texture_count);
+  void DrawUiScreens(eng::DrawList& dl, const eng::TextureId* textures,
+                     int texture_count) const;
   void UpdateInteraction(const eng::InputState& input);
   void RunPlayerRules(const Object& o, const eng::InputState& input, float dt);
   void RunEnemyRules(const Object& o, EnemyState& e, float dt);

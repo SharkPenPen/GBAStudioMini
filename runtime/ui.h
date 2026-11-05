@@ -8,6 +8,9 @@
 
 namespace r4 {
 
+struct UiElementData;
+struct UiScreenData;
+
 enum class UiAnchor {
   kTopLeft = 0,
   kTopCenter,
@@ -116,5 +119,11 @@ std::vector<std::string> UiWrapText(const std::string& text, int max_w,
 
 // 画一个界面（含一层子元素）。
 void UiDrawScreen(const UiScreen& screen, const UiDrawContext& ctx);
+
+// p3d 数据 → 运行时元素；image 下标通过 textures 解析。
+UiElement UiElementFromData(const UiElementData& d, const eng::TextureId* textures,
+                            int texture_count);
+UiScreen UiScreenFromData(const UiScreenData& d, const eng::TextureId* textures,
+                          int texture_count);
 
 }  // namespace r4

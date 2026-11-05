@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "engine/render/font.h"
+#include "runtime/p3d.h"
 
 namespace r4 {
 namespace {
@@ -301,6 +302,55 @@ void UiDrawScreen(const UiScreen& screen, const UiDrawContext& ctx) {
   if (ctx.dl == nullptr) return;
   const UiRect layout = UiLayoutRect(screen.layout, ctx.view_w, ctx.view_h);
   for (const UiElement& e : screen.elements) DrawElement(e, layout, ctx);
+}
+UiElement UiElementFromData(const UiElementData& d, const eng::TextureId* textures,
+                            int texture_count) {
+  UiElement e;
+  e.id = d.id;
+  e.kind = static_cast<UiKind>(d.kind);
+  e.anchor = static_cast<UiAnchor>(d.anchor);
+  e.x = d.x;
+  e.y = d.y;
+  e.w = d.w;
+  e.h = d.h;
+  e.slice = UiNineSlice{d.slice_l, d.slice_r, d.slice_t, d.slice_b, d.slice_tile};
+  e.texture = (d.image >= 0 && d.image < texture_count && textures != nullptr)
+                  ? textures[d.image]
+                  : 0;
+  e.src = eng::TexRegion{d.src_x, d.src_y, d.src_w, d.src_h};
+  e.frames = d.frames;
+  e.frame = d.frame;
+  e.text = d.text;
+  e.font_size = d.font_size;
+  e.color = d.color;
+  e.align = d.align;
+  e.binding.name = d.binding.name;
+  e.binding.map = d.binding.map;
+  e.binding.in_min = d.binding.in_min;
+  e.binding.in_max = d.binding.in_max;
+  e.binding.out_min = d.binding.out_min;
+  e.binding.out_max = d.binding.out_max;
+  e.binding.format = d.binding.format;
+  e.visible_var = d.visible_var;
+  e.visible_value = d.visible_value;
+  e.padding = d.padding;
+  for (const UiElementData& child : d.children) {
+    e.children.push_back(UiElementFromData(child, textures, texture_count));
+  }
+  return e;
+}
+
+UiScreen UiScreenFromData(const UiScreenData& d, const eng::TextureId* textures,
+                          int texture_count) {
+  UiScreen s;
+  s.id = d.id;
+  s.name = d.name;
+  s.modal = d.modal;
+  s.layout = static_cast<UiLayout>(d.layout);
+  for (const UiElementData& e : d.elements) {
+    s.elements.push_back(UiElementFromData(e, textures, texture_count));
+  }
+  return s;
 }
 
 }  // namespace r4

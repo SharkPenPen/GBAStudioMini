@@ -520,6 +520,7 @@ bool ReadScene(Reader& r, Scene* s, std::string* error) {
   }
   s->gravity = r.I32();
   s->controlled = r.I32();
+  s->hud_ui = r.I32();
   if (!r.ok || s->layers.empty()) {
     SetErr(error, "p3d: bad scene");
     return false;
@@ -536,6 +537,110 @@ bool ReadTransition(Reader& r, Transition* t) {
   t->set_variable = r.Str();
   t->set_value = r.I32();
   return r.ok;
+}
+
+bool ReadUiElement(Reader& r, UiElementData* e) {
+  e->id = r.Str();
+  e->kind = r.U8();
+  e->anchor = r.U8();
+  e->x = r.I32();
+  e->y = r.I32();
+  e->w = r.I32();
+  e->h = r.I32();
+  e->slice_l = r.I32();
+  e->slice_r = r.I32();
+  e->slice_t = r.I32();
+  e->slice_b = r.I32();
+  e->slice_tile = r.U8() != 0;
+  e->image = r.I32();
+  e->src_x = r.I32();
+  e->src_y = r.I32();
+  e->src_w = r.I32();
+  e->src_h = r.I32();
+  e->frames = r.I32();
+  e->frame = r.I32();
+  e->text = r.Str();
+  e->font_size = r.I32();
+  e->color = r.U32();
+  e->align = r.U8();
+  e->binding.name = r.Str();
+  e->binding.map = r.U8();
+  e->binding.in_min = r.I32();
+  e->binding.in_max = r.I32();
+  e->binding.out_min = r.I32();
+  e->binding.out_max = r.I32();
+  e->binding.format = r.Str();
+  e->visible_var = r.Str();
+  e->visible_value = r.I32();
+  e->padding = r.I32();
+  const uint16_t cn = r.U16();
+  if (!r.ok || cn > 4096) return false;
+  e->children.resize(cn);
+  for (uint16_t i = 0; i < cn; ++i) {
+    if (!ReadUiElement(r, &e->children[i])) return false;
+  }
+  return r.ok;
+}
+
+bool ReadUiScreen(Reader& r, UiScreenData* s) {
+  s->id = r.Str();
+  s->name = r.Str();
+  s->modal = r.U8() != 0;
+  s->layout = r.U8();
+  const uint16_t n = r.U16();
+  if (!r.ok || n > 4096) return false;
+  s->elements.resize(n);
+  for (uint16_t i = 0; i < n; ++i) {
+    if (!ReadUiElement(r, &s->elements[i])) return false;
+  }
+  return r.ok;
+}
+
+void WriteUiElement(Writer& w, const UiElementData& e) {
+  w.Str(e.id);
+  w.U8(static_cast<uint8_t>(e.kind));
+  w.U8(static_cast<uint8_t>(e.anchor));
+  w.I32(e.x);
+  w.I32(e.y);
+  w.I32(e.w);
+  w.I32(e.h);
+  w.I32(e.slice_l);
+  w.I32(e.slice_r);
+  w.I32(e.slice_t);
+  w.I32(e.slice_b);
+  w.U8(e.slice_tile ? 1 : 0);
+  w.I32(e.image);
+  w.I32(e.src_x);
+  w.I32(e.src_y);
+  w.I32(e.src_w);
+  w.I32(e.src_h);
+  w.I32(e.frames);
+  w.I32(e.frame);
+  w.Str(e.text);
+  w.I32(e.font_size);
+  w.U32(e.color);
+  w.U8(static_cast<uint8_t>(e.align));
+  w.Str(e.binding.name);
+  w.U8(static_cast<uint8_t>(e.binding.map));
+  w.I32(e.binding.in_min);
+  w.I32(e.binding.in_max);
+  w.I32(e.binding.out_min);
+  w.I32(e.binding.out_max);
+  w.Str(e.binding.format);
+  w.Str(e.visible_var);
+  w.I32(e.visible_value);
+  w.I32(e.padding);
+  w.U16(static_cast<uint16_t>(std::min<size_t>(4096, e.children.size())));
+  for (const UiElementData& c : e.children) WriteUiElement(w, c);
+}
+
+void WriteUiScreen(Writer& w, const UiScreenData& s) {
+  w.Str(s.id);
+  w.Str(s.name);
+  w.U8(s.modal ? 1 : 0);
+  w.U8(static_cast<uint8_t>(s.layout));
+  w.U16(static_cast<uint16_t>(std::min<size_t>(4096, s.elements.size())));
+  for (const UiElementData& e : s.elements) WriteUiElement(w, e);
 }
 
 }  // namespace
@@ -647,6 +752,21 @@ bool P3dLoad(const unsigned char* data, size_t size, P3d* out,
       std::string gname = r.Str();
       const int gval = r.I32();
       p.global_vars.emplace_back(std::move(gname), gval);
+    }
+  }
+  if (version >= 75) {
+    p.persistent_ui = r.I32();
+    const uint16_t sn = r.U16();
+    if (!r.ok || sn > 256) {
+      SetErr(error, "p3d: bad ui screen count");
+      return false;
+    }
+    p.ui_screens.resize(sn);
+    for (uint16_t i = 0; i < sn; ++i) {
+      if (!ReadUiScreen(r, &p.ui_screens[i])) {
+        SetErr(error, "p3d: bad ui screen");
+        return false;
+      }
     }
   }
   *out = std::move(p);
@@ -953,6 +1073,7 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
     }
     w.I32(s.gravity);
     w.I32(s.controlled);
+    w.I32(s.hud_ui);
   }
 
   w.U32(static_cast<uint32_t>(p.transitions.size()));
@@ -982,6 +1103,13 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
   for (const auto& kv : p.global_vars) {
     w.Str(kv.first);
     w.I32(kv.second);
+  }
+  w.I32(p.persistent_ui);
+  w.U16(static_cast<uint16_t>(std::min<size_t>(256, p.ui_screens.size())));
+  for (const UiScreenData& s : p.ui_screens) WriteUiScreen(w, s);
+  if (!w.ok) {
+    SetErr(error, "p3d: write overflow/too long string");
+    return false;
   }
   std::ofstream f(path, std::ios::binary | std::ios::trunc);
   if (!f) {

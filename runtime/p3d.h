@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 74;  // 74: 删掉 SceneLayer.tileset
+constexpr uint32_t kP3dVersion = 75;  // 75: UI 屏幕 / 元素
+                                      // 74: 删掉 SceneLayer.tileset
                                       // 73: 项目视口 view_w/view_h
                                       // 72: 对象可推动标记
                                       // 69: 单屏，移除旧双屏字段与 UI 按钮动作
@@ -321,6 +322,7 @@ struct Scene {
   std::vector<UiText> ui_texts;  // v38
   std::vector<Trigger> triggers;  // v14
   int controlled = -1;  // v27: scene.objects 下标；-1 = 无
+  int hud_ui = -1;      // v75: p3d.ui_screens 下标；-1 = 无
 };
 
 struct Transition {
@@ -338,6 +340,55 @@ struct AudioClip {
   std::vector<unsigned char> data;  // 原始 wav/ogg 字节
 };
 
+struct UiBindingData {
+  std::string name;
+  int map = 0;  // 0 等于 / 1 线性 / 2 步进
+  int in_min = 0;
+  int in_max = 0;
+  int out_min = 0;
+  int out_max = 0;
+  std::string format;
+};
+
+struct UiElementData {
+  std::string id;
+  int kind = 0;    // 0 panel / 1 text / 2 image / 3 value_image / 4 value_bar
+  int anchor = 0;  // 0..8
+  int x = 0;
+  int y = 0;
+  int w = 0;
+  int h = 0;
+  int slice_l = 0;
+  int slice_r = 0;
+  int slice_t = 0;
+  int slice_b = 0;
+  bool slice_tile = true;
+  int image = -1;
+  int src_x = 0;
+  int src_y = 0;
+  int src_w = 0;
+  int src_h = 0;
+  int frames = 1;
+  int frame = 0;
+  std::string text;
+  int font_size = 10;
+  uint32_t color = 0xFFFFFFFFu;
+  int align = 0;
+  UiBindingData binding;
+  std::string visible_var;
+  int visible_value = 1;
+  int padding = 0;
+  std::vector<UiElementData> children;
+};
+
+struct UiScreenData {
+  std::string id;
+  std::string name;
+  bool modal = false;
+  int layout = 0;  // 0 screen / 1 safe
+  std::vector<UiElementData> elements;
+};
+
 struct P3d {
   // v45：项目级公式库（名字 → 表达式）
   std::map<std::string, std::string> formulas;
@@ -352,6 +403,8 @@ struct P3d {
   std::vector<Transition> transitions;
   // 全局变量：暂不写进 p3d（序列化下一步单独做，避免格式错位）
   std::vector<std::pair<std::string, int>> global_vars;
+  int persistent_ui = -1;  // v75: 常驻界面下标
+  std::vector<UiScreenData> ui_screens;  // v75
 };
 
 bool P3dLoad(const unsigned char* data, size_t size, P3d* out, std::string* error);

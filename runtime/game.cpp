@@ -11,6 +11,7 @@
 #include "engine/base/rect.h"
 #include "engine/render/font.h"
 #include "engine/render/texture.h"
+#include "runtime/ui.h"
 #include "runtime/audio.h"
 #include "runtime/expr.h"
 
@@ -687,6 +688,7 @@ void Game::DrawToast(eng::DrawList& dl, const eng::TextureId* textures,
   // 场景 UI 文本（屏幕坐标，visible_variable 为空 = 一直显示）
   if (p3d_ != nullptr && !p3d_->scenes.empty()) {
     const Scene& sc = p3d_->scenes[scene_index_];
+    if (sc.hud_ui < 0) {
     for (const Scene::UiText& u : sc.ui_texts) {
       // ★ 血条：直接用属性算比例，不用写规则 ★
       // ★ 图片元素：画对象动画的某一帧（图标、头像、心形…）★
@@ -842,10 +844,48 @@ void Game::DrawToast(eng::DrawList& dl, const eng::TextureId* textures,
       eng::DrawPixelText(dl, static_cast<float>(u.x), static_cast<float>(u.y),
                          shown.c_str(), 0xFFFFFFFFu, std::max(1, u.scale));
     }
+    }
   }
+  DrawUiScreens(dl, textures, texture_count);
   if (toast_timer_ <= 0.0f || toast_.empty()) return;
   const float w = eng::PixelTextWidth(toast_, 2);
   eng::DrawPixelText(dl, (view_w_ - w) * 0.5f, 12.0f, toast_, 0xFFFFFFFFu, 2);
+}
+
+int Game::UiValue(const char* name) const {
+  if (name == nullptr || name[0] == '\0') return 0;
+  auto it = variables_.find(name);
+  if (it != variables_.end()) return it->second;
+  auto at = player_.attrs.find(name);
+  if (at != player_.attrs.end()) return at->second;
+  return 0;
+}
+
+void Game::DrawUiScreens(eng::DrawList& dl, const eng::TextureId* textures,
+                         int texture_count) const {
+  if (p3d_ == nullptr || p3d_->scenes.empty()) return;
+  UiDrawContext ctx;
+  ctx.dl = &dl;
+  ctx.view_w = view_w_;
+  ctx.view_h = view_h_;
+  ctx.value = [](void* user, const char* name) {
+    return static_cast<const Game*>(user)->UiValue(name);
+  };
+  ctx.user = const_cast<Game*>(this);
+  const Scene& sc = p3d_->scenes[scene_index_];
+  if (sc.hud_ui >= 0 && sc.hud_ui < static_cast<int>(p3d_->ui_screens.size())) {
+    const UiScreen screen =
+        UiScreenFromData(p3d_->ui_screens[static_cast<size_t>(sc.hud_ui)],
+                         textures, texture_count);
+    UiDrawScreen(screen, ctx);
+  }
+  if (p3d_->persistent_ui >= 0 &&
+      p3d_->persistent_ui < static_cast<int>(p3d_->ui_screens.size())) {
+    const UiScreen screen =
+        UiScreenFromData(p3d_->ui_screens[static_cast<size_t>(p3d_->persistent_ui)],
+                         textures, texture_count);
+    UiDrawScreen(screen, ctx);
+  }
 }
 
 void Game::RenderHShooter(eng::DrawList& dl, const eng::TextureId* textures,

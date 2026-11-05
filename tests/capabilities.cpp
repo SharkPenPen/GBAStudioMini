@@ -166,6 +166,17 @@ void TestFixedCameraCenters() {
 
 void TestP3dRoundTrip() {
   r4::P3d p = BaseP3d();
+  r4::UiScreenData hud;
+  hud.id = "hud";
+  hud.name = "HUD";
+  r4::UiElementData label;
+  label.kind = 1;
+  label.text = "hp";
+  label.x = 10;
+  label.y = 10;
+  hud.elements.push_back(label);
+  p.ui_screens.push_back(hud);
+  p.scenes[0].hud_ui = 0;
   const std::filesystem::path path =
       std::filesystem::temp_directory_path() / "pocketloom_cap_test.p3d";
   std::filesystem::remove(path);
@@ -179,6 +190,14 @@ void TestP3dRoundTrip() {
   CHECK(q.view_h == 272);
   CHECK(!q.scenes.empty());
   if (!q.scenes.empty()) CHECK(q.scenes[0].id == "test");
+  CHECK(q.ui_screens.size() == 1);
+  CHECK(q.scenes[0].hud_ui == 0);
+  if (!q.ui_screens.empty()) {
+    CHECK(q.ui_screens[0].elements.size() == 1);
+    if (!q.ui_screens[0].elements.empty()) {
+      CHECK(q.ui_screens[0].elements[0].text == "hp");
+    }
+  }
   std::filesystem::remove(path);
 }
 
