@@ -624,19 +624,6 @@ bool SceneLoad(const std::filesystem::path& path, SceneDoc* out,
   if (!ReadString(root, "bgm", &s.bgm, &found, error)) return false;
   if (!ReadString(root, "camera_mode", &s.camera_mode, &found, error)) return false;
   if (s.camera_mode.empty()) s.camera_mode = "follow";
-  int scroll_speed = 0;
-  if (!ReadInt(root, "scroll_speed", &scroll_speed, &found, error)) return false;
-  if (found) s.scroll_speed = scroll_speed;
-  int scroll_speed_y = 0;
-  if (!ReadInt(root, "scroll_speed_y", &scroll_speed_y, &found, error)) return false;
-  if (found) s.scroll_speed_y = scroll_speed_y;
-  int scroll_end_x = 0;
-  if (!ReadInt(root, "scroll_end_x", &scroll_end_x, &found, error)) return false;
-  if (found) s.scroll_end_x = scroll_end_x;
-  int scroll_end_y = 0;
-  if (!ReadInt(root, "scroll_end_y", &scroll_end_y, &found, error)) return false;
-  if (found) s.scroll_end_y = scroll_end_y;
-  if (!ReadString(root, "scroll_next", &s.scroll_next, &found, error)) return false;
   if (!ReadBool(root, "objects_locked", &s.objects_locked, &found, error)) return false;
   const JsonValue* triggers = root.Find("triggers");
   if (triggers != nullptr && triggers->IsArray()) {
@@ -852,15 +839,6 @@ void SceneSyncRaw(SceneDoc* s) {
   root.Set("bgm", JsonValue::String(s->bgm));
   root.Set("camera_mode", JsonValue::String(
       s->camera_mode.empty() ? "follow" : s->camera_mode));
-  root.Set("scroll_speed", JsonValue::Number(static_cast<double>(s->scroll_speed)));
-  if (s->scroll_speed_y != 0) {
-    root.Set("scroll_speed_y", JsonValue::Number(static_cast<double>(s->scroll_speed_y)));
-  }
-  if (s->scroll_end_x != 0 || s->scroll_end_y != 0 || !s->scroll_next.empty()) {
-    root.Set("scroll_end_x", JsonValue::Number(static_cast<double>(s->scroll_end_x)));
-    root.Set("scroll_end_y", JsonValue::Number(static_cast<double>(s->scroll_end_y)));
-    root.Set("scroll_next", JsonValue::String(s->scroll_next));
-  }
   root.Set("objects_locked", JsonValue::Bool(s->objects_locked));
   JsonValue variables = JsonValue::Object();
   for (const auto& entry : s->variables) {

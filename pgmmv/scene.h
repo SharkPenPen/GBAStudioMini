@@ -125,11 +125,6 @@ struct SceneDoc {
   int gravity = 900;
   std::string bgm;  // 背景音乐资源 id  // platformer / free2d
   std::string camera_mode = "follow";     // follow / fixed / auto_scroll
-  int scroll_speed = 30;    // 横版射击自动卷轴 px/s
-  int scroll_speed_y = 0;   // 纵版：正值 = 画面内容向下滚 px/s
-  int scroll_end_x = 0;     // 卷轴关卡：横向卷过这么多像素就切场景（0 = 不切）
-  int scroll_end_y = 0;     // 纵向卷轴版
-  std::string scroll_next;  // 切到哪个场景（空 = 不切）
   bool objects_locked = false;  // 编辑器只读：对象层锁定
   std::map<std::string, int> variables;  // 场景初始变量
   std::string hud_ui;  // 引用工程里的 UiScreenDoc id；空 = 无 HUD

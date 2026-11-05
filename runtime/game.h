@@ -118,7 +118,6 @@ enum class ControlProfile {
 enum class CameraProfile {
   kFollow,
   kFixed,
-  kAutoScroll,
 };
 
 class Game {
@@ -194,11 +193,6 @@ class Game {
                         int texture_count) const;
   void RenderShooter(eng::DrawList& dl, const eng::TextureId* textures,
                      int texture_count) const;
-  void InitHShooter();
-  void UpdateHShooter(float dt, const eng::InputState& input);
-  void RenderHShooter(eng::DrawList& dl, const eng::TextureId* textures,
-                      int texture_count) const;
-  void HShooterHitPlayer();
   void SpawnProjectiles(const Object& owner, float ox, float oy, float ovx, float ovy,
                         bool from_player, int parent_scene_object);
   void UpdateProjectiles(float dt);
@@ -256,8 +250,6 @@ class Game {
   Trigger pending_trigger_;
   std::vector<TriggerAction> pending_actions_;
   float shooter_time_ = 0.0f;
-  float hscroll_x_ = 0.0f;
-  float vscroll_y_ = 0.0f;  // 纵版卷轴累计偏移（正 = 内容往下走）
   float shooter_fire_timer_ = 0.0f;
   float shooter_dive_timer_ = 0.0f;
   float camera_x_ = 0.0f;

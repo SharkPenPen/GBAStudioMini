@@ -333,11 +333,6 @@ bool ReadScene(Reader& r, Scene* s, std::string* error) {
   s->camera_offset_y = r.I32();
   s->camera_deadzone_w = r.I32();
   s->camera_deadzone_h = r.I32();
-  s->scroll_speed = r.I32();
-  s->scroll_speed_y = r.I32();
-  s->scroll_end_x = r.I32();
-  s->scroll_end_y = r.I32();
-  s->scroll_next = r.Str();
   const uint16_t vn = r.U16();
   if (!r.ok || vn > 256) {
     SetErr(error, "p3d: bad scene variable count");
@@ -944,11 +939,6 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
     w.I32(s.camera_offset_y);
     w.I32(s.camera_deadzone_w);
     w.I32(s.camera_deadzone_h);
-    w.I32(s.scroll_speed);
-    w.I32(s.scroll_speed_y);
-    w.I32(s.scroll_end_x);
-    w.I32(s.scroll_end_y);
-    w.Str(s.scroll_next);
     w.U16(static_cast<uint16_t>(s.variables.size()));
     for (const auto& entry : s.variables) {
       w.Str(entry.first);

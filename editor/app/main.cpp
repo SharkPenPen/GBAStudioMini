@@ -4589,14 +4589,14 @@ void DrawScenePageRight() {
     ImGui::SameLine();
     ImGui::TextDisabled("关闭后回到 (0,0)");
     ImGui::TextDisabled("相机（跟随时）");
-    const char* kModes[] = {"follow", "fixed", "auto_scroll"};
-    const char* kModeLabels[] = {"跟随（死区）", "固定", "自动滚动"};
+    const char* kModes[] = {"follow", "fixed"};
+    const char* kModeLabels[] = {"跟随（死区）", "固定"};
     int mode = 0;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 2; ++i) {
       if (s->camera_mode == kModes[i]) mode = i;
     }
     ImGui::SetNextItemWidth(-1.0f);
-    if (ImGui::Combo("##cam_mode", &mode, kModeLabels, 3)) {
+    if (ImGui::Combo("##cam_mode", &mode, kModeLabels, 2)) {
       PushUndo();
       s->camera_mode = kModes[mode];
       MarkDirty();
@@ -4622,15 +4622,6 @@ void DrawScenePageRight() {
     ImGui::SetNextItemWidth(90.0f);
     UndoIntField("##cam_oy", &s->camera.offset_y, 1);
     ImGui::TextDisabled("0,0 = 角色居中；死区外推到边才跟随");
-    if (s->camera_mode == "auto_scroll") {
-      ImGui::TextUnformatted("滚动速度 X / Y px/s");
-      ImGui::SetNextItemWidth(90.0f);
-      UndoIntField("##cam_scroll", &s->scroll_speed, 1);
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(90.0f);
-      UndoIntField("##cam_scroll_y", &s->scroll_speed_y, 1);
-      ImGui::TextDisabled("Y > 0 = 纵版：画面内容向下滚");
-    }
   }
 
   // ★ 对象（场景实例）属性 ★

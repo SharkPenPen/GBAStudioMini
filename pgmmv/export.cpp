@@ -889,11 +889,6 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
     rs.camera_offset_y = s.camera.offset_y;
     rs.camera_deadzone_w = s.camera.deadzone_w;
     rs.camera_deadzone_h = s.camera.deadzone_h;
-    rs.scroll_speed = s.scroll_speed;
-    rs.scroll_speed_y = s.scroll_speed_y;
-    rs.scroll_end_x = s.scroll_end_x;
-    rs.scroll_end_y = s.scroll_end_y;
-    rs.scroll_next = s.scroll_next;
     rs.variables = s.variables;
     for (const TriggerDef& t : s.triggers) {
       r4::Trigger rt;
