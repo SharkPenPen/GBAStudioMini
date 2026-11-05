@@ -197,6 +197,7 @@ int g_selected_placed_object = -1;
 int g_selected_trigger = -1;
 std::string g_selected_ui_screen;
 int g_selected_ui_element = -1;
+bool g_ui_dragging = false;
 std::set<int> g_placed_multi;
 std::vector<pgmmv::SceneObject> g_scene_clipboard;
 int g_selected_tile = 0;
@@ -6918,6 +6919,20 @@ void DrawUiPageCenter() {
     if (e.kind == "text") dl->AddText(p, col, e.text.c_str());
     if (clicked && ImGui::IsMouseHoveringRect(p, ImVec2(p.x + sz.x, p.y + sz.y))) {
       g_selected_ui_element = i;
+      g_ui_dragging = true;
+    }
+  }
+  if (g_ui_dragging) {
+    if (ImGui::IsMouseDown(0)) {
+      const ImVec2 delta = ImGui::GetIO().MouseDelta;
+      pgmmv::UiElementDoc* e = CurrentUiElement();
+      if (e != nullptr && (delta.x != 0.0f || delta.y != 0.0f)) {
+        e->x += static_cast<int>(std::round(delta.x / scale));
+        e->y += static_cast<int>(std::round(delta.y / scale));
+        MarkDirty();
+      }
+    } else {
+      g_ui_dragging = false;
     }
   }
   ImGui::Dummy(canvas);
@@ -6974,6 +6989,29 @@ void DrawUiPageRight() {
   if (ImGui::Combo("类型", &kind, kUiKinds, 5)) {
     e->kind = kUiKinds[kind];
     MarkDirty();
+  }
+  if (e->kind == "image" || e->kind == "panel" || e->kind == "value_image") {
+    const char* cur = e->image.empty() ? "(无)" : e->image.c_str();
+    if (ImGui::BeginCombo("图片", cur)) {
+      if (ImGui::Selectable("(无)", e->image.empty())) {
+        e->image.clear();
+        MarkDirty();
+      }
+      for (const pgmmv::Asset& a : g_project.assets) {
+        if (a.kind != pgmmv::AssetKind::kImage) continue;
+        const bool sel = (e->image == a.id);
+        const std::string label = a.name.empty() ? a.id : a.name;
+        if (ImGui::Selectable(label.c_str(), sel)) {
+          e->image = a.id;
+          e->src_x = 0;
+          e->src_y = 0;
+          e->src_w = a.width;
+          e->src_h = a.height;
+          MarkDirty();
+        }
+      }
+      ImGui::EndCombo();
+    }
   }
   int anchor = 0;
   for (int i = 0; i < 9; ++i) if (e->anchor == kUiAnchors[i]) anchor = i;

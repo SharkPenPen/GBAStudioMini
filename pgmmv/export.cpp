@@ -357,7 +357,11 @@ int AnchorFromName(const std::string& a) {
   return 0;
 }
 
-r4::UiElementData ConvertUiElement(const UiElementDoc& u) {
+r4::UiElementData ConvertUiElement(const UiElementDoc& u,
+                                   const Project& project,
+                                   std::map<std::string, LoadedImage>* image_cache,
+                                   std::map<std::string, int>* ui_images,
+                                   r4::P3d* p, std::string* error) {
   r4::UiElementData e;
   e.id = u.id;
   if (u.kind == "text") e.kind = 1;
@@ -375,11 +379,38 @@ r4::UiElementData ConvertUiElement(const UiElementDoc& u) {
   e.slice_t = u.slice_t;
   e.slice_b = u.slice_b;
   e.slice_tile = u.slice_tile;
-  e.image = -1;  // 图片元素下一步接资源索引
+  e.image = -1;
+  if (!u.image.empty()) {
+    auto it = ui_images->find(u.image);
+    if (it != ui_images->end()) {
+      e.image = it->second;
+    } else {
+      const Asset* asset = project.FindAsset(u.image);
+      if (asset != nullptr) {
+        LoadedImage* src = nullptr;
+        if (LoadSourceImage(project, asset->path, image_cache, &src, error)) {
+          r4::Image img;
+          img.id = asset->id;
+          img.width = src->width;
+          img.height = src->height;
+          img.rgba = src->rgba;
+          const int index = static_cast<int>(p->images.size());
+          p->images.push_back(std::move(img));
+          (*ui_images)[u.image] = index;
+          e.image = index;
+        }
+      }
+    }
+  }
   e.src_x = u.src_x;
   e.src_y = u.src_y;
   e.src_w = u.src_w;
   e.src_h = u.src_h;
+  if (e.image >= 0 && e.image < static_cast<int>(p->images.size())) {
+    const r4::Image& img = p->images[static_cast<size_t>(e.image)];
+    if (e.src_w <= 0) e.src_w = img.width;
+    if (e.src_h <= 0) e.src_h = img.height;
+  }
   e.frames = u.frames;
   e.frame = u.frame;
   e.text = u.text;
@@ -397,7 +428,7 @@ r4::UiElementData ConvertUiElement(const UiElementDoc& u) {
   e.visible_value = u.visible_value;
   e.padding = u.padding;
   for (const UiElementDoc& child : u.children) {
-    e.children.push_back(ConvertUiElement(child));
+    e.children.push_back(ConvertUiElement(child, project, image_cache, ui_images, p, error));
   }
   return e;
 }
@@ -414,6 +445,8 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
   r4::P3d p;
   p.formulas = project.formulas;
   for (const auto& kv : project.variables) p.global_vars.emplace_back(kv.first, kv.second);
+  std::map<std::string, LoadedImage> image_cache;
+  std::map<std::string, int> ui_image_index;
   std::map<std::string, int> ui_index;
   for (const UiScreenDoc& us : project.ui_screens) {
     r4::UiScreenData screen;
@@ -422,7 +455,8 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
     screen.modal = us.modal;
     screen.layout = (us.layout == "safe") ? 1 : 0;
     for (const UiElementDoc& ue : us.elements) {
-      screen.elements.push_back(ConvertUiElement(ue));
+      screen.elements.push_back(ConvertUiElement(
+          ue, project, &image_cache, &ui_image_index, &p, error));
     }
     ui_index[us.id] = static_cast<int>(p.ui_screens.size());
     p.ui_screens.push_back(std::move(screen));
@@ -431,7 +465,6 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
     auto it = ui_index.find(project.persistent_ui);
     p.persistent_ui = it == ui_index.end() ? -1 : it->second;
   }
-  std::map<std::string, LoadedImage> image_cache;
 
   // 1) 图块：按 (tile_w, tile_h) 分组，组内只填场景实际用到的块，按页切开。
   //    每页一张 image；tileset 条目在第 3 步生成（顺序 = 页号）。

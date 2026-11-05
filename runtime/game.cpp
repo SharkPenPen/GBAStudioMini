@@ -854,6 +854,8 @@ void Game::DrawToast(eng::DrawList& dl, const eng::TextureId* textures,
 
 int Game::UiValue(const char* name) const {
   if (name == nullptr || name[0] == '\0') return 0;
+  if (std::strcmp(name, "score") == 0) return score_;
+  if (std::strcmp(name, "lives") == 0) return lives_;
   auto it = variables_.find(name);
   if (it != variables_.end()) return it->second;
   auto at = player_.attrs.find(name);

@@ -104,6 +104,26 @@ void DrawPanel(const UiElement& e, UiRect r, const UiDrawContext& ctx) {
   }
 }
 
+std::string UiFormatText(const std::string& text, const UiDrawContext& ctx) {
+  if (ctx.value == nullptr) return text;
+  std::string out;
+  for (size_t i = 0; i < text.size();) {
+    if (text[i] != '{') {
+      out.push_back(text[i++]);
+      continue;
+    }
+    const size_t end = text.find('}', i);
+    if (end == std::string::npos) {
+      out.append(text.substr(i));
+      break;
+    }
+    const std::string key = text.substr(i + 1, end - i - 1);
+    out += std::to_string(ctx.value(ctx.user, key.c_str()));
+    i = end + 1;
+  }
+  return out;
+}
+
 void DrawText(const std::string& text, UiRect r, const UiElement& e,
               const UiDrawContext& ctx) {
   const std::vector<std::string> lines =
@@ -192,6 +212,8 @@ void DrawElement(const UiElement& e, UiRect parent, const UiDrawContext& ctx) {
         char buf[96];
         std::snprintf(buf, sizeof(buf), e.binding.format.empty() ? "%d" : e.binding.format.c_str(), v);
         s = buf;
+      } else {
+        s = UiFormatText(s, ctx);
       }
       DrawText(s, r, e, ctx);
       break;
