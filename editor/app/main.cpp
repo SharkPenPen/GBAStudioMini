@@ -304,6 +304,56 @@ bool UndoIntField(const char* label, int* target, int min_value = -1000000000) {
   return true;
 }
 
+// ---- 统一按钮/排布 ---------------------------------------------------------
+constexpr float kRowButtonH = 24.0f;
+
+bool RowButton(const char* label) {
+  return ImGui::Button(label, ImVec2(-1.0f, kRowButtonH));
+}
+
+bool InlineButton(const char* label, float width = 88.0f) {
+  return ImGui::Button(label, ImVec2(width, 22.0f));
+}
+
+bool DialogButton(const char* label) {
+  return ImGui::Button(label, ImVec2(110.0f, 28.0f));
+}
+
+void PushDangerColors() {
+  ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.48f, 0.16f, 0.16f, 1.0f));
+  ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.64f, 0.22f, 0.22f, 1.0f));
+  ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.76f, 0.28f, 0.28f, 1.0f));
+}
+
+bool DangerRowButton(const char* label) {
+  PushDangerColors();
+  const bool clicked = ImGui::Button(label, ImVec2(-1.0f, kRowButtonH));
+  ImGui::PopStyleColor(3);
+  return clicked;
+}
+
+bool DangerSmallButton(const char* label) {
+  PushDangerColors();
+  const bool clicked = ImGui::SmallButton(label);
+  ImGui::PopStyleColor(3);
+  return clicked;
+}
+
+bool DangerInlineButton(const char* label, float width = 88.0f) {
+  PushDangerColors();
+  const bool clicked = ImGui::Button(label, ImVec2(width, 22.0f));
+  ImGui::PopStyleColor(3);
+  return clicked;
+}
+
+// 列表行末尾的“x”：统一贴右，不跟字段宽度漂移。
+bool RightSmallButton(const char* label) {
+  ImGui::SameLine();
+  const float x = ImGui::GetWindowContentRegionMax().x - 26.0f;
+  if (x > ImGui::GetCursorPosX()) ImGui::SetCursorPosX(x);
+  return ImGui::SmallButton(label);
+}
+
 // 文本输入 + 撤销：同样在激活那一帧压一次，打字过程中不重复压。
 void PushUndoOnActivate() {
   if (ImGui::IsItemActivated()) PushUndo();
@@ -1648,7 +1698,7 @@ void DrawProjectSettingsModal() {
     ImGui::Separator();
     ImGui::TextDisabled("屏幕：%d×%d", pgmmv::kScreenWidth, pgmmv::kScreenHeight);
     ImGui::Separator();
-    if (ImGui::Button("关闭", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
+    if (DialogButton("关闭")) ImGui::CloseCurrentPopup();
     ImGui::EndPopup();
   }
 }
@@ -1668,7 +1718,7 @@ void DrawConfirmModal() {
     ImGui::TextUnformatted("当前项目有未保存修改。");
     ImGui::TextDisabled("%s前要先保存吗？", what);
     ImGui::Separator();
-    if (ImGui::Button("保存", ImVec2(110, 28))) {
+    if (DialogButton("保存")) {
       std::string err;
       if (SaveCurrent(&err)) {
         g_show_confirm = false;
@@ -1679,13 +1729,13 @@ void DrawConfirmModal() {
       }
     }
     ImGui::SameLine();
-    if (ImGui::Button("不保存", ImVec2(110, 28))) {
+    if (DialogButton("不保存")) {
       g_show_confirm = false;
       ImGui::CloseCurrentPopup();
       ExecutePending();
     }
     ImGui::SameLine();
-    if (ImGui::Button("取消", ImVec2(110, 28))) {
+    if (DialogButton("取消")) {
       g_show_confirm = false;
       g_pending = PendingAction::kNone;
       ImGui::CloseCurrentPopup();
@@ -1717,14 +1767,14 @@ void DrawRenameObjectModal() {
     const bool enter = ImGui::InputText("##rename_object", g_rename_object_buf,
                                         sizeof(g_rename_object_buf),
                                         ImGuiInputTextFlags_EnterReturnsTrue);
-    if (enter || ImGui::Button("确定", ImVec2(100, 28))) {
+    if (enter || DialogButton("确定")) {
       obj->name = g_rename_object_buf;
       g_show_rename_object = false;
       MarkDirty();
       ImGui::CloseCurrentPopup();
     }
     ImGui::SameLine();
-    if (ImGui::Button("取消", ImVec2(100, 28))) {
+    if (DialogButton("取消")) {
       g_show_rename_object = false;
       ImGui::CloseCurrentPopup();
     }
@@ -1972,26 +2022,26 @@ void DrawObjectTimeline(pgmmv::ObjectDoc* obj, pgmmv::DirectionDef* dir) {
   // 动画页没有 ObjectDoc，obj 可以为空；只有“对象级碰撞”那一行依赖它。
   if (dir == nullptr) return;
   EditorEnsureActionHolds(dir);
-  if (ImGui::Button("|<")) { g_anim_frame = 0; g_anim_playing = false; }
+  if (ImGui::Button("|<", ImVec2(48, 24))) { g_anim_frame = 0; g_anim_playing = false; }
   ImGui::SameLine();
-  if (ImGui::Button("<")) {
+  if (ImGui::Button("<", ImVec2(48, 24))) {
     g_anim_frame = std::max(0, g_anim_frame - 1);
     g_anim_playing = false;
   }
   ImGui::SameLine();
-  if (ImGui::Button(g_anim_playing ? "暂停" : "播放")) {
+  if (ImGui::Button(g_anim_playing ? "暂停" : "播放", ImVec2(56, 24))) {
     g_anim_playing = !g_anim_playing;
     g_anim_accum = 0.0;
     if (g_anim_playing && dir->frames.empty()) g_anim_playing = false;
   }
   ImGui::SameLine();
-  if (ImGui::Button(">")) {
+  if (ImGui::Button(">", ImVec2(48, 24))) {
     g_anim_frame = std::min(static_cast<int>(dir->frames.size()) - 1,
                             g_anim_frame + 1);
     g_anim_playing = false;
   }
   ImGui::SameLine();
-  if (ImGui::Button(">|")) {
+  if (ImGui::Button(">|", ImVec2(48, 24))) {
     g_anim_frame = std::max(0, static_cast<int>(dir->frames.size()) - 1);
     g_anim_playing = false;
   }
@@ -2240,7 +2290,7 @@ void DrawObjectAnimation() {
   ImGui::BeginChild("##seq_frames_col", ImVec2(0, top_h), true);
   ImGui::TextDisabled("帧（%d）", static_cast<int>(dir->frames.size()));
   // ★ 新建帧 = 复制当前帧 ★（一整份数据，含三个盒子和以后的连接点）
-    if (ImGui::Button("+ 帧")) {
+    if (InlineButton("+ 帧", 64)) {
     const int at = dir->frames.empty()
                        ? 0
                        : std::min(static_cast<int>(dir->frames.size()),
@@ -2258,7 +2308,7 @@ void DrawObjectAnimation() {
     MarkDirty();
   }
   ImGui::SameLine();
-  if (ImGui::Button("删除帧") && dir->frames.size() > 1) {
+  if (DangerInlineButton("删除帧", 64) && dir->frames.size() > 1) {
     dir->frames.erase(dir->frames.begin() + g_anim_frame);
     if (g_anim_frame >= static_cast<int>(dir->frames.size())) {
       g_anim_frame = static_cast<int>(dir->frames.size()) - 1;
@@ -2847,13 +2897,13 @@ void DrawObjectLeft() {
     ImGui::TextDisabled("先新建或打开项目");
     return;
   }
-  if (ImGui::Button("新建对象", ImVec2(-1, 0))) {
+  if (RowButton("新建对象")) {
     CreateObject();
   }
-  if (ImGui::Button("导入对象模板", ImVec2(-1, 0))) {
+  if (RowButton("导入对象模板")) {
     ImportObjectTemplate();
   }
-  if (ImGui::Button("批量导入对象模板", ImVec2(-1, 0))) {
+  if (RowButton("批量导入对象模板")) {
     ImportObjectTemplatesBulk();
   }
   ImGui::Separator();
@@ -2881,16 +2931,16 @@ void DrawObjectLeft() {
   }
   if (!g_selected_object.empty()) {
     ImGui::Separator();
-    if (ImGui::Button("重命名选中对象", ImVec2(-1, 0))) {
+    if (RowButton("重命名选中对象")) {
       const pgmmv::ObjectDoc* obj = CurrentObject();
       std::snprintf(g_rename_object_buf, sizeof(g_rename_object_buf), "%s",
                     obj != nullptr ? obj->name.c_str() : "");
       g_show_rename_object = true;
     }
-    if (ImGui::Button("复制选中对象", ImVec2(-1, 0))) DuplicateCurrentObject();
-    if (ImGui::Button("导出对象模板", ImVec2(-1, 0))) ExportCurrentObjectTemplate();
-    if (ImGui::Button("导出模板包（含图像）", ImVec2(-1, 0))) ExportCurrentObjectPackage();
-    if (ImGui::Button("删除选中对象", ImVec2(-1, 0))) {
+    if (RowButton("复制选中对象")) DuplicateCurrentObject();
+    if (RowButton("导出对象模板")) ExportCurrentObjectTemplate();
+    if (RowButton("导出模板包（含图像）")) ExportCurrentObjectPackage();
+    if (DangerRowButton("删除选中对象")) {
       DeleteObject(g_selected_object);
     }
   }
@@ -3077,7 +3127,7 @@ void DrawPgTabs() {
 }
 void DrawTilePageLeft() {
   ImGui::TextDisabled("图块列表");
-  if (ImGui::Button("新建图块组", ImVec2(-1.0f, 26.0f))) {
+  if (RowButton("新建图块组")) {
     int n = 1;
     std::string id;
     for (;;) {
@@ -3093,7 +3143,7 @@ void DrawTilePageLeft() {
   }
   // ★ 走 DeleteTileset：先查引用，别再直接 erase ★
   //   直接删会把场景里的 tileset id 删成悬空引用（那些格子导出时全变空）。
-  if (!g_selected_tileset.empty() && ImGui::Button("删除选中", ImVec2(-1.0f, 24.0f))) {
+  if (!g_selected_tileset.empty() && DangerRowButton("删除选中图块组")) {
     DeleteTileset(g_selected_tileset);
   }
   ImGui::Separator();
@@ -3390,7 +3440,7 @@ void DrawScenePageLeft() {
   // ★ 场景树 ★
   //   场景 → 图层 / 触发器 / 对象。触发器和对象本来就存在 scene.json 里，
   //   树只是把它们摊开；选中谁，右栏就显示谁的属性。
-  if (ImGui::Button("+ 新建", ImVec2(-1.0f, 26.0f))) {
+  if (RowButton("+ 新建")) {
     ImGui::OpenPopup("##scene_tree_new");
   }
   if (ImGui::BeginPopup("##scene_tree_new")) {
@@ -3455,7 +3505,7 @@ void DrawScenePageLeft() {
   {
     pgmmv::SceneDoc* cur = CurrentScene();
     ImGui::BeginDisabled(cur == nullptr);
-    if (ImGui::Button("+ 触发器", ImVec2(-1.0f, 22.0f))) {
+    if (RowButton("+ 触发器")) {
       if (cur != nullptr) {
         PushUndo();
         pgmmv::TriggerDef t;
@@ -3477,7 +3527,7 @@ void DrawScenePageLeft() {
         MarkDirty();
       }
     }
-    if (ImGui::Button("+ 对象实例", ImVec2(-1.0f, 22.0f))) {
+    if (RowButton("+ 对象实例")) {
       if (cur != nullptr) {
         std::string obj_id = g_selected_object_for_place;
         if (obj_id.empty() && !g_project.objects.empty()) {
@@ -3497,7 +3547,7 @@ void DrawScenePageLeft() {
     ImGui::EndDisabled();
   }
 
-  if (!g_selected_scene.empty() && ImGui::Button("删除选中", ImVec2(-1.0f, 24.0f))) {
+  if (!g_selected_scene.empty() && DangerRowButton("删除选中的场景内容")) {
     pgmmv::SceneDoc* cur = CurrentScene();
     if (g_scene_sel_kind == SceneSelKind::kTrigger && cur != nullptr &&
         g_selected_trigger >= 0 &&
@@ -3744,7 +3794,7 @@ void DrawScenePageCenter() {
   ImGui::SetNextItemWidth(120.0f);
   ImGui::SliderFloat("##scene_zoom", &zoom, 0.1f, 5.0f, "%.2fx");
   ImGui::SameLine();
-  if (ImGui::Button("适配")) g_scene_fit_requested = true;
+  if (InlineButton("适配", 64)) g_scene_fit_requested = true;
   ImGui::SameLine();
   ImGui::TextDisabled("左键画 / 右键擦 / 图块 %d:%d", g_paint_slot, g_paint_tile);
   ImGui::SameLine();
@@ -3800,9 +3850,9 @@ void DrawScenePageCenter() {
       }
     }
     ImGui::SameLine(0.0f, 16.0f);
-    if (ImGui::SmallButton("全墙")) g_collision_mask = 15;
+    if (InlineButton("全墙", 64)) g_collision_mask = 15;
     ImGui::SameLine();
-    if (ImGui::SmallButton("清空笔")) g_collision_mask = 0;
+    if (InlineButton("清空笔", 64)) g_collision_mask = 0;
     ImGui::SameLine();
     ImGui::TextDisabled("左键写笔头 · 右键擦");
   }
@@ -4631,13 +4681,13 @@ void DrawScenePageRight() {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(90.0f);
     UndoIntField("##oy", &o.y);
-    if (ImGui::Button("聚焦实例", ImVec2(-1.0f, 24.0f))) {
+    if (RowButton("聚焦实例")) {
       g_scene_focus_pending = true;
       g_scene_focus_x = static_cast<float>(o.x);
       g_scene_focus_y = static_cast<float>(o.y) +
                         (ref != nullptr ? static_cast<float>(ref->frame.h) * 0.5f : 16.0f);
     }
-    if (ImGui::Button("复制对象", ImVec2(-1.0f, 24.0f))) {
+    if (RowButton("复制对象")) {
       const std::string obj_id = o.object;
       const int ox = o.x;
       const int oy = o.y;
@@ -4646,7 +4696,7 @@ void DrawScenePageRight() {
       g_selected_placed_object = static_cast<int>(s->objects.size()) - 1;
       MarkDirty();
     }
-    if (ImGui::Button("删除对象", ImVec2(-1.0f, 24.0f))) {
+    if (DangerRowButton("删除对象")) {
       PushUndo();
       s->objects.erase(s->objects.begin() + g_selected_placed_object);
       g_selected_placed_object = -1;
@@ -4747,7 +4797,7 @@ void DrawScenePageRight() {
         ImGui::SetNextItemWidth(60.0f);
         if (ImGui::InputInt("##v", &a.value)) MarkDirty();
         ImGui::SameLine();
-        if (ImGui::SmallButton("x")) del = static_cast<int>(i);
+        if (RightSmallButton("x")) del = static_cast<int>(i);
         ImGui::PopID();
       }
       if (del >= 0) {
@@ -4755,7 +4805,7 @@ void DrawScenePageRight() {
         list->erase(list->begin() + del);
         MarkDirty();
       }
-      if (ImGui::SmallButton("+ 动作")) {
+      if (InlineButton("+ 动作", 64)) {
         PushUndo();
         pgmmv::TriggerAction a;
         a.type = "attr_add";
@@ -4796,7 +4846,7 @@ void DrawScenePageRight() {
       ImGui::SetNextItemWidth(60.0f);
       if (ImGui::InputInt("##rval", &rule.require_value)) MarkDirty();
       draw_actions("规则动作", &rule.actions, 0);
-      if (ImGui::SmallButton("删除规则")) del_rule = ri;
+      if (DangerSmallButton("删除规则")) del_rule = ri;
       ImGui::PopID();
     }
     if (del_rule >= 0) {
@@ -4804,7 +4854,7 @@ void DrawScenePageRight() {
       trg.rules.erase(trg.rules.begin() + del_rule);
       MarkDirty();
     }
-    if (ImGui::Button("+ 规则", ImVec2(-1.0f, 22.0f))) {
+    if (RowButton("+ 规则")) {
       PushUndo();
       pgmmv::TriggerRuleDef rule;
       trg.rules.push_back(rule);
@@ -4859,7 +4909,7 @@ void DrawScenePageRight() {
       if (ImGui::DragFloat("##val", &m.value, 0.05f, -9999.0f, 9999.0f, "%.2f")) MarkDirty();
       if (ImGui::IsItemActivated()) PushUndo();
       ImGui::SameLine();
-      if (ImGui::SmallButton("x")) remove_mod = mi;
+      if (RightSmallButton("x")) remove_mod = mi;
       ImGui::PopID();
     }
     if (remove_mod >= 0) {
@@ -4998,7 +5048,7 @@ void DrawScenePageRight() {
             }
           }
           ImGui::SameLine();
-          if (ImGui::SmallButton("x")) remove_act = ai;
+          if (RightSmallButton("x")) remove_act = ai;
           ImGui::PopID();
         }
         if (remove_act >= 0) {
@@ -5006,7 +5056,7 @@ void DrawScenePageRight() {
           trg.interaction.actions.erase(trg.interaction.actions.begin() + remove_act);
           MarkDirty();
         }
-        if (ImGui::Button("+ 动作")) {
+        if (InlineButton("+ 动作", 72)) {
           PushUndo();
           pgmmv::TriggerAction a;
           a.type = "dialogue";
@@ -5015,7 +5065,7 @@ void DrawScenePageRight() {
         }
       }
     }
-    if (ImGui::Button("+ 修饰器")) {
+    if (InlineButton("+ 修饰器", 80)) {
       PushUndo();
       pgmmv::StatMod m;
       m.id = pgmmv::StatId::kSpeed;
@@ -5025,7 +5075,7 @@ void DrawScenePageRight() {
       MarkDirty();
     }
     ImGui::SameLine();
-    if (ImGui::Button("删除触发器")) {
+    if (DangerInlineButton("删除触发器", 120)) {
       PushUndo();
       s->triggers.erase(s->triggers.begin() + g_selected_trigger);
       g_selected_trigger = -1;
@@ -5048,7 +5098,7 @@ void DrawScenePageRight() {
         ImGui::SetNextItemWidth(80.0f);
         if (ImGui::InputInt("##gv", &kv.second, 0, 0)) MarkDirty();
         ImGui::SameLine();
-        if (ImGui::SmallButton("x")) remove_g = kv.first;
+        if (RightSmallButton("x")) remove_g = kv.first;
         ImGui::PopID();
       }
       if (!remove_g.empty()) {
@@ -5059,14 +5109,14 @@ void DrawScenePageRight() {
       ImGui::SetNextItemWidth(140.0f);
       ImGui::InputTextWithHint("##newgvar", "新全局变量", new_gvar, sizeof(new_gvar));
       ImGui::SameLine();
-      if (ImGui::Button("+ 全局") && new_gvar[0] != 0) {
+      if (InlineButton("+ 全局", 72) && new_gvar[0] != 0) {
         g_project.variables[new_gvar] = 0;
         new_gvar[0] = 0;
         MarkDirty();
       }
     }
     ImGui::TextDisabled("场景（进入场景时重置）");
-    if (ImGui::Button("从触发器/UI 中收集")) {
+    if (InlineButton("从触发器/UI 中收集", 160)) {
       for (const pgmmv::TriggerDef& t : s->triggers) {
         if (!t.interaction.require_variable.empty() &&
             s->variables.find(t.interaction.require_variable) == s->variables.end()) {
@@ -5089,7 +5139,7 @@ void DrawScenePageRight() {
       ImGui::SetNextItemWidth(80.0f);
       if (ImGui::InputInt("##v", &kv.second, 0, 0)) MarkDirty();
       ImGui::SameLine();
-      if (ImGui::SmallButton("x")) remove_var = kv.first;
+      if (RightSmallButton("x")) remove_var = kv.first;
       ImGui::PopID();
     }
     if (!remove_var.empty()) {
@@ -5100,7 +5150,7 @@ void DrawScenePageRight() {
     ImGui::SetNextItemWidth(140.0f);
     ImGui::InputTextWithHint("##newvar", "新变量名", new_var, sizeof(new_var));
     ImGui::SameLine();
-    if (ImGui::Button("+ 变量") && new_var[0] != 0) {
+    if (InlineButton("+ 变量", 72) && new_var[0] != 0) {
       s->variables[new_var] = 0;
       new_var[0] = 0;
       MarkDirty();
@@ -5185,10 +5235,9 @@ void DrawAnimListLeft() {
     ImGui::TextDisabled("未打开项目");
     return;
   }
-  if (ImGui::Button("+ 动画", ImVec2(70, 22))) CreateAnimation();
-  ImGui::SameLine();
+  if (RowButton("+ 动画")) CreateAnimation();
   ImGui::BeginDisabled(CurrentAnimation() == nullptr);
-  if (ImGui::Button("删除", ImVec2(52, 22))) DeleteAnimation();
+  if (DangerRowButton("删除动画")) DeleteAnimation();
   ImGui::EndDisabled();
   ImGui::Separator();
   if (g_project.animations.empty()) {
@@ -5432,7 +5481,7 @@ void DoImportAudiosBulk() {
 
 void DrawAudioLeft() {
   ImGui::TextDisabled("声音列表");
-  if (ImGui::Button("导入音频", ImVec2(-1.0f, 26.0f))) DoImportAudiosBulk();
+  if (RowButton("导入音频")) DoImportAudiosBulk();
   ImGui::Separator();
   int count = 0;
   for (const pgmmv::Asset& a : g_project.assets) {
@@ -5456,7 +5505,7 @@ void DrawResourceLeft2() {
     return;
   }
   ImGui::TextDisabled("图像列表");
-  if (ImGui::Button("导入图片", ImVec2(-1.0f, 26.0f))) DoImportPngsBulk();
+  if (RowButton("导入图片")) DoImportPngsBulk();
   ImGui::SetNextItemWidth(-1.0f);
   ImGui::InputTextWithHint("##asset_search", "输入搜索文本", g_asset_search,
                            sizeof(g_asset_search));
@@ -5652,7 +5701,7 @@ void DrawResourceRight2() {
     ImGui::Separator();
     if (!arefs.empty()) {
       ImGui::TextDisabled("被引用，先解除引用再删除");
-    } else if (ImGui::Button("删除资源", ImVec2(-1.0f, 26.0f))) {
+    } else if (DangerRowButton("删除资源")) {
       for (size_t ai = 0; ai < g_project.assets.size(); ++ai) {
         if (g_project.assets[ai].id == aa->id) {
           g_project.assets.erase(g_project.assets.begin() + ai);
@@ -5694,7 +5743,7 @@ void DrawResourceRight2() {
   CollectAssetRefs(*asset, &refs2);
   if (!refs2.empty()) {
     ImGui::TextDisabled("被引用，先解除引用再删除");
-  } else if (ImGui::Button("删除资源", ImVec2(-1.0f, 26.0f))) {
+  } else if (DangerRowButton("删除资源")) {
     for (size_t ai = 0; ai < g_project.assets.size(); ++ai) {
       if (g_project.assets[ai].id == asset->id) {
         g_project.assets.erase(g_project.assets.begin() + ai);
@@ -6151,7 +6200,7 @@ void DrawObjectRules(pgmmv::ObjectDoc* obj) {
       ImGui::SetNextItemWidth(80.0f);
       if (ImGui::InputInt("##val", &obj->attrs[i].value)) MarkDirty();
       ImGui::SameLine();
-      if (ImGui::SmallButton("删")) del = static_cast<int>(i);
+      if (RightSmallButton("删")) del = static_cast<int>(i);
       ImGui::PopID();
     }
     if (del >= 0) {
@@ -6194,7 +6243,7 @@ void DrawObjectRules(pgmmv::ObjectDoc* obj) {
         MarkDirty();
       }
       ImGui::SameLine();
-      if (ImGui::SmallButton("+ 动作")) {
+      if (InlineButton("+ 动作", 64)) {
         PushUndo();
         pgmmv::Effect e;
         e.type = pgmmv::RuleAct::kMove;
@@ -6202,7 +6251,7 @@ void DrawObjectRules(pgmmv::ObjectDoc* obj) {
         MarkDirty();
       }
       ImGui::SameLine();
-      if (ImGui::SmallButton("删除")) del_rule = static_cast<int>(ri);
+      if (DangerSmallButton("删除")) del_rule = static_cast<int>(ri);
 
       // 条件行
       ImGui::TextColored(ImVec4(0.62f, 0.78f, 1.0f, 1.0f), "当");
@@ -6218,7 +6267,7 @@ void DrawObjectRules(pgmmv::ObjectDoc* obj) {
                           static_cast<int>(ri) * 100 + 1 + static_cast<int>(ci));
         ImGui::PopStyleColor(2);
         ImGui::SameLine();
-        if (ImGui::SmallButton("x##c")) del_cond = static_cast<int>(ci);
+        if (RightSmallButton("x##c")) del_cond = static_cast<int>(ci);
         if (ci + 1 < r.when.size()) {
           ImGui::SameLine();
           ImGui::TextDisabled("且");
@@ -6245,7 +6294,7 @@ void DrawObjectRules(pgmmv::ObjectDoc* obj) {
                          static_cast<int>(ri) * 100 + 10 + static_cast<int>(ai));
         ImGui::PopStyleColor(2);
         ImGui::SameLine();
-        if (ImGui::SmallButton("x##a")) del_act = static_cast<int>(ai);
+        if (RightSmallButton("x##a")) del_act = static_cast<int>(ai);
         if (ai + 1 < r.effects.size()) {
           ImGui::SameLine();
           ImGui::TextDisabled("·");
@@ -6320,7 +6369,7 @@ void DrawFormulaLibrary() {
     ImGui::SetNextItemWidth(-32.0f);
     if (ImGui::InputText("##expr", buf, sizeof(buf))) kv.second = buf;
     ImGui::SameLine();
-    if (ImGui::SmallButton("x")) del = kv.first;
+    if (RightSmallButton("x")) del = kv.first;
     ImGui::PopID();
   }
   if (!del.empty()) {
@@ -6448,7 +6497,7 @@ void DrawUiPageLeft() {
     return;
   }
   ImGui::TextUnformatted("界面列表");
-  if (ImGui::Button("+ 新界面")) {
+  if (RowButton("+ 新界面")) {
     PushUndo();
     pgmmv::UiScreenDoc s;
     s.id = UniqueUiId("ui_");
@@ -6470,7 +6519,7 @@ void DrawUiPageLeft() {
   if (s == nullptr) return;
   ImGui::Separator();
   ImGui::TextUnformatted("元素");
-  if (ImGui::Button("+ 元素")) {
+  if (RowButton("+ 元素")) {
     PushUndo();
     pgmmv::UiElementDoc e;
     e.id = UniqueUiElementId(*s, "el_");
@@ -6480,8 +6529,7 @@ void DrawUiPageLeft() {
     g_selected_ui_element = static_cast<int>(s->elements.size()) - 1;
     MarkDirty();
   }
-  ImGui::SameLine();
-  if (ImGui::Button("删除元素") && g_selected_ui_element >= 0 &&
+  if (DangerRowButton("删除元素") && g_selected_ui_element >= 0 &&
       g_selected_ui_element < static_cast<int>(s->elements.size())) {
     PushUndo();
     s->elements.erase(s->elements.begin() + g_selected_ui_element);
@@ -6496,7 +6544,7 @@ void DrawUiPageLeft() {
     }
   }
   ImGui::Separator();
-  if (ImGui::Button("删除界面")) {
+  if (DangerRowButton("删除界面")) {
     PushUndo();
     for (size_t i = 0; i < g_project.ui_screens.size(); ++i) {
       if (g_project.ui_screens[i].id == g_selected_ui_screen) {
