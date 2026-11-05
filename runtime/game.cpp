@@ -305,31 +305,15 @@ void Game::SetScene(int index) {
     player_.hp = player_.attrs["hp"];  // 运行时血量从属性表出发
 
   }
-  // ★ 不再单独存"游戏类型" ★
-  //   跟随相机 = 横版平台；固定/自动卷轴 = 飞行射击。这本来就是相机决定了玩法。
-  const bool free2d = (s.camera_mode == "fixed");
-  control_ = free2d ? ControlProfile::kFree2d : ControlProfile::kPlatformer;
-  if (s.camera_mode == "fixed") {
-    camera_profile_ = CameraProfile::kFixed;
-  } else {
-    camera_profile_ = CameraProfile::kFollow;
-  }
-  shooter_time_ = 0.0f;
-  shooter_fire_timer_ = 0.0f;
-  shooter_dive_timer_ = 0.0f;
-  shooter_bullets_.clear();
-  shooter_enemies_.clear();
+  camera_profile_ = (s.camera_mode == "fixed") ? CameraProfile::kFixed
+                                                 : CameraProfile::kFollow;
   InitSceneRuntime();
   UpdateCamera(0.016f);
   PlaySceneBgm();
 }
 
 void Game::InitSceneRuntime() {
-  if (control_ == ControlProfile::kPlatformer) {
-    InitEnemies();
-  } else {
-    InitShooter();
-  }
+  InitEnemies();
 }
 
 void Game::InitEnemies() {
@@ -373,74 +357,6 @@ void Game::InitEnemies() {
       }
     }
     enemies_.push_back(e);
-  }
-}
-
-void Game::InitShooter() {
-  shooter_enemies_.clear();
-  shooter_bullets_.clear();
-  shooter_explosions_.clear();
-  shooter_bullet_object_ = -1;
-  shooter_player_image_ = -1;
-  shooter_effect_object_ = -1;
-  if (p3d_ == nullptr) return;
-  for (int i = 0; i < static_cast<int>(p3d_->objects.size()); ++i) {
-    if (p3d_->objects[i].type == "player") {
-      player_object_ = i;
-      shooter_player_image_ = p3d_->objects[i].image;
-      break;
-    }
-  }
-  for (int i = 0; i < static_cast<int>(p3d_->objects.size()); ++i) {
-    if (p3d_->objects[i].type == "bullet") {
-      shooter_bullet_object_ = i;
-      break;
-    }
-  }
-  for (int i = 0; i < static_cast<int>(p3d_->objects.size()); ++i) {
-    if (p3d_->objects[i].type == "effect") {
-      shooter_effect_object_ = i;
-      break;
-    }
-  }
-  const Scene& s = p3d_->scenes[scene_index_];
-  for (int i = 0; i < static_cast<int>(s.objects.size()); ++i) {
-    const SceneObject& so = s.objects[i];
-    if (so.object < 0 || so.object >= static_cast<int>(p3d_->objects.size())) continue;
-    if (so.object == player_object_) continue;
-    const Object& o = p3d_->objects[so.object];
-    if (o.type != "enemy") continue;
-    ShooterEnemy e;
-    e.object = so.object;
-    e.scene_object = i;
-    e.home_x = static_cast<float>(so.x);
-    e.home_y = static_cast<float>(so.y);
-    e.x = e.home_x;
-    e.y = e.home_y;
-    e.phase = static_cast<float>(shooter_enemies_.size()) * 0.73f;
-    shooter_enemies_.push_back(e);
-  }
-  if (player_object_ >= 0) {
-    const Object& po = p3d_->objects[player_object_];
-    const float half_w = static_cast<float>(std::max(4, po.frame_w)) * 0.5f;
-    const float half_h = static_cast<float>(std::max(4, po.frame_h)) * 0.5f;
-    player_.x = std::max(half_w, std::min(view_w_ - half_w, player_.x));
-    player_.y = std::max(half_h, std::min(view_h_ - half_h, player_.y));
-  }
-  shooter_fire_timer_ = 0.0f;
-  shooter_dive_timer_ = 0.0f;
-  shooter_time_ = 0.0f;
-}
-
-void Game::ShooterHitPlayer() {
-  if (invuln_ > 0.0f) return;
-  AudioPlay(Sfx::kHurt);
-  invuln_ = 1.5f;
-  toast_ = "OUCH";
-  toast_timer_ = 1.0f;
-  if (player_object_ >= 0) {
-    player_.x = 200.0f;
-    player_.y = 208.0f;
   }
 }
 
@@ -806,296 +722,6 @@ void Game::ActivateModalFocus() {
         SetScene(i);
         return;
       }
-    }
-  }
-}
-
-void Game::UpdateShooter(float dt, const eng::InputState& input) {
-  shooter_time_ += dt;
-  
-  if (invuln_ > 0.0f) invuln_ -= dt;
-  if (toast_timer_ > 0.0f) toast_timer_ -= dt;
-  if (p3d_ == nullptr || player_object_ < 0) return;
-  const Object& po = p3d_->objects[player_object_];
-  const float half_w = static_cast<float>(std::max(4, po.frame_w)) * 0.5f;
-  const float half_h = static_cast<float>(std::max(4, po.frame_h)) * 0.5f;
-  const float speed = static_cast<float>(po.speed > 0 ? po.speed : 160);
-
-  int dx = 0, dy = 0;
-  if (eng::KeyDown(input, eng::Key::kLeft)) --dx;
-  if (eng::KeyDown(input, eng::Key::kRight)) ++dx;
-  if (eng::KeyDown(input, eng::Key::kUp)) --dy;
-  if (eng::KeyDown(input, eng::Key::kDown)) ++dy;
-  // 固定镜头/俯视关也走图块碰撞层，不再只是夹屏幕。
-  // 运行时需要推动场景实例，p3d_ 声明为 const 只限制别处；这里明确改实例位置。
-  Scene& sc = const_cast<Scene&>(p3d_->scenes[scene_index_]);
-  auto object_aabb = [&](int si, float* x0, float* y0, float* x1, float* y1) {
-    const SceneObject& so = sc.objects[static_cast<size_t>(si)];
-    if (so.object < 0 || so.object >= static_cast<int>(p3d_->objects.size())) return false;
-    const Object& oo = p3d_->objects[static_cast<size_t>(so.object)];
-    const AttackBox ob = ColBoxOf(oo, oo.default_action, 0);
-    if (ob.w <= 0 || ob.h <= 0) return false;
-    *x0 = static_cast<float>(so.x) + static_cast<float>(ob.x);
-    *y0 = static_cast<float>(so.y) + static_cast<float>(ob.y);
-    *x1 = *x0 + static_cast<float>(ob.w);
-    *y1 = *y0 + static_cast<float>(ob.h);
-    return true;
-  };
-  auto overlap_index = [&]() {
-    const AttackBox pb = ColBoxOf(po, player_.action, player_.frame);
-    const float px0 = player_.x + static_cast<float>(pb.x);
-    const float px1 = px0 + static_cast<float>(pb.w);
-    const float py0 = player_.y + static_cast<float>(pb.y);
-    const float py1 = py0 + static_cast<float>(pb.h);
-    for (size_t si = 0; si < sc.objects.size(); ++si) {
-      if (static_cast<int>(si) == sc.controlled) continue;
-      float ox0, oy0, ox1, oy1;
-      if (!object_aabb(static_cast<int>(si), &ox0, &oy0, &ox1, &oy1)) continue;
-      if (px1 > ox0 && px0 < ox1 && py1 > oy0 && py0 < oy1) return static_cast<int>(si);
-    }
-    return -1;
-  };
-  auto box_blocked = [&](int self, float x0, float y0, float x1, float y1) {
-    const int c0 = static_cast<int>(std::floor(x0 / 8.0f));
-    const int c1 = static_cast<int>(std::floor((x1 - 0.001f) / 8.0f));
-    const int r0 = static_cast<int>(std::floor(y0 / 8.0f));
-    const int r1 = static_cast<int>(std::floor((y1 - 0.001f) / 8.0f));
-    for (int r = r0; r <= r1; ++r)
-      for (int c = c0; c <= c1; ++c)
-        if (TileWallsAt(c, r) != 0) return true;
-    for (size_t si = 0; si < sc.objects.size(); ++si) {
-      if (static_cast<int>(si) == self || static_cast<int>(si) == sc.controlled) continue;
-      float ox0, oy0, ox1, oy1;
-      if (!object_aabb(static_cast<int>(si), &ox0, &oy0, &ox1, &oy1)) continue;
-      if (x1 > ox0 && x0 < ox1 && y1 > oy0 && y0 < oy1) return true;
-    }
-    return false;
-  };
-  auto try_push = [&](float delta, int axis) {
-    const int hit = overlap_index();
-    if (hit < 0) return true;
-    SceneObject& so = sc.objects[static_cast<size_t>(hit)];
-    const Object& oo = p3d_->objects[static_cast<size_t>(so.object)];
-    if (!oo.pushable) return false;
-    const int step = static_cast<int>(std::lround(delta));
-    if (step == 0) return false;
-    const int old_x = so.x;
-    const int old_y = so.y;
-    if (axis == 0) so.x += step; else so.y += step;
-    float x0, y0, x1, y1;
-    const bool ok = object_aabb(hit, &x0, &y0, &x1, &y1) &&
-                    !box_blocked(hit, x0, y0, x1, y1);
-    if (!ok) {
-      so.x = old_x;
-      so.y = old_y;
-      return false;
-    }
-    // 「可推动」条件规则的动作在推动成功这一帧执行（音效/动画等）。
-    for (const Rule& r : oo.rules) {
-      if (!r.enabled) continue;
-      bool pushed_rule = false;
-      for (const RuleCond& c : r.when) {
-        if (c.type == 12) pushed_rule = true;
-      }
-      if (!pushed_rule) continue;
-      for (const RuleEffect& e : r.effects) {
-        if (e.type == 5) PlayClipById(e.text);
-        if (e.type == 2) {
-          for (size_t ai = 0; ai < oo.actions.size(); ++ai) {
-            if (oo.actions[ai].name == e.text) {
-              so.action = static_cast<int>(ai);
-              so.anim_start = frame_count_;
-              break;
-            }
-          }
-        }
-      }
-    }
-    return true;
-  };
-  const float old_x = player_.x;
-  const float old_y = player_.y;
-  player_.vx = static_cast<float>(dx) * speed;
-  player_.vy = static_cast<float>(dy) * speed;
-  const float move_x = player_.vx * dt;
-  const float move_y = player_.vy * dt;
-  ResolveX(move_x, player_object_);
-  if (!try_push(move_x, 0)) player_.x = old_x;
-  ResolveY(move_y, player_object_);
-  if (!try_push(move_y, 1)) player_.y = old_y;
-  player_.vx = 0.0f;
-  player_.vy = 0.0f;
-  player_.x = std::max(half_w, std::min(view_w_ - half_w, player_.x));
-  player_.y = std::max(half_h, std::min(view_h_ - half_h, player_.y));
-  if (dx != 0) player_.facing = dx > 0 ? 1 : -1;
-
-  shooter_fire_timer_ -= dt;
-  const int fire_ticks = ObjIntAttr(po, "fire_interval", 12);
-  if (shooter_bullet_object_ >= 0 && shooter_fire_timer_ <= 0.0f &&
-      eng::KeyDown(input, eng::Key::kA)) {
-    const Object& bo = p3d_->objects[shooter_bullet_object_];
-    ShooterBullet b;
-    b.object = shooter_bullet_object_;
-    b.x = player_.x;
-    b.y = player_.y - half_h;
-    // 帧上有 muzzle 连接点就从枪口出弹
-    float mx = 0.0f;
-    float my = 0.0f;
-    if (PlayerAttachPoint("muzzle", &mx, &my)) {
-      b.x = mx;
-      b.y = my;
-    }
-    b.vy = -static_cast<float>(ObjIntAttr(bo, "bullet_speed", 300));
-    b.from_player = true;
-    shooter_bullets_.push_back(b);
-    if (!po.spawners.empty()) SpawnProjectiles(po, player_.x, player_.y, 0.0f, 0.0f, true, -1);
-    shooter_fire_timer_ = static_cast<float>(fire_ticks) / 60.0f;
-    AudioPlay(Sfx::kJump);
-  }
-
-  for (ShooterEnemy& e : shooter_enemies_) {
-    if (!e.alive) continue;
-    const Object& eo = p3d_->objects[e.object];
-    if (e.diving) {
-      e.dive_t += dt;
-      const float sx = player_.x - e.x;
-      const float sy = player_.y - e.y;
-      const float len = std::sqrt(sx * sx + sy * sy);
-      if (len > 1.0f) {
-        e.x += sx / len * 120.0f * dt;
-        e.y += sy / len * 120.0f * dt;
-      }
-      if (e.dive_t > 2.5f || e.y > 250.0f) {
-        e.diving = false;
-        e.x = e.home_x;
-        e.y = e.home_y;
-        e.dive_wait = 0.0f;
-      }
-    } else {
-      // 编队摆动 + 定期俯冲（以前是按对象配 behavior/patrol_range/dive_interval，
-      // 三个字段只服务这一处，就固定成同一种节奏了）
-      e.x = e.home_x + std::sin(shooter_time_ * 1.4f + e.phase) * 10.0f;
-      e.y = e.home_y + std::sin(shooter_time_ * 0.9f + e.phase) * 3.0f;
-      e.dive_wait += dt;
-      if (e.dive_wait >= 4.0f) {
-        e.diving = true;
-        e.dive_t = 0.0f;
-        e.dive_wait = 0.0f;
-      }
-    }
-
-    const float ex0 = e.x + static_cast<float>(eo.col_x);
-    const float ex1 = ex0 + static_cast<float>(eo.col_w);
-    const float ey0 = e.y + static_cast<float>(eo.col_y);
-    const float ey1 = ey0 + static_cast<float>(eo.col_h);
-    const float px0 = player_.x + static_cast<float>(po.col_x);
-    const float px1 = px0 + static_cast<float>(po.col_w);
-    const float py0 = player_.y + static_cast<float>(po.col_y);
-    const float py1 = py0 + static_cast<float>(po.col_h);
-    if (px1 > ex0 && px0 < ex1 && py1 > ey0 && py0 < ey1) {
-      ShooterHitPlayer();
-      
-    }
-
-    if (shooter_bullet_object_ >= 0) {
-      e.fire_timer += dt;
-      const float interval = static_cast<float>(std::max(1, ObjIntAttr(eo, "fire_interval", 120))) / 60.0f;
-      if (e.fire_timer >= interval) {
-        e.fire_timer = 0.0f;
-        const Object& bo = p3d_->objects[shooter_bullet_object_];
-        ShooterBullet b;
-        b.object = shooter_bullet_object_;
-        b.x = e.x;
-        b.y = e.y + static_cast<float>(eo.frame_h) * 0.5f;
-        b.vy = static_cast<float>(ObjIntAttr(bo, "bullet_speed", 300)) * 0.7f;
-        b.from_player = false;
-        shooter_bullets_.push_back(b);
-        if (!eo.spawners.empty()) SpawnProjectiles(eo, e.x, e.y, 0.0f, 0.0f, false, e.scene_object);
-      }
-    }
-  }
-
-  for (size_t ei = 0; ei < shooter_explosions_.size();) {
-    shooter_explosions_[ei].time += dt;
-    if (shooter_explosions_[ei].time > 0.45f) {
-      shooter_explosions_.erase(shooter_explosions_.begin() + ei);
-    } else {
-      ++ei;
-    }
-  }
-
-  const int player_bullet_object = shooter_bullet_object_;
-  for (size_t bi = 0; bi < shooter_bullets_.size();) {
-    ShooterBullet& b = shooter_bullets_[bi];
-    b.y += b.vy * dt;
-    if (b.y < -16.0f || b.y > 256.0f) {
-      shooter_bullets_.erase(shooter_bullets_.begin() + bi);
-      continue;
-    }
-    bool remove = false;
-    if (b.object < 0 || b.object >= static_cast<int>(p3d_->objects.size())) {
-      shooter_bullets_.erase(shooter_bullets_.begin() + bi);
-      continue;
-    }
-    const Object& bo = p3d_->objects[b.object];
-    const float bx0 = b.x + static_cast<float>(bo.col_x);
-    const float bx1 = bx0 + static_cast<float>(bo.col_w);
-    const float by0 = b.y + static_cast<float>(bo.col_y);
-    const float by1 = by0 + static_cast<float>(bo.col_h);
-    if (b.from_player) {
-      for (ShooterEnemy& e : shooter_enemies_) {
-        if (!e.alive) continue;
-        const Object& eo = p3d_->objects[e.object];
-        const float ex0 = e.x + static_cast<float>(eo.col_x);
-        const float ex1 = ex0 + static_cast<float>(eo.col_w);
-        const float ey0 = e.y + static_cast<float>(eo.col_y);
-        const float ey1 = ey0 + static_cast<float>(eo.col_h);
-        if (bx1 > ex0 && bx0 < ex1 && by1 > ey0 && by0 < ey1) {
-          e.alive = false;
-          score_ += ObjIntAttr(eo, "score", 100);
-          if (shooter_effect_object_ >= 0) {
-            ShooterExplosion fx;
-            fx.object = shooter_effect_object_;
-            fx.x = e.x;
-            fx.y = e.y;
-            shooter_explosions_.push_back(fx);
-          }
-          remove = true;
-          AudioPlay(Sfx::kCoin);
-          break;
-        }
-      }
-    } else {
-      const float px0 = player_.x + static_cast<float>(po.col_x);
-      const float px1 = px0 + static_cast<float>(po.col_w);
-      const float py0 = player_.y + static_cast<float>(po.col_y);
-      const float py1 = py0 + static_cast<float>(po.col_h);
-      if (bx1 > px0 && bx0 < px1 && by1 > py0 && by0 < py1) {
-        ShooterHitPlayer();
-        remove = true;
-      }
-    }
-    if (remove) {
-      shooter_bullets_.erase(shooter_bullets_.begin() + bi);
-    } else {
-      ++bi;
-    }
-  }
-  (void)player_bullet_object;
-
-  bool any_alive = false;
-  for (const ShooterEnemy& e : shooter_enemies_) {
-    if (e.alive) { any_alive = true; break; }
-  }
-  if (!any_alive && !shooter_enemies_.empty()) {
-    ShooterEnemy* none = nullptr;
-    (void)none;
-    for (ShooterEnemy& e : shooter_enemies_) {
-      e.alive = true;
-      e.x = e.home_x;
-      e.y = e.home_y;
-      e.fire_timer = 0.0f;
-      e.diving = false;
     }
   }
 }
@@ -1755,84 +1381,13 @@ void Game::UpdateProjectiles(float dt) {
     bool remove = p.life <= 0.0f;
     if (!remove && p.destroy_with_parent && p.parent_scene_object >= 0) {
       bool parent_dead = true;
-      if (control_ == ControlProfile::kPlatformer) {
-        for (const EnemyState& owner : enemies_) {
-          if (owner.scene_object == p.parent_scene_object && !owner.dead && !owner.dying) {
-            parent_dead = false;
-            break;
-          }
-        }
-      } else {
-        for (const ShooterEnemy& owner : shooter_enemies_) {
-          if (owner.scene_object == p.parent_scene_object && owner.alive) {
-            parent_dead = false;
-            break;
-          }
+      for (const EnemyState& owner : enemies_) {
+        if (owner.scene_object == p.parent_scene_object && !owner.dead && !owner.dying) {
+          parent_dead = false;
+          break;
         }
       }
       if (parent_dead) remove = true;
-    }
-    if (!remove && control_ == ControlProfile::kFree2d && p.hit_cd <= 0.0f &&
-        p.object >= 0 && p.object < static_cast<int>(p3d_->objects.size())) {
-      const Object& target = p3d_->objects[p.object];
-      if (p.from_player) {
-        for (ShooterEnemy& e : shooter_enemies_) {
-          if (!e.alive) continue;
-          if (e.object < 0 || e.object >= static_cast<int>(p3d_->objects.size())) continue;
-          const Object& eo = p3d_->objects[e.object];
-          if (ObjectTeam(eo) == ObjectTeam(target)) continue;
-          const AttackBox hb{eo.hurt_w > 0 ? eo.hurt_x : eo.col_x,
-                             eo.hurt_h > 0 ? eo.hurt_y : eo.col_y,
-                             eo.hurt_w > 0 ? eo.hurt_w : eo.col_w,
-                             eo.hurt_h > 0 ? eo.hurt_h : eo.col_h};
-          const float ex0 = e.x + static_cast<float>(hb.x);
-          const float ey0 = e.y + static_cast<float>(hb.y);
-          const float ex1 = ex0 + static_cast<float>(hb.w);
-          const float ey1 = ey0 + static_cast<float>(hb.h);
-          if (p.x <= ex0 || p.x >= ex1 || p.y <= ey0 || p.y >= ey1) continue;
-          e.alive = false;
-          score_ += ObjIntAttr(eo, "score", 100);
-          if (shooter_effect_object_ >= 0) {
-            ShooterExplosion fx;
-            fx.object = shooter_effect_object_;
-            fx.x = e.x;
-            fx.y = e.y;
-            shooter_explosions_.push_back(fx);
-          }
-          if (p.destroy_on_hit) remove = true; else p.hit_cd = 0.2f;
-          break;
-        }
-      } else {
-        AttackBox phb{po.hurt_x, po.hurt_y, po.hurt_w, po.hurt_h};
-        if (phb.w <= 0 || phb.h <= 0) {
-          phb = ColBoxOf(po, player_.action, player_.frame);
-        }
-        if (player_.action >= 0 && player_.action < static_cast<int>(po.actions.size())) {
-          const Action& pa = po.actions[player_.action];
-          if (player_.frame >= 0 && player_.frame < static_cast<int>(pa.frames.size())) {
-            const AttackBox& fb = pa.frames[player_.frame].hurt;
-            if (fb.w > 0 && fb.h > 0) phb = AttackBox{fb.x, fb.y, fb.w, fb.h};
-          }
-        }
-        const float px0 = player_.x + static_cast<float>(phb.x);
-        const float py0 = player_.y + static_cast<float>(phb.y);
-        const float px1 = px0 + static_cast<float>(phb.w);
-        const float py1 = py0 + static_cast<float>(phb.h);
-        if (ObjectTeam(po) != ObjectTeam(target) &&
-            p.x > px0 && p.x < px1 && p.y > py0 && p.y < py1) {
-          ShooterHitPlayer();
-          // 受击可能重置场景（清空 projectiles_），当前引用已失效
-          return;
-        }
-      }
-    }
-    if (!remove && control_ == ControlProfile::kFree2d) {
-      if (remove) {
-        projectiles_.erase(projectiles_.begin() + i);
-      } else {
-        ++i;
-      }
-      continue;
     }
     if (!remove && p.hit_cd <= 0.0f && p.object >= 0 &&
         p.object < static_cast<int>(p3d_->objects.size())) {
@@ -1890,8 +1445,8 @@ void Game::UpdateProjectiles(float dt) {
 void Game::RenderProjectiles(eng::DrawList& dl, const eng::TextureId* textures,
                              int texture_count) const {
   if (p3d_ == nullptr) return;
-  const float ox = control_ == ControlProfile::kPlatformer ? camera_x_ : 0.0f;
-  const float oy = control_ == ControlProfile::kPlatformer ? camera_y_ : 0.0f;
+  const float ox = camera_x_;
+  const float oy = camera_y_;
   for (const ProjectileState& p : projectiles_) {
     if (p.object < 0 || p.object >= static_cast<int>(p3d_->objects.size())) continue;
     const Object& o = p3d_->objects[p.object];
@@ -2558,102 +2113,8 @@ void Game::Update(float dt, const eng::InputState& input) {
     prev_input_ = input;
     return;
   }
-  if (control_ == ControlProfile::kFree2d &&
-      camera_profile_ == CameraProfile::kFixed) {
-    UpdateShooter(dt, input);
-    UpdateProjectiles(dt);
-    UpdateAnimation(dt);
-    UpdateTriggers();
-    prev_input_ = input;
-    return;
-  }
   UpdatePlatformer(dt, input);
   prev_input_ = input;  // 下一帧算 key_up 用
-}
-
-void Game::RenderShooter(eng::DrawList& dl, const eng::TextureId* textures,
-                              int texture_count) const {
-  dl.Clear(0xFF000000u);
-  for (int i = 0; i < 90; ++i) {
-    const int x = (i * 97 + static_cast<int>(shooter_time_ * 26.0f)) % 400;
-    const int y = (i * 53 + static_cast<int>(shooter_time_ * 17.0f)) % 240;
-    const bool bright = (i % 5) == 0;
-    dl.DrawRect(eng::Rect2{eng::Vec2{static_cast<float>(x), static_cast<float>(y)},
-                           eng::Vec2{bright ? 2.0f : 1.0f, bright ? 2.0f : 1.0f}},
-                bright ? 0xFFE8F2FFu : 0xFF8FA4C0u);
-  }
-
-  auto draw_obj = [&](int obj_index, float x, float y, int action_index,
-                      int frame_index, eng::u32 tint) {
-    if (obj_index < 0 || obj_index >= static_cast<int>(p3d_->objects.size())) return;
-    const Object& o = p3d_->objects[obj_index];
-    if (o.image < 0 || o.image >= texture_count) return;
-    const eng::TextureId tex = textures[o.image];
-    if (tex == 0) return;
-    int frame_no = 0;
-    if (action_index >= 0 && action_index < static_cast<int>(o.actions.size())) {
-      const Action& a = o.actions[action_index];
-      if (!a.frames.empty()) {
-        int fi = frame_index;
-        if (fi < 0) fi = 0;
-        if (fi >= static_cast<int>(a.frames.size())) fi = static_cast<int>(a.frames.size()) - 1;
-        frame_no = a.frames[fi].image;
-      }
-    }
-    const int fw = std::max(1, o.frame_w);
-    const int fh = std::max(1, o.frame_h);
-    const int tex_w = (o.image >= 0 && o.image < static_cast<int>(p3d_->images.size()))
-                          ? p3d_->images[o.image].width
-                          : fw;
-    const int tc = (tex_w / fw > 0) ? frame_no % (tex_w / fw) : 0;
-    const int tr = (tex_w / fw > 0) ? frame_no / (tex_w / fw) : 0;
-    const eng::TexRegion src = eng::TexRegion::Make(tc * fw, tr * fh, fw, fh);
-    dl.DrawImage(eng::Rect2{
-                     eng::Vec2{x - static_cast<float>(fw) * 0.5f,
-                               y - static_cast<float>(fh) * 0.5f},
-                     eng::Vec2{static_cast<float>(fw), static_cast<float>(fh)}},
-                 tex, tint, src);
-  };
-
-  if (shooter_player_image_ >= 0 && shooter_player_image_ < texture_count &&
-      textures[shooter_player_image_] != 0) {
-    int fw = 16;
-    int fh = 16;
-    if (player_object_ >= 0) {
-      fw = std::max(1, p3d_->objects[player_object_].frame_w);
-      fh = std::max(1, p3d_->objects[player_object_].frame_h);
-    }
-    dl.DrawImage(eng::Rect2{
-                     eng::Vec2{player_.x - static_cast<float>(fw) * 0.5f,
-                               player_.y - static_cast<float>(fh) * 0.5f},
-                     eng::Vec2{static_cast<float>(fw), static_cast<float>(fh)}},
-                 textures[shooter_player_image_], 0xFFFFFFFFu,
-                 eng::TexRegion::Make(0, 0, fw, fh));
-  }
-
-  for (const ShooterEnemy& e : shooter_enemies_) {
-    if (!e.alive) continue;
-    if (e.object < 0 || e.object >= static_cast<int>(p3d_->objects.size())) continue;
-    const Object& eo = p3d_->objects[e.object];
-    int action = eo.default_action;
-    if (action < 0 || action >= static_cast<int>(eo.actions.size())) action = 0;
-    draw_obj(e.object, e.x, e.y, action, 0, 0xFFFFFFFFu);
-  }
-
-  for (const ShooterExplosion& fx : shooter_explosions_) {
-    const int frame = std::min(2, static_cast<int>(fx.time * 12.0f));
-    draw_obj(fx.object, fx.x, fx.y, 0, frame, 0xFFFFFFFFu);
-  }
-
-  for (const ShooterBullet& b : shooter_bullets_) {
-    if (b.object < 0 || b.object >= static_cast<int>(p3d_->objects.size())) continue;
-    const Object& bo = p3d_->objects[b.object];
-    int action = bo.default_action;
-    if (action < 0 || action >= static_cast<int>(bo.actions.size())) action = 0;
-    draw_obj(b.object, b.x, b.y, action, 0,
-             b.from_player ? 0xFFFFFFFFu : 0xFFFFB0B0u);
-  }
-
 }
 
 void Game::RenderPlatformer(eng::DrawList& dl, const eng::TextureId* textures,
@@ -2839,14 +2300,6 @@ void Game::Render(eng::DrawList& dl, const eng::TextureId* textures,
   // 注意：DrawToast 在 const 方法里不能调用，这里用 const_cast（只为画字，不改状态）
   Game* self = const_cast<Game*>(this);
   if (p3d_ == nullptr) return;
-  if (control_ == ControlProfile::kFree2d &&
-      camera_profile_ == CameraProfile::kFixed) {
-    // 固定镜头俯视关也用场景图层渲染，不再进旧 shooter 星空背景。
-    RenderPlatformer(dl, textures, texture_count);
-    RenderProjectiles(dl, textures, texture_count);
-    self->DrawToast(dl, textures, texture_count);
-    return;
-  }
   RenderPlatformer(dl, textures, texture_count);
   self->DrawToast(dl, textures, texture_count);
 }

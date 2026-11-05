@@ -14,37 +14,6 @@
 
 namespace r4 {
 
-struct ShooterEnemy {
-  int object = -1;
-  int scene_object = -1;
-  float home_x = 0.0f;
-  float home_y = 0.0f;
-  float x = 0.0f;
-  float y = 0.0f;
-  float phase = 0.0f;
-  float fire_timer = 0.0f;
-  float dive_wait = 0.0f;
-  float dive_t = 0.0f;
-  bool alive = true;
-  bool diving = false;
-};
-
-struct ShooterExplosion {
-  int object = -1;
-  float x = 0.0f;
-  float y = 0.0f;
-  float time = 0.0f;
-};
-
-struct ShooterBullet {
-  int object = -1;
-  float x = 0.0f;
-  float y = 0.0f;
-  float vx = 0.0f;
-  float vy = 0.0f;
-  bool from_player = false;
-};
-
 struct CheckpointState {
   int object = -1;
   float x = 0.0f;
@@ -108,11 +77,6 @@ struct Player {
   int hp = 100;
   int facing = 1;  // 1 = right, -1 = left
   std::map<std::string, int> attrs;  // 实例属性（规则读写）
-};
-
-enum class ControlProfile {
-  kPlatformer,
-  kFree2d,
 };
 
 enum class CameraProfile {
@@ -186,13 +150,9 @@ class Game {
   void InitEnemies();
   void InitSceneRuntime();
   void UpdateEnemies(float dt);
-  void InitShooter();
   void UpdatePlatformer(float dt, const eng::InputState& input);
-  void UpdateShooter(float dt, const eng::InputState& input);
   void RenderPlatformer(eng::DrawList& dl, const eng::TextureId* textures,
                         int texture_count) const;
-  void RenderShooter(eng::DrawList& dl, const eng::TextureId* textures,
-                     int texture_count) const;
   void SpawnProjectiles(const Object& owner, float ox, float oy, float ovx, float ovy,
                         bool from_player, int parent_scene_object);
   void UpdateProjectiles(float dt);
@@ -201,7 +161,6 @@ class Game {
   void UpdateTriggers();
   bool RunTriggerList(const Trigger& trigger,
                       const std::vector<TriggerAction>& list);
-  void ShooterHitPlayer();
 
   const P3d* p3d_ = nullptr;
   int scene_index_ = 0;
@@ -227,14 +186,7 @@ class Game {
   std::vector<unsigned int> trigger_tick_;     // 在区域内的帧数（持续效果用）
   float player_attack_active_ = 0.0f;
   float player_attack_cooldown_ = 0.0f;
-  std::vector<ShooterEnemy> shooter_enemies_;
-  std::vector<ShooterBullet> shooter_bullets_;
-  std::vector<ShooterExplosion> shooter_explosions_;
-  ControlProfile control_ = ControlProfile::kPlatformer;
   CameraProfile camera_profile_ = CameraProfile::kFollow;
-  int shooter_bullet_object_ = -1;
-  int shooter_player_image_ = -1;
-  int shooter_effect_object_ = -1;
   std::map<std::string, int> variables_;
   std::string save_path_ = "save0.dat";
   std::vector<int> modal_stack_;
@@ -249,9 +201,6 @@ class Game {
   bool has_pending_ui_ = false;
   Trigger pending_trigger_;
   std::vector<TriggerAction> pending_actions_;
-  float shooter_time_ = 0.0f;
-  float shooter_fire_timer_ = 0.0f;
-  float shooter_dive_timer_ = 0.0f;
   float camera_x_ = 0.0f;
   float camera_y_ = 0.0f;
   int transition_count_ = 0;
