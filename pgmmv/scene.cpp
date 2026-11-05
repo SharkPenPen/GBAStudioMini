@@ -136,7 +136,8 @@ const SceneChunk* SceneDoc::FindChunk(int layer, int cx, int cy) const {
 }
 
 void SceneDoc::EnsureLayers() {
-  static const char* names[kSceneLayerCount] = {"层 1", "层 2", "层 3", "层 4"};
+  static const char* names[kSceneLayerCount] = {"前景 1（对象上）", "前景 2（对象上）",
+                                                  "背景 1（对象下）", "背景 2（最底）"};
   std::vector<SceneLayer> old = std::move(layers);
   layers.clear();
   layers.resize(kSceneLayerCount);
@@ -383,7 +384,8 @@ SceneDoc SceneCreateDefault(const std::string& id, const std::string& name,
   s.id = id;
   s.name = name.empty() ? id : name;
   s.layers.resize(kSceneLayerCount);
-  static const char* names[kSceneLayerCount] = {"层 1", "层 2", "层 3", "层 4"};
+  static const char* names[kSceneLayerCount] = {"前景 1（对象上）", "前景 2（对象上）",
+                                                  "背景 1（对象下）", "背景 2（最底）"};
   for (int i = 0; i < kSceneLayerCount; ++i) {
     s.layers[i].name = names[i];
     s.layers[i].visible = true;
