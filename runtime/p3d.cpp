@@ -167,31 +167,6 @@ bool ReadAction(Reader& r, Action* a, std::string* error) {
   return true;
 }
 
-void ReadCondition(Reader& r, Condition* c) {
-  c->type = r.U8();
-  c->key = r.Str();
-  c->value = r.I32();
-}
-
-bool ReadLink(Reader& r, Link* l, std::string* error) {
-  l->from = r.I32();
-  l->to = r.I32();
-  const uint16_t n = r.U16();
-  if (!r.ok || n > 16) {
-    SetErr(error, "p3d: bad condition count");
-    return false;
-  }
-  l->conditions.resize(n);
-  for (uint16_t i = 0; i < n; ++i) {
-    ReadCondition(r, &l->conditions[i]);
-    if (!r.ok) {
-      SetErr(error, "p3d: condition read failed");
-      return false;
-    }
-  }
-  return true;
-}
-
 bool ReadObject(Reader& r, Object* o, std::string* error) {
   o->id = r.Str();
   o->name = r.Str();
@@ -224,15 +199,6 @@ bool ReadObject(Reader& r, Object* o, std::string* error) {
     if (!ReadAction(r, &o->actions[i], error)) return false;
   }
   o->default_action = r.I32();
-  const uint16_t lc = r.U16();
-  if (!r.ok || lc > 128) {
-    SetErr(error, "p3d: bad object link count");
-    return false;
-  }
-  o->links.resize(lc);
-  for (uint16_t i = 0; i < lc; ++i) {
-    if (!ReadLink(r, &o->links[i], error)) return false;
-  }
   const uint16_t an = r.U16();
   if (!r.ok || an > 64) {
     SetErr(error, "p3d: bad attr count");
@@ -844,17 +810,6 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
       w.U8(a.flip_v ? 1 : 0);
     }
     w.I32(o.default_action);
-    w.U16(static_cast<uint16_t>(o.links.size()));
-    for (const Link& l : o.links) {
-      w.I32(l.from);
-      w.I32(l.to);
-      w.U16(static_cast<uint16_t>(l.conditions.size()));
-      for (const Condition& c : l.conditions) {
-        w.U8(static_cast<uint8_t>(c.type));
-        w.Str(c.key);
-        w.I32(c.value);
-      }
-    }
     w.U16(static_cast<uint16_t>(o.attrs.size()));
     for (const ObjectAttr& a : o.attrs) {
       w.Str(a.name);

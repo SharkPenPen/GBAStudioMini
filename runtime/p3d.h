@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 87;  // 87: 删掉 Spawner
+constexpr uint32_t kP3dVersion = 88;  // 88: 删掉 FlowLink
+                                      // 87: 删掉 Spawner
                                       // 86: 删掉 score / score_ge
                                       // 85: 删掉自动卷轴
                                       // 84: 删掉 lives / Game Over
@@ -143,18 +144,6 @@ inline int P3dActionHold(const Action& a, size_t index) {
   return (60 + fps / 2) / fps;
 }
 
-struct Condition {
-  int type = 0;  // 0 key, 1 not_key, 2 on_ground, 3 not_on_ground, 4 anim_end, 5 hp_le_zero, 6 always, 7 timer
-  std::string key;
-  int value = 0;  // timer ticks
-};
-
-struct Link {
-  int from = 0;
-  int to = 0;
-  std::vector<Condition> conditions;
-};
-
 struct Object {
   std::string id;
   std::string name;
@@ -183,7 +172,6 @@ struct Object {
   std::vector<ObjectAttr> attrs;   // v45
   std::vector<Rule> rules;         // v45  // v18
   int default_action = 0;
-  std::vector<Link> links;
 };
 
 struct Tileset {

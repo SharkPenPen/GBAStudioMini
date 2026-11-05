@@ -288,26 +288,16 @@ bool BuildTilePages(const Project& project, const std::vector<TileGroup>& groups
   return true;
 }
 
-// 对象能用到的动作：默认动作 + 按键映射 + 流程链接里从这些动作出发能走到的
+// 对象能用到的动作：默认动作 + 按键映射。
 std::set<std::string> ReachableActions(const ObjectDoc& o) {
   std::set<std::string> reach;
   auto add = [&reach](const std::string& n) {
     if (!n.empty()) reach.insert(n);
   };
   add(o.default_action);
-  // 运行时还会按名字硬找这两个（受击死亡 / 攻击动作），不一定写在流程里
+  // 运行时还会按名字硬找这两个（受击死亡 / 攻击动作），不一定写进默认动作
   add("attack");
   add("death");
-  bool grew = true;
-  while (grew) {
-    grew = false;
-    for (const FlowLink& l : o.links) {
-      if (reach.count(l.from) != 0 && reach.count(l.to) == 0) {
-        reach.insert(l.to);
-        grew = true;
-      }
-    }
-  }
   return reach;
 }
 
@@ -736,18 +726,6 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
       }
     }
     ro.default_action = FindAction(ro, o.default_action);
-    for (const FlowLink& fl : o.links) {
-      r4::Link rl;
-      rl.from = FindAction(ro, fl.from);
-      rl.to = FindAction(ro, fl.to);
-      for (const FlowCondition& fc : fl.conditions) {
-        r4::Condition rc;
-        rc.type = static_cast<int>(fc.type);
-        rc.key = fc.key;
-        rl.conditions.push_back(std::move(rc));
-      }
-      ro.links.push_back(std::move(rl));
-    }
     p.objects.push_back(std::move(ro));
   }
 

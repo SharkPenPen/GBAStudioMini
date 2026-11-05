@@ -1047,73 +1047,6 @@ void Game::ResolveY(float dy, int obj_index) {
   }
 }
 
-bool Game::CheckCondition(const Condition& c, const eng::InputState& input) const {
-  auto down = [&input](const char* key) {
-    if (std::strcmp(key, "right") == 0) return eng::KeyDown(input, eng::Key::kRight);
-    if (std::strcmp(key, "left") == 0) return eng::KeyDown(input, eng::Key::kLeft);
-    if (std::strcmp(key, "up") == 0) return eng::KeyDown(input, eng::Key::kUp);
-    if (std::strcmp(key, "down") == 0) return eng::KeyDown(input, eng::Key::kDown);
-    if (std::strcmp(key, "jump") == 0) return eng::KeyDown(input, eng::Key::kA);
-    if (std::strcmp(key, "attack") == 0) return eng::KeyDown(input, eng::Key::kB);
-    return false;
-  };
-  auto pressed = [&input](const char* key) {
-    if (std::strcmp(key, "jump") == 0) return eng::KeyPressed(input, eng::Key::kA);
-    if (std::strcmp(key, "attack") == 0) return eng::KeyPressed(input, eng::Key::kB);
-    return false;
-  };
-  switch (c.type) {
-    case 0:  // key
-      if (std::strcmp(c.key.c_str(), "jump") == 0) return pressed("jump");
-      return down(c.key.c_str());
-    case 1:  // not_key
-      if (std::strcmp(c.key.c_str(), "jump") == 0) return !down("jump");
-      return !down(c.key.c_str());
-    case 2: return player_.on_ground;
-    case 3: return !player_.on_ground;
-    case 4: return player_.anim_end;
-    case 5: return player_.hp <= 0;
-    case 6: return true;  // always
-    case 7:  // timer ticks
-      return player_.anim_time * 60.0f >= static_cast<float>(c.value);
-    case 8: {
-      auto it = variables_.find(c.key);
-      return (it == variables_.end() ? 0 : it->second) == c.value;
-    }
-    default: return false;
-  }
-}
-
-void Game::UpdateAction(const eng::InputState& input) {
-  if (p3d_ == nullptr || player_object_ < 0) return;
-  const Object& o = p3d_->objects[player_object_];
-  if (o.actions.empty()) return;
-  if (player_.action < 0 || player_.action >= static_cast<int>(o.actions.size())) {
-    player_.action = o.default_action;
-  }
-  for (int step = 0; step < 8; ++step) {
-    bool changed = false;
-    for (const Link& link : o.links) {
-      if (link.from != player_.action) continue;
-      bool ok = !link.conditions.empty();
-      for (const Condition& c : link.conditions) {
-        if (!CheckCondition(c, input)) { ok = false; break; }
-      }
-      if (!ok) continue;
-      if (link.to >= 0 && link.to < static_cast<int>(o.actions.size()) &&
-          link.to != player_.action) {
-        player_.action = link.to;
-        player_.anim_time = 0.0f;
-        player_.frame = 0;
-        player_.anim_end = false;
-        changed = true;
-        break;
-      }
-    }
-    if (!changed) break;
-  }
-}
-
 void Game::UpdateAnimation(float dt) {
   if (p3d_ == nullptr || player_object_ < 0) return;
   const Object& o = p3d_->objects[player_object_];
@@ -1945,7 +1878,6 @@ void Game::UpdateSimulation(float dt, const eng::InputState& input) {
     return;
   }
 
-  UpdateAction(input);
   UpdateAnimation(dt);
   UpdateEnemies(dt);
   UpdateProjectiles(dt);

@@ -141,8 +141,6 @@ class Game {
   void SpawnById(const std::string& id, float x, float y, int dir, bool from_player);
   void ResolveX(float dx, int obj_index);
   void ResolveY(float dy, int obj_index);
-  void UpdateAction(const eng::InputState& input);
-  bool CheckCondition(const Condition& c, const eng::InputState& input) const;
   void UpdateAnimation(float dt);
   void UpdateCamera(float dt);
   void Damage();

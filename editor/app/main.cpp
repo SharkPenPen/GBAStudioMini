@@ -148,7 +148,6 @@ std::filesystem::path g_cli_r1_create;
 std::filesystem::path g_cli_r1_png;
 std::string g_r1_report_path;
 
-void LoadFlowLayout();
 
 bool TextMatchesFilter(const std::string& text, const char* filter) {
   if (filter == nullptr || filter[0] == '\0') return true;
@@ -166,8 +165,6 @@ bool TextMatchesFilter(const std::string& text, const char* filter) {
 // ---- R2 对象工具状态 -------------------------------------------------------
 std::string g_selected_object;
 std::string g_selected_action = "idle";
-int g_object_tab = 0;  // 0 = 动画, 1 = 动作流程
-int g_selected_link = -1;
 char g_action_frames_buf[256] = {};
 std::string g_action_frames_key;
 bool g_action_frames_invalid = false;
@@ -421,8 +418,7 @@ void SelectAction(const std::string& name) {
   { std::FILE* lf = std::fopen("editor-ui.log", "a");
     if (lf) { std::fprintf(lf, "select enter\n"); std::fclose(lf); } }
   g_selected_action = name;
-  g_selected_link = -1;
-  g_anim_frame = 0;
+    g_anim_frame = 0;
   g_anim_playing = false;
   g_anim_accum = 0.0;
   SyncActionFramesBuffer();
@@ -457,7 +453,7 @@ void EditorClampAnimFrame(const pgmmv::DirectionDef* a) {
 
 pgmmv::AnimationDoc* EnsureAnimation();
 
-// 动作属于动画资源：增/删/改名都改资源，同时把引用它的对象里的流程链接跟上
+// 动作属于动画资源：增/删/改名都改资源，同时同步对象的默认动作引用
 void EditorAddAction() {
   pgmmv::AnimationDoc* ad = EnsureAnimation();
   if (ad == nullptr) return;
@@ -490,11 +486,6 @@ void EditorDeleteSelectedAction() {
       ad->actions.end());
   for (pgmmv::ObjectDoc& o : g_project.objects) {
     if (o.animation != ad->id) continue;
-    o.links.erase(std::remove_if(o.links.begin(), o.links.end(),
-                                 [&](const pgmmv::FlowLink& l) {
-                                   return l.from == name || l.to == name;
-                                 }),
-                  o.links.end());
     if (o.default_action == name && !ad->actions.empty()) {
       o.default_action = ad->actions.front().name;
     }
@@ -518,10 +509,6 @@ void EditorRenameAction(const std::string& new_name) {
   a->name = new_name;
   for (pgmmv::ObjectDoc& o : g_project.objects) {
     if (o.animation != ad->id) continue;
-    for (pgmmv::FlowLink& l : o.links) {
-      if (l.from == old_name) l.from = new_name;
-      if (l.to == old_name) l.to = new_name;
-    }
     if (o.default_action == old_name) o.default_action = new_name;
   }
   g_selected_action = new_name;
@@ -532,8 +519,7 @@ void EditorRenameAction(const std::string& new_name) {
 void SelectObject(const std::string& id) {
   g_selected_object = id;
   g_selected_object_for_place = id;  // 场景放置跟随当前对象
-  g_selected_link = -1;
-  pgmmv::ObjectDoc* obj = CurrentObject();
+    pgmmv::ObjectDoc* obj = CurrentObject();
   if (obj != nullptr) {
     if (!obj->animation.empty()) g_selected_animation = obj->animation;
     if (FindActionIn(obj, g_selected_action) == nullptr) {
@@ -574,8 +560,7 @@ void CreateObject() {
   g_dirty = true;
   SelectObject(id);
   g_selected_object_for_place = id;  // 场景页“+ 对象实例”默认放刚建的对象
-  g_object_tab = 0;
-  SetStatus("已新建对象：" + name + "，请在对象页选择动画资源（未保存）");
+    SetStatus("已新建对象：" + name + "，请在对象页选择动画资源（未保存）");
 }
 
 
@@ -951,8 +936,7 @@ void OnProjectLoaded() {
     g_selected_asset = g_project.assets.front().id;
   }
   g_selected_object.clear();
-  g_selected_link = -1;
-  g_anim_frame = 0;
+    g_anim_frame = 0;
   g_anim_playing = false;
   g_anim_accum = 0.0;
   if (!g_project.objects.empty()) {
@@ -979,7 +963,6 @@ void OnProjectLoaded() {
   g_drag_started = false;
   g_selected_object_for_place.clear();
   if (!g_project.objects.empty()) g_selected_object_for_place = g_project.objects.front().id;
-  LoadFlowLayout();
   PreviewRelease();
   ReleaseTilesetPreviews();
   SyncProjectBuffers();
@@ -1622,7 +1605,7 @@ bool LoadUiFont() {
 }
 
 // ---- UI --------------------------------------------------------------------
-const char* kTools[] = {"场景", "图块", "动画", "对象", "资源", "流程", "界面"};
+const char* kTools[] = {"场景", "图块", "动画", "对象", "资源", "界面"};
 const char* ToolName(int i) {
   return (i >= 0 && i < static_cast<int>(sizeof(kTools) / sizeof(kTools[0])))
              ? kTools[i]
@@ -2888,8 +2871,7 @@ void DrawObjectLeft() {
     const std::string label = o.name + "##" + o.id;
     if (ImGui::Selectable(label.c_str(), g_selected_object == o.id)) {
       SelectObject(o.id);
-      g_object_tab = 0;
-    }
+          }
     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
       SelectObject(o.id);
       std::snprintf(g_rename_object_buf, sizeof(g_rename_object_buf), "%s",
@@ -5324,172 +5306,6 @@ void DrawDetectionSettings() {
   ImGui::PopID();
   if (changed) MarkDirty();
 }
-void DrawFlowPageLeft() {
-  ImGui::TextDisabled("流程");
-  if (ImGui::Button("新建过渡", ImVec2(-1.0f, 26.0f))) {
-    UiLog("flow new clicked");
-    pgmmv::Transition tr;
-    tr.from = g_project.scenes.empty() ? "" : g_project.scenes.front().id;
-    tr.to = g_project.scenes.size() > 1 ? g_project.scenes[1].id : tr.from;
-    g_project.transitions.push_back(tr);
-    g_selected_transition = static_cast<int>(g_project.transitions.size()) - 1;
-    MarkDirty();
-  }
-  if (g_selected_transition >= 0 && ImGui::Button("删除选中", ImVec2(-1.0f, 24.0f))) {
-    if (g_selected_transition < static_cast<int>(g_project.transitions.size())) {
-      g_project.transitions.erase(g_project.transitions.begin() + g_selected_transition);
-      g_selected_transition = g_project.transitions.empty() ? -1 : 0;
-      MarkDirty();
-    }
-  }
-  ImGui::Separator();
-  for (size_t i = 0; i < g_project.transitions.size(); ++i) {
-    const pgmmv::Transition& tr = g_project.transitions[i];
-    char label[256];
-    std::snprintf(label, sizeof(label), "%s → %s", tr.from.c_str(), tr.to.c_str());
-    if (ImGui::Selectable(label, g_selected_transition == static_cast<int>(i))) {
-      g_selected_transition = static_cast<int>(i);
-    }
-  }
-  if (g_project.transitions.empty()) ImGui::TextDisabled("没有过渡");
-  static bool flow_rect_logged = false;
-  if (!flow_rect_logged) {
-    // 记录按钮矩形，便于模拟鼠标定位
-  }
-}
-
-std::map<std::string, ImVec2> g_flow_pos;
-
-void LoadFlowLayout() {
-  g_flow_pos.clear();
-  if (!g_has_project || g_project.root_dir.empty()) return;
-  std::ifstream f(g_project.root_dir / ".flow_layout.txt");
-  std::string id;
-  float x = 0.0f, y = 0.0f;
-  while (f >> id >> x >> y) g_flow_pos[id] = ImVec2(x, y);
-}
-
-
-void DrawFlowPageCenter() {
-  ImGui::TextDisabled("场景流程");
-  ImGui::Separator();
-  ImDrawList* dl = ImGui::GetWindowDrawList();
-  const ImVec2 origin = ImGui::GetCursorScreenPos();
-  const float w = 150.0f, h = 36.0f;
-  std::vector<std::pair<std::string, ImVec2>> nodes;
-  for (size_t i = 0; i < g_project.scenes.size(); ++i) {
-    nodes.emplace_back(g_project.scenes[i].id,
-                       ImVec2(origin.x + 60.0f, origin.y + 60.0f + i * 64.0f));
-  }
-  for (const auto& n : nodes) {
-    const ImVec2 a = n.second;
-    const bool sel = (g_selected_scene == n.first);
-    dl->AddRectFilled(a, ImVec2(a.x + w, a.y + h),
-                      sel ? IM_COL32(47, 128, 237, 110) : IM_COL32(67, 67, 67, 255));
-    dl->AddRect(a, ImVec2(a.x + w, a.y + h), IM_COL32(20, 20, 20, 255));
-  }
-  const ImVec2 start(origin.x + 60.0f, origin.y + 10.0f);
-  dl->AddRectFilled(start, ImVec2(start.x + 110.0f, start.y + 32.0f),
-                    IM_COL32(40, 160, 70, 255));
-  dl->AddText(ImVec2(start.x + 34, start.y + 7), IM_COL32(255, 255, 255, 255), "Start");
-  if (!nodes.empty()) {
-    dl->AddLine(ImVec2(start.x + 55.0f, start.y + 32.0f), nodes[0].second,
-                IM_COL32(220, 220, 220, 255), 2.0f);
-  }
-  for (const pgmmv::Transition& tr : g_project.transitions) {
-    ImVec2 a(0, 0), b(0, 0);
-    bool ha = false, hb = false;
-    for (const auto& n : nodes) {
-      if (n.first == tr.from) { a = ImVec2(n.second.x + w, n.second.y + h * 0.5f); ha = true; }
-      if (n.first == tr.to) { b = ImVec2(n.second.x, n.second.y + h * 0.5f); hb = true; }
-    }
-    if (!ha || !hb) continue;
-    dl->AddLine(a, b, IM_COL32(200, 200, 200, 255), 2.0f);
-    dl->AddTriangleFilled(b, ImVec2(b.x - 8, b.y - 5), ImVec2(b.x - 8, b.y + 5),
-                          IM_COL32(200, 200, 200, 255));
-  }
-  for (size_t i = 0; i < nodes.size(); ++i) {
-    ImGui::SetCursorScreenPos(nodes[i].second);
-    ImGui::InvisibleButton(nodes[i].first.c_str(), ImVec2(w, h));
-    if (ImGui::IsItemClicked()) g_selected_scene = nodes[i].first;
-    dl->AddText(ImVec2(nodes[i].second.x + 10.0f, nodes[i].second.y + 10.0f),
-                IM_COL32(230, 230, 230, 255), g_project.scenes[i].name.c_str());
-  }
-}
-
-void DrawFlowPageRight() {
-  if (!g_has_project) {
-    ImGui::TextDisabled("未打开项目");
-    return;
-  }
-  static int tab = 1;  // 0 Scene, 1 连接, 2 群组
-  const char* tabs[3] = {"Scene", "连接", "群组"};
-  for (int i = 0; i < 3; ++i) {
-    if (i > 0) ImGui::SameLine();
-    if (ImGui::Button(tabs[i], ImVec2(80.0f, 24.0f))) tab = i;
-  }
-  ImGui::Separator();
-  if (g_selected_scene.empty()) {
-    ImGui::TextDisabled("先选中一个场景节点");
-    return;
-  }
-  if (tab == 0) {
-    ImGui::TextDisabled("场景");
-    ImGui::Text("ID：%s", g_selected_scene.c_str());
-  } else if (tab == 2) {
-    ImGui::TextDisabled("群组（空壳）");
-  } else {
-    ImGui::TextDisabled("连接");
-    if (ImGui::Button("添加连接", ImVec2(-1.0f, 24.0f))) {
-      for (const pgmmv::SceneDoc& s : g_project.scenes) {
-        if (s.id != g_selected_scene) {
-          pgmmv::Transition tr;
-          tr.from = g_selected_scene;
-          tr.to = s.id;
-          g_project.transitions.push_back(tr);
-          MarkDirty();
-          break;
-        }
-      }
-    }
-    int remove = -1;
-    for (size_t i = 0; i < g_project.transitions.size(); ++i) {
-      pgmmv::Transition& tr = g_project.transitions[i];
-      if (tr.from != g_selected_scene) continue;
-      ImGui::PushID(static_cast<int>(i));
-      ImGui::TextUnformatted(tr.to.c_str());
-      ImGui::SameLine();
-      const char* types[2] = {"出口", "开关"};
-      static bool cond_btn_logged = false;
-      for (int k = 0; k < 2; ++k) {
-        if (k > 0) ImGui::SameLine();
-        const bool sel = (static_cast<int>(tr.type) == k);
-        if (sel) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.184f, 0.502f, 0.929f, 1.0f));
-        if (ImGui::Button(types[k], ImVec2(46.0f, 22.0f))) {
-          tr.type = static_cast<pgmmv::TransitionType>(k);
-          MarkDirty();
-          UiLogF("cond set %d", k);
-        }
-        if (sel) ImGui::PopStyleColor();
-        if (!cond_btn_logged) {
-          const ImVec2 a = ImGui::GetItemRectMin();
-          const ImVec2 b = ImGui::GetItemRectMax();
-          UiLogF("cond btn %d rect %.0f %.0f %.0f %.0f", k, a.x, a.y, b.x, b.y);
-        }
-      }
-      cond_btn_logged = true;
-      ImGui::SameLine();
-      if (ImGui::Button("X")) remove = static_cast<int>(i);
-      ImGui::PopID();
-    }
-    if (remove >= 0) {
-      g_project.transitions.erase(g_project.transitions.begin() + remove);
-      MarkDirty();
-    }
-    if (g_project.transitions.empty()) ImGui::TextDisabled("没有连接");
-  }
-}
-
 void DrawPlaceholder(const char* title);
 
 const char* kResTabs[] = {"图像", "音频", "变量"};
@@ -5807,7 +5623,7 @@ void StopAudio() { r4::AudioStop(); }
 
 void DrawResourceRight2() {
   if (g_res_tab == 2) {
-    ImGui::TextDisabled("变量（待流程确定后设计）");
+    ImGui::TextDisabled("变量（待定）");
     return;
   }
   if (g_res_tab == 1) {
@@ -7181,8 +6997,7 @@ void DrawShell() {
     case 2: DrawAnimListLeft(); break;
     case 3: DrawObjectLeft(); break;
     case 4: DrawResourceLeft2(); break;
-    case 5: DrawFlowPageLeft(); break;
-    case 6: DrawUiPageLeft(); break;
+    case 5: DrawUiPageLeft(); break;
     default: DrawPlaceholder(ToolName(g_current_tool)); break;
   }
   ImGui::EndChild();
@@ -7194,8 +7009,7 @@ void DrawShell() {
     case 2: DrawObjectAnimation(); break;
     case 3: DrawObjectPageCenter(); break;
     case 4: DrawResourceCenter2(); break;
-    case 5: DrawFlowPageCenter(); break;
-    case 6: DrawUiPageCenter(); break;
+    case 5: DrawUiPageCenter(); break;
     default: DrawPlaceholder(ToolName(g_current_tool)); break;
   }
   ImGui::EndChild();
@@ -7214,8 +7028,7 @@ void DrawShell() {
     }
     case 3: DrawObjectPageRight(); break;
     case 4: DrawResourceRight2(); break;
-    case 5: DrawFlowPageRight(); break;
-    case 6: DrawUiPageRight(); break;
+    case 5: DrawUiPageRight(); break;
     default: DrawPlaceholder(ToolName(g_current_tool)); break;
   }
   ImGui::EndChild();
@@ -7260,7 +7073,7 @@ int main(int argc, char** argv) {
     } else if (a == "--frames" && i + 1 < argc) {
       g_frames_left = std::atoi(argv[++i]);
     } else if (a == "--tool" && i + 1 < argc) {
-      g_current_tool = std::max(0, std::min(6, std::atoi(argv[++i])));
+      g_current_tool = std::max(0, std::min(5, std::atoi(argv[++i])));
     } else if (a == "--import-png" && i + 1 < argc) {
       import_png = argv[++i];
     } else if (a == "--export-p3d" && i + 1 < argc) {

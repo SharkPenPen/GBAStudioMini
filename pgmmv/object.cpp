@@ -462,130 +462,7 @@ JsonValue WriteDirection(const DirectionDef& d) {
 }
 
 
-JsonValue ConditionToJson(const FlowCondition& c) {
-  JsonValue o = JsonValue::Object();
-  switch (c.type) {
-    case ConditionType::kKey:
-      o.Set("key", JsonValue::String(c.key));
-      break;
-    case ConditionType::kNotKey:
-      o.Set("not_key", JsonValue::String(c.key));
-      break;
-    case ConditionType::kOnGround:
-      o.Set("on_ground", JsonValue::Bool(true));
-      break;
-    case ConditionType::kNotOnGround:
-      o.Set("not_on_ground", JsonValue::Bool(true));
-      break;
-    case ConditionType::kAnimEnd:
-      o.Set("anim_end", JsonValue::Bool(true));
-      break;
-    case ConditionType::kHpLeZero:
-      o.Set("hp_le_zero", JsonValue::Bool(true));
-      break;
-    case ConditionType::kAlways:
-      o.Set("always", JsonValue::Bool(true));
-      break;
-    case ConditionType::kTimer:
-      o.Set("timer", JsonValue::Number(static_cast<double>(c.value)));
-      break;
-    case ConditionType::kVariable:
-      o.Set("variable", JsonValue::String(c.key));
-      o.Set("value", JsonValue::Number(static_cast<double>(c.value)));
-      break;
-  }
-  return o;
-}
-
-bool ParseCondition(const JsonValue& v, FlowCondition* out, std::string* error) {
-  if (!v.IsObject()) {
-    if (error != nullptr) *error = "flow condition must be an object";
-    return false;
-  }
-  const JsonValue* key = v.Find("key");
-  if (key != nullptr && key->IsString()) {
-    out->type = ConditionType::kKey;
-    out->key = key->text;
-    return true;
-  }
-  const JsonValue* nkey = v.Find("not_key");
-  if (nkey != nullptr && nkey->IsString()) {
-    out->type = ConditionType::kNotKey;
-    out->key = nkey->text;
-    return true;
-  }
-  const JsonValue* og = v.Find("on_ground");
-  if (og != nullptr) {
-    out->type = ConditionType::kOnGround;
-    return true;
-  }
-  const JsonValue* nog = v.Find("not_on_ground");
-  if (nog != nullptr) {
-    out->type = ConditionType::kNotOnGround;
-    return true;
-  }
-  const JsonValue* ae = v.Find("anim_end");
-  if (ae != nullptr) {
-    out->type = ConditionType::kAnimEnd;
-    return true;
-  }
-  const JsonValue* hp = v.Find("hp_le_zero");
-  if (hp != nullptr) {
-    out->type = ConditionType::kHpLeZero;
-    return true;
-  }
-  const JsonValue* al = v.Find("always");
-  if (al != nullptr) {
-    out->type = ConditionType::kAlways;
-    return true;
-  }
-  const JsonValue* tm = v.Find("timer");
-  if (tm != nullptr && tm->IsNumber()) {
-    out->type = ConditionType::kTimer;
-    out->value = static_cast<int>(tm->number);
-    return true;
-  }
-  const JsonValue* var = v.Find("variable");
-  if (var != nullptr && var->IsString()) {
-    const JsonValue* val = v.Find("value");
-    out->type = ConditionType::kVariable;
-    out->key = var->text;
-    out->value = (val != nullptr && val->IsNumber()) ? static_cast<int>(val->number) : 0;
-    return true;
-  }
-  if (error != nullptr) *error = "unsupported flow condition";
-  return false;
-}
-
 }  // namespace
-
-const char* ConditionTypeName(ConditionType t) {
-  switch (t) {
-    case ConditionType::kKey: return "key";
-    case ConditionType::kNotKey: return "not_key";
-    case ConditionType::kOnGround: return "on_ground";
-    case ConditionType::kNotOnGround: return "not_on_ground";
-    case ConditionType::kAnimEnd: return "anim_end";
-    case ConditionType::kHpLeZero: return "hp_le_zero";
-    case ConditionType::kAlways: return "always";
-    case ConditionType::kTimer: return "timer";
-    case ConditionType::kVariable: return "variable";
-  }
-  return "key";
-}
-
-bool ConditionTypeFromName(const std::string& name, ConditionType* out) {
-  if (name == "key") { *out = ConditionType::kKey; return true; }
-  if (name == "not_key") { *out = ConditionType::kNotKey; return true; }
-  if (name == "on_ground") { *out = ConditionType::kOnGround; return true; }
-  if (name == "not_on_ground") { *out = ConditionType::kNotOnGround; return true; }
-  if (name == "anim_end") { *out = ConditionType::kAnimEnd; return true; }
-  if (name == "hp_le_zero") { *out = ConditionType::kHpLeZero; return true; }
-  if (name == "always") { *out = ConditionType::kAlways; return true; }
-  if (name == "timer") { *out = ConditionType::kTimer; return true; }
-  if (name == "variable") { *out = ConditionType::kVariable; return true; }
-  return false;
-}
 
 std::string SanitizeObjectId(const std::string& name) {
   std::string out;
@@ -617,29 +494,6 @@ ObjectDoc ObjectCreateDefault(const std::string& id, const std::string& name) {
   // 动作不在这里建：新建对象时由调用方配一个动画资源（见 AnimationCreateForObject）
 
   o.default_action = "idle";
-  FlowCondition right;
-  right.type = ConditionType::kKey;
-  right.key = "right";
-  FlowCondition not_right;
-  not_right.type = ConditionType::kNotKey;
-  not_right.key = "right";
-  FlowCondition left;
-  left.type = ConditionType::kKey;
-  left.key = "left";
-  FlowCondition not_left;
-  not_left.type = ConditionType::kNotKey;
-  not_left.key = "left";
-  FlowCondition jump;
-  jump.type = ConditionType::kKey;
-  jump.key = "jump";
-  FlowCondition anim_end;
-  anim_end.type = ConditionType::kAnimEnd;
-
-  o.links.push_back(FlowLink{"idle", "run", {right}});
-  o.links.push_back(FlowLink{"idle", "run", {left}});
-  o.links.push_back(FlowLink{"run", "idle", {not_right, not_left}});
-  o.links.push_back(FlowLink{"idle", "jump", {jump}});
-  o.links.push_back(FlowLink{"jump", "idle", {anim_end}});
   return o;
 }
 
@@ -783,44 +637,6 @@ bool ObjectLoad(const std::filesystem::path& path, ObjectDoc* out,
       return false;
     }
     if (!ReadString(*flow, "default", &o.default_action, &found, error)) return false;
-    const JsonValue* links = flow->Find("links");
-    if (links != nullptr) {
-      if (!links->IsArray()) {
-        if (error != nullptr) *error = "flow.links must be an array";
-        return false;
-      }
-      for (const JsonValue& lv : links->items) {
-        if (!lv.IsObject()) {
-          if (error != nullptr) *error = "flow link must be an object";
-          return false;
-        }
-        FlowLink link;
-        bool has = false;
-        if (!ReadString(lv, "from", &link.from, &has, error) || !has ||
-            link.from.empty()) {
-          if (error != nullptr) *error = "flow link.from is required";
-          return false;
-        }
-        if (!ReadString(lv, "to", &link.to, &has, error) || !has ||
-            link.to.empty()) {
-          if (error != nullptr) *error = "flow link.to is required";
-          return false;
-        }
-        const JsonValue* conds = lv.Find("if");
-        if (conds != nullptr) {
-          if (!conds->IsArray()) {
-            if (error != nullptr) *error = "flow link.if must be an array";
-            return false;
-          }
-          for (const JsonValue& cv : conds->items) {
-            FlowCondition c;
-            if (!ParseCondition(cv, &c, error)) return false;
-            link.conditions.push_back(std::move(c));
-          }
-        }
-        o.links.push_back(std::move(link));
-      }
-    }
   }
   if (o.default_action.empty()) o.default_action = "idle";
 
@@ -899,19 +715,6 @@ void ObjectSyncRaw(ObjectDoc* o) {
           ? *root.Find("flow")
           : JsonValue::Object();
   flow.Set("default", JsonValue::String(o->default_action));
-  JsonValue links = JsonValue::Array();
-  for (const FlowLink& link : o->links) {
-    JsonValue lv = JsonValue::Object();
-    lv.Set("from", JsonValue::String(link.from));
-    lv.Set("to", JsonValue::String(link.to));
-    JsonValue conds = JsonValue::Array();
-    for (const FlowCondition& c : link.conditions) {
-      conds.Push(ConditionToJson(c));
-    }
-    lv.Set("if", std::move(conds));
-    links.Push(std::move(lv));
-  }
-  flow.Set("links", std::move(links));
   root.Set("flow", std::move(flow));
 
   o->raw = std::move(root);

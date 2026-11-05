@@ -1,6 +1,6 @@
 // pgmmv/object.h
 //
-// R2：对象文档（动作动画 + 动作流程）。
+// R2：对象文档（动作动画 + 规则）。
 //
 // 一个对象文件：<project>/objects/<id>.json
 // 运行时不解析它；导出阶段再生成 game.p3d。
@@ -173,33 +173,6 @@ inline void EnsureActionHolds(DirectionDef* a) {
   }
 }
 
-enum class ConditionType {
-  kKey = 0,
-  kNotKey,
-  kOnGround,
-  kNotOnGround,
-  kAnimEnd,
-  kHpLeZero,
-  kAlways,
-  kTimer,
-  kVariable,
-};
-
-const char* ConditionTypeName(ConditionType t);
-bool ConditionTypeFromName(const std::string& name, ConditionType* out);
-
-struct FlowCondition {
-  ConditionType type = ConditionType::kKey;
-  std::string key;
-  int value = 0;  // 计时条件：tick
-};
-
-struct FlowLink {
-  std::string from;
-  std::string to;
-  std::vector<FlowCondition> conditions;
-};
-
 
 
 // ---- 规则：条件 + 动作 ----
@@ -281,7 +254,6 @@ struct ObjectDoc {
   // 动作不在对象里：对象只引用一个动画资源（animation），动作在 animations/*.json
   std::string animation;
   std::string default_action = "idle";
-  std::vector<FlowLink> links;
   JsonValue raw;
 };
 
