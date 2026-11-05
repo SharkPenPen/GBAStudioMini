@@ -1,6 +1,6 @@
 # engine/ —— 平台无关核心（engine_core）+ PC 宿主（engine_host_pc）
 #
-# engine_core：base / draw_list / texture / font / png，不依赖任何 OS。
+# engine_core：base / draw_list / texture / ui_font / png，不依赖任何 OS。
 # engine_host_pc：Windows 窗口、输入、计时、软件光栅。
 # PSP/3DS 以后各有一份 host，不放进 core。
 
@@ -11,7 +11,6 @@ set(ENGINE_CORE_SOURCES
   base/version.cpp
 
   render/draw_list.cpp
-  render/font.cpp
   render/png.cpp
   render/png_decode.cpp
   render/texture.cpp

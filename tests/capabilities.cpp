@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "engine/platform/platform.h"
-#include "engine/render/font.h"
 #include "pgmmv/ui.h"
 #include "engine/render/texture.h"
 #include "runtime/game.h"
@@ -269,7 +268,6 @@ void TestUiAnchor() {
 }
 
 void TestUiWrap() {
-  CHECK(eng::FontInit());
   const std::vector<std::string> lines =
       r4::UiWrapText("hello world hello", 40, 10, 0);
   CHECK(lines.size() >= 2);
@@ -300,6 +298,34 @@ void TestUiNineSlice() {
   r4::UiDrawScreen(screen, ctx);
   CHECK(dl.count() > 9);
   eng::TextureDestroy(tex);
+}
+
+void TestUiFontSizes() {
+  const int w12 = r4::UiTextWidth("中", 12, 0);
+  const int w14 = r4::UiTextWidth("中", 14, 0);
+  const int w16 = r4::UiTextWidth("中", 16, 0);
+  CHECK(w12 > 0);
+  CHECK(w14 >= w12);
+  CHECK(w16 >= w14);
+
+  eng::DrawList dl;
+  dl.ResetScreenSizes();
+  dl.SetScreenSize(480, 272);
+  r4::UiScreen screen;
+  r4::UiElement label;
+  label.kind = r4::UiKind::kText;
+  label.text = "中文AB";
+  label.font_size = 16;
+  label.w = 120;
+  label.h = 20;
+  label.color = 0xFFFFFFFFu;
+  screen.elements.push_back(label);
+  r4::UiDrawContext ctx;
+  ctx.dl = &dl;
+  ctx.view_w = 480;
+  ctx.view_h = 272;
+  r4::UiDrawScreen(screen, ctx);
+  CHECK(dl.count() > 10);
 }
 
 void TestUiDocRoundTrip() {
@@ -365,6 +391,7 @@ int main() {
   std::printf("ui anchor...\n"); TestUiAnchor();
   std::printf("ui wrap...\n"); TestUiWrap();
   std::printf("ui nine-slice...\n"); TestUiNineSlice();
+  std::printf("ui font sizes...\n"); TestUiFontSizes();
   std::printf("ui doc roundtrip...\n"); TestUiDocRoundTrip();
   std::printf("ui value bar...\n"); TestUiValueBar();
   if (g_failures != 0) {

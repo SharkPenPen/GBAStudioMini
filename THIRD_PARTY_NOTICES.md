@@ -30,6 +30,7 @@ games.
 Each folder contains its own license, source URL and SHA256. See
 `third_party/font/README.md` and `third_party/font/manifest.json`.
 
-The existing `engine/render/game_font.h` was generated from Fusion Pixel 10px;
-the provenance record is in `third_party/font/VERSION.txt` and the OFL text is
-`third_party/font/LICENSE-OFL.txt`.
+The UI now uses generated native 12/14/16 faces:
+`engine/render/ui_font12.h`, `ui_font14.h`, `ui_font16.h`. The old 10px Fusion
+Pixel atlas was removed; `third_party/font/LICENSE-OFL.txt` still covers the OFL
+sources.

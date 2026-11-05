@@ -6,35 +6,96 @@
 #include <string>
 #include <vector>
 
-#include "engine/render/font.h"
-#include "engine/render/font_cjk12.h"
+#include "engine/render/ui_font12.h"
+#include "engine/render/ui_font14.h"
+#include "engine/render/ui_font16.h"
 #include "runtime/p3d.h"
 
 namespace r4 {
 namespace {
+
+int Utf8Next(const char* s, eng::u32* out) {
+  const unsigned char* p = reinterpret_cast<const unsigned char*>(s);
+  if (p == nullptr || p[0] == 0) return 0;
+  if (p[0] < 0x80) {
+    *out = p[0];
+    return 1;
+  }
+  if ((p[0] & 0xE0) == 0xC0) {
+    if ((p[1] & 0xC0) != 0x80) return -1;
+    *out = (static_cast<eng::u32>(p[0] & 0x1F) << 6) | (p[1] & 0x3F);
+    return 2;
+  }
+  if ((p[0] & 0xF0) == 0xE0) {
+    if ((p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80) return -1;
+    *out = (static_cast<eng::u32>(p[0] & 0x0F) << 12) |
+           (static_cast<eng::u32>(p[1] & 0x3F) << 6) | (p[2] & 0x3F);
+    return 3;
+  }
+  if ((p[0] & 0xF8) == 0xF0) {
+    if ((p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80 ||
+        (p[3] & 0xC0) != 0x80) {
+      return -1;
+    }
+    *out = (static_cast<eng::u32>(p[0] & 0x07) << 18) |
+           (static_cast<eng::u32>(p[1] & 0x3F) << 12) |
+           (static_cast<eng::u32>(p[2] & 0x3F) << 6) | (p[3] & 0x3F);
+    return 4;
+  }
+  return -1;
+}
 
 eng::Rect2 R(int x, int y, int w, int h) {
   return eng::Rect2{eng::Vec2{static_cast<float>(x), static_cast<float>(y)},
                     eng::Vec2{static_cast<float>(w), static_cast<float>(h)}};
 }
 
-const eng::CjkGlyph* FindCjk(eng::u32 code) {
+const eng::UiFaceGlyph* FaceData(int size, int* count, int* w, int* h) {
+  if (size >= 15) {
+    *count = eng::kUiFont16Count;
+    *w = eng::kUiFont16W;
+    *h = eng::kUiFont16H;
+    return eng::kUiFont16;
+  }
+  if (size >= 13) {
+    *count = eng::kUiFont14Count;
+    *w = eng::kUiFont14W;
+    *h = eng::kUiFont14H;
+    return eng::kUiFont14;
+  }
+  *count = eng::kUiFont12Count;
+  *w = eng::kUiFont12W;
+  *h = eng::kUiFont12H;
+  return eng::kUiFont12;
+}
+
+const eng::UiFaceGlyph* FindFaceGlyph(eng::u32 cp, int size) {
+  int count = 0;
+  int w = 0;
+  int h = 0;
+  const eng::UiFaceGlyph* glyphs = FaceData(size, &count, &w, &h);
   int lo = 0;
-  int hi = eng::kCjkCount - 1;
+  int hi = count - 1;
   while (lo <= hi) {
     const int mid = (lo + hi) / 2;
-    if (eng::kCjk12[mid].code == code) return &eng::kCjk12[mid];
-    if (eng::kCjk12[mid].code < code) lo = mid + 1;
+    if (glyphs[mid].code == cp) return &glyphs[mid];
+    if (glyphs[mid].code < cp) lo = mid + 1;
     else hi = mid - 1;
   }
   return nullptr;
 }
 
-int GlyphAdvance(eng::u32 cp, int spacing) {
-  if (FindCjk(cp) != nullptr) return eng::kCjkW + 1;
-  eng::GlyphView g;
-  eng::FontGlyph(cp, &g);
-  return g.advance + spacing;
+int GlyphAdvance(eng::u32 cp, int size, int spacing) {
+  const eng::UiFaceGlyph* g = FindFaceGlyph(cp, size);
+  return (g != nullptr ? g->advance : 8) + spacing;
+}
+
+int FaceLineHeight(int size) {
+  int count = 0;
+  int w = 0;
+  int h = 0;
+  FaceData(size, &count, &w, &h);
+  return h + 2;
 }
 
 int MapValue(const UiBinding& b, int raw) {
@@ -142,7 +203,11 @@ void DrawText(const std::string& text, UiRect r, const UiElement& e,
               const UiDrawContext& ctx) {
   const std::vector<std::string> lines =
       UiWrapText(text, std::max(1, r.w), e.font_size, 0);
-  const int line_h = eng::FontLineHeight();
+  const int line_h = FaceLineHeight(e.font_size);
+  int face_w = 0;
+  int face_h = 0;
+  int face_count = 0;
+  FaceData(e.font_size, &face_count, &face_w, &face_h);
   int y = r.y;
   for (const std::string& line : lines) {
     const int line_w = UiTextWidth(line, e.font_size, 0);
@@ -151,39 +216,30 @@ void DrawText(const std::string& text, UiRect r, const UiElement& e,
     else if (e.align == 2) x = r.x + r.w - line_w;
     for (size_t i = 0; i < line.size();) {
       eng::u32 cp = 0;
-      const int adv = eng::Utf8Decode(line.c_str() + i, &cp);
+      const int adv = Utf8Next(line.c_str() + i, &cp);
       if (adv <= 0) break;
-      if (cp >= 0x80) {
-        const eng::CjkGlyph* cg = FindCjk(cp);
-        if (cg != nullptr) {
-          for (int ry = 0; ry < eng::kCjkH; ++ry) {
-            const unsigned bits = cg->rows[ry];
-            int rx = 0;
-            while (rx < eng::kCjkW) {
-              if ((bits & (1u << rx)) == 0) {
-                ++rx;
-                continue;
-              }
-              int run = 1;
-              while (rx + run < eng::kCjkW && (bits & (1u << (rx + run))) != 0) {
-                ++run;
-              }
-              ctx.dl->DrawRect(R(x + rx, y + ry, run, 1), e.color);
-              rx += run;
+      const eng::UiFaceGlyph* g = FindFaceGlyph(cp, e.font_size);
+      if (g != nullptr) {
+        for (int ry = 0; ry < face_h; ++ry) {
+          const unsigned bits = g->rows[ry];
+          int rx = 0;
+          while (rx < face_w) {
+            if ((bits & (1u << rx)) == 0) {
+              ++rx;
+              continue;
             }
+            int run = 1;
+            while (rx + run < face_w && (bits & (1u << (rx + run))) != 0) {
+              ++run;
+            }
+            ctx.dl->DrawRect(R(x + rx, y + ry, run, 1), e.color);
+            rx += run;
           }
-          x += eng::kCjkW + 1;
-          i += static_cast<size_t>(adv);
-          continue;
         }
+        x += g->advance;
+      } else {
+        x += 8;  // 缺字：留空，避免和下一个字挤在一起
       }
-      eng::GlyphView g;
-      eng::FontGlyph(cp, &g);
-      if (g.valid && g.w > 0 && g.h > 0) {
-        ctx.dl->DrawImage(R(x + g.dx, y + g.dy, g.w, g.h), eng::FontTexture(),
-                          e.color, eng::TexRegion{g.x, g.y, g.w, g.h});
-      }
-      x += g.advance;
       i += static_cast<size_t>(adv);
     }
     y += line_h;
@@ -234,7 +290,7 @@ void DrawElement(const UiElement& e, UiRect parent, const UiDrawContext& ctx) {
     }
   }
   if (ih <= 0) {
-    if (e.kind == UiKind::kText) ih = eng::FontLineHeight();
+    if (e.kind == UiKind::kText) ih = FaceLineHeight(e.font_size);
     else if (e.texture != 0) {
       const eng::Texture* t = eng::TextureGet(e.texture);
       if (t != nullptr && t->valid()) ih = t->height;
@@ -309,9 +365,9 @@ int UiTextWidth(const std::string& text, int font_size, int spacing) {
   int w = 0;
   for (size_t i = 0; i < text.size();) {
     eng::u32 cp = 0;
-    const int adv = eng::Utf8Decode(text.c_str() + i, &cp);
+    const int adv = Utf8Next(text.c_str() + i, &cp);
     if (adv <= 0) break;
-    w += GlyphAdvance(cp, spacing);
+    w += GlyphAdvance(cp, font_size, spacing);
     i += static_cast<size_t>(adv);
   }
   return w > 0 ? w - spacing : 0;
@@ -331,9 +387,9 @@ std::vector<std::string> UiWrapText(const std::string& text, int max_w,
     size_t last_space = std::string::npos;
     for (size_t i = 0; i < para.size();) {
       eng::u32 cp = 0;
-      const int adv = eng::Utf8Decode(para.c_str() + i, &cp);
+      const int adv = Utf8Next(para.c_str() + i, &cp);
       if (adv <= 0) break;
-      const int gw = GlyphAdvance(cp, spacing);
+      const int gw = GlyphAdvance(cp, font_size, spacing);
       if (line_w + gw > max_w && !line.empty()) {
         if (last_space != std::string::npos) {
           out.push_back(line.substr(0, last_space));
@@ -370,8 +426,8 @@ void UiDrawTextLine(eng::DrawList& dl, int x, int y, const std::string& text,
   e.text = text;
   e.color = color;
   e.align = align;
-  e.font_size = 10;
-  UiRect r{x, y, max_w > 0 ? max_w : 10000, eng::FontLineHeight()};
+  e.font_size = 12;
+  UiRect r{x, y, max_w > 0 ? max_w : 10000, FaceLineHeight(12)};
   UiDrawContext ctx;
   ctx.dl = &dl;
   DrawText(text, r, e, ctx);

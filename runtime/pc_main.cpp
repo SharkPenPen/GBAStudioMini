@@ -11,7 +11,6 @@
 
 #include "engine/platform/platform.h"
 #include "engine/render/draw_list.h"
-#include "engine/render/font.h"
 #include "engine/render/texture.h"
 #include "runtime/audio.h"
 #include "runtime/game.h"
@@ -96,9 +95,6 @@ int main(int argc, char** argv) {
     return 5;
   }
 
-  if (!eng::FontInit()) {
-    std::fprintf(stderr, "game_pc: font init failed (HUD disabled)\n");
-  }
   if (!r4::AudioInit()) {
     std::fprintf(stderr, "game_pc: audio unavailable (running silent)\n");
   }

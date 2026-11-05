@@ -9,7 +9,6 @@
 #include <cstring>
 
 #include "engine/base/rect.h"
-#include "engine/render/font.h"
 #include "engine/render/texture.h"
 #include "runtime/ui.h"
 #include "runtime/audio.h"
@@ -816,7 +815,7 @@ void Game::RenderHShooter(eng::DrawList& dl, const eng::TextureId* textures,
                b.from_player ? 0xFFFFFFFFu : 0xFF80A0FFu);
     }
   }
-  if (eng::FontTexture() != 0 && game_over_) {
+  if (game_over_) {
     UiDrawTextLine(dl, 0, 150, "GAME OVER", 0xFFFF5050u, 1, view_w_);
   }
 }
@@ -2633,7 +2632,7 @@ void Game::RenderShooter(eng::DrawList& dl, const eng::TextureId* textures,
              b.from_player ? 0xFFFFFFFFu : 0xFFFFB0B0u);
   }
 
-  if (game_over_ && eng::FontTexture() != 0) {
+  if (game_over_) {
     UiDrawTextLine(dl, 0, 150, "GAME OVER", 0xFFFF5050u, 1, view_w_);
   }
 }

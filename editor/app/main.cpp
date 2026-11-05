@@ -6827,7 +6827,10 @@ void DrawUiPageCenter() {
                         (col & 0x00FFFFFFu) | (50u << 24));
     }
     dl->AddRect(p, ImVec2(p.x + sz.x, p.y + sz.y), col);
-    if (e.kind == "text") dl->AddText(p, col, e.text.c_str());
+    if (e.kind == "text") {
+      dl->AddText(ImGui::GetFont(), static_cast<float>(e.font_size),
+                  ImVec2(p.x, p.y), col, e.text.c_str());
+    }
     if (g_selected_ui_element == i) {
       const ImVec2 h(p.x + sz.x - 5.0f, p.y + sz.y - 5.0f);
       dl->AddRectFilled(h, ImVec2(h.x + 10.0f, h.y + 10.0f),
@@ -6971,8 +6974,10 @@ void DrawUiPageRight() {
       e->text = text_buf;
       MarkDirty();
     }
-    if (UndoIntField("字号", &e->font_size, 8)) {
-      e->font_size = std::max(8, std::min(16, e->font_size));
+    const char* kFontSizes[] = {"12", "14", "16"};
+    int fs = e->font_size >= 16 ? 2 : (e->font_size >= 14 ? 1 : 0);
+    if (ImGui::Combo("字号", &fs, kFontSizes, 3)) {
+      e->font_size = 12 + fs * 2;
       MarkDirty();
     }
     const char* aligns[] = {"left", "center", "right"};

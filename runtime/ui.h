@@ -76,7 +76,7 @@ struct UiElement {
   int frames = 1;
   int frame = 0;
   std::string text;
-  int font_size = 10;
+  int font_size = 12;
   eng::u32 color = 0xFFFFFFFFu;
   int align = 0;  // 0 左 / 1 中 / 2 右
 

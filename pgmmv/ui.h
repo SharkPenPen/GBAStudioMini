@@ -33,7 +33,7 @@ struct UiElementDoc {
   int frame = 0;
 
   std::string text;
-  int font_size = 10;
+  int font_size = 12;
   unsigned color = 0xFFFFFFFFu;
   int align = 0;
 

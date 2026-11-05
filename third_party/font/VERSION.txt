@@ -1,5 +1,0 @@
-﻿TakWolf/fusion-pixel-font
-release: 2026.10.16
-asset: fusion-pixel-font-10px-proportional-otf.woff2-v2026.10.16.zip
-sha256: 0F19A2FB0A5E5DA53BDA693898A56EF1F12B25224E5C870152F5E8BDF29813F8
-license: SIL Open Font License 1.1 (see LICENSE-OFL.txt)

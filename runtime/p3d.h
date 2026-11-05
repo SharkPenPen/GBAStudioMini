@@ -354,7 +354,7 @@ struct UiElementData {
   int frames = 1;
   int frame = 0;
   std::string text;
-  int font_size = 10;
+  int font_size = 12;
   uint32_t color = 0xFFFFFFFFu;
   int align = 0;
   UiBindingData binding;
