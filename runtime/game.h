@@ -134,6 +134,11 @@ class Game {
 
   int scene_index() const { return scene_index_; }
   int UiValue(const char* name) const;
+  bool SaveBytes(std::string* out) const;
+  bool LoadBytes(const std::string& data);
+  bool SaveToFile(const std::string& path) const;
+  bool LoadFromFile(const std::string& path);
+  void SetSavePath(const std::string& path) { save_path_ = path; }
   int view_w() const { return view_w_; }
   int view_h() const { return view_h_; }
   int transition_count() const { return transition_count_; }
@@ -241,6 +246,7 @@ class Game {
   int shooter_player_image_ = -1;
   int shooter_effect_object_ = -1;
   std::map<std::string, int> variables_;
+  std::string save_path_ = "save0.dat";
   std::vector<int> modal_stack_;
   int modal_focus_ = -1;
   int modal_list_index_ = 0;

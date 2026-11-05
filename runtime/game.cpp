@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <iterator>
 
 #include "engine/base/rect.h"
 #include "engine/render/texture.h"
@@ -22,6 +23,53 @@ int ObjIntAttr(const Object& o, const char* name, int def) {
     if (a.name == name) return a.value;
   }
   return def;
+}
+
+
+void PutU16(std::string* b, unsigned v) {
+  b->push_back(static_cast<char>(v & 0xFF));
+  b->push_back(static_cast<char>((v >> 8) & 0xFF));
+}
+
+void PutI32(std::string* b, int v) {
+  const unsigned u = static_cast<unsigned>(v);
+  for (int i = 0; i < 4; ++i) {
+    b->push_back(static_cast<char>((u >> (i * 8)) & 0xFF));
+  }
+}
+
+void PutStr(std::string* b, const std::string& s) {
+  const unsigned n = s.size() > 65535 ? 65535 : static_cast<unsigned>(s.size());
+  PutU16(b, n);
+  b->append(s.data(), n);
+}
+
+bool GetU16(const std::string& b, size_t* pos, unsigned* out) {
+  if (*pos + 2 > b.size()) return false;
+  *out = static_cast<unsigned char>(b[*pos]) |
+         (static_cast<unsigned>(static_cast<unsigned char>(b[*pos + 1])) << 8);
+  *pos += 2;
+  return true;
+}
+
+bool GetI32(const std::string& b, size_t* pos, int* out) {
+  if (*pos + 4 > b.size()) return false;
+  unsigned u = 0;
+  for (int i = 0; i < 4; ++i) {
+    u |= static_cast<unsigned>(static_cast<unsigned char>(b[*pos + i])) << (i * 8);
+  }
+  *out = static_cast<int>(u);
+  *pos += 4;
+  return true;
+}
+
+bool GetStr(const std::string& b, size_t* pos, std::string* out) {
+  unsigned n = 0;
+  if (!GetU16(b, pos, &n)) return false;
+  if (*pos + n > b.size()) return false;
+  out->assign(b.data() + *pos, n);
+  *pos += n;
+  return true;
 }
 
 std::string ObjectTeam(const Object& o) {
@@ -678,6 +726,93 @@ int Game::UiValue(const char* name) const {
   if (at != player_.attrs.end()) return at->second;
   return 0;
 }
+
+bool Game::SaveBytes(std::string* out) const {
+  if (out == nullptr || p3d_ == nullptr || p3d_->scenes.empty()) return false;
+  out->clear();
+  out->append("PLSV", 4);
+  PutU16(out, 1);  // version
+  PutStr(out, p3d_->scenes[static_cast<size_t>(scene_index_)].id);
+  PutI32(out, static_cast<int>(std::lround(player_.x)));
+  PutI32(out, static_cast<int>(std::lround(player_.y)));
+  std::vector<std::pair<std::string, int>> globals;
+  for (const auto& kv : variables_) {
+    if (kv.first.rfind("g:", 0) == 0) {
+      globals.emplace_back(kv.first.substr(2), kv.second);
+    }
+  }
+  PutU16(out, static_cast<unsigned>(globals.size()));
+  for (const auto& kv : globals) {
+    PutStr(out, kv.first);
+    PutI32(out, kv.second);
+  }
+  return true;
+}
+
+bool Game::LoadBytes(const std::string& data) {
+  if (p3d_ == nullptr || data.size() < 6) return false;
+  if (data.compare(0, 4, "PLSV") != 0) return false;
+  size_t pos = 4;
+  unsigned version = 0;
+  if (!GetU16(data, &pos, &version) || version != 1) return false;
+  std::string scene_id;
+  int px = 0;
+  int py = 0;
+  if (!GetStr(data, &pos, &scene_id) || !GetI32(data, &pos, &px) ||
+      !GetI32(data, &pos, &py)) {
+    return false;
+  }
+  unsigned count = 0;
+  if (!GetU16(data, &pos, &count) || count > 4096) return false;
+  std::vector<std::pair<std::string, int>> globals;
+  for (unsigned i = 0; i < count; ++i) {
+    std::string key;
+    int value = 0;
+    if (!GetStr(data, &pos, &key) || !GetI32(data, &pos, &value)) return false;
+    globals.emplace_back(std::move(key), value);
+  }
+  int scene_index = -1;
+  for (int i = 0; i < static_cast<int>(p3d_->scenes.size()); ++i) {
+    if (p3d_->scenes[static_cast<size_t>(i)].id == scene_id) {
+      scene_index = i;
+      break;
+    }
+  }
+  if (scene_index < 0) return false;
+  SetScene(scene_index);
+  for (auto it = variables_.begin(); it != variables_.end();) {
+    if (it->first.rfind("g:", 0) == 0) it = variables_.erase(it);
+    else ++it;
+  }
+  for (const auto& kv : globals) variables_["g:" + kv.first] = kv.second;
+  globals_seeded_ = true;
+  player_.x = static_cast<float>(px);
+  player_.y = static_cast<float>(py);
+  won_ = false;
+  game_over_ = false;
+  toast_.clear();
+  toast_timer_ = 0.0f;
+  UpdateCamera(0.0f);
+  return true;
+}
+
+bool Game::SaveToFile(const std::string& path) const {
+  std::string data;
+  if (!SaveBytes(&data)) return false;
+  std::ofstream f(path, std::ios::binary | std::ios::trunc);
+  if (!f) return false;
+  f.write(data.data(), static_cast<std::streamsize>(data.size()));
+  return f.good();
+}
+
+bool Game::LoadFromFile(const std::string& path) {
+  std::ifstream f(path, std::ios::binary);
+  if (!f) return false;
+  std::string data((std::istreambuf_iterator<char>(f)),
+                   std::istreambuf_iterator<char>());
+  return LoadBytes(data);
+}
+
 
 void Game::DrawUiScreens(eng::DrawList& dl, const eng::TextureId* textures,
                          int texture_count) const {
@@ -1706,6 +1841,14 @@ bool Game::RunTriggerList(const Trigger& trigger,
     }
     if (action.type == 2) {  // set_variable
       variables_[action.target] = action.value;
+      continue;
+    }
+    if (action.type == 11) {  // save
+      SaveToFile(save_path_);
+      continue;
+    }
+    if (action.type == 12) {  // load
+      if (LoadFromFile(save_path_)) return true;
       continue;
     }
     if (action.type == 9) {  // open_ui

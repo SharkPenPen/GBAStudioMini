@@ -152,6 +152,57 @@ void TestModalStack() {
   CHECK(game.UiValue("done") == 1);
 }
 
+void TestSaveLoad() {
+  r4::P3d p = BaseP3d();
+  r4::Trigger trigger;
+  trigger.x = 80;
+  trigger.y = 80;
+  trigger.w = 80;
+  trigger.h = 80;
+  trigger.once = true;
+  r4::TriggerAction coins;
+  coins.type = 2;  // set_variable
+  coins.target = "g:coins";
+  coins.value = 5;
+  trigger.actions.push_back(coins);
+  p.scenes[0].triggers.push_back(trigger);
+
+  r4::Game game;
+  std::string err;
+  CHECK(game.Init(p, &err));
+  game.Update(1.0f / 60.0f, EmptyInput());
+  CHECK(game.UiValue("g:coins") == 5);
+  const eng::InputState right = RightInput();
+  for (int i = 0; i < 30; ++i) game.Update(1.0f / 60.0f, right);
+  CHECK(game.player().x > 100.0f);
+
+  std::string bytes;
+  CHECK(game.SaveBytes(&bytes));
+  CHECK(!bytes.empty());
+  std::string bad = bytes;
+  bad[0] = 'X';
+  r4::Game rejected;
+  CHECK(rejected.Init(p, &err));
+  CHECK(!rejected.LoadBytes(bad));
+
+  r4::Game loaded;
+  CHECK(loaded.Init(p, &err));
+  CHECK(loaded.LoadBytes(bytes));
+  CHECK(loaded.scene_id() == "test");
+  CHECK(loaded.UiValue("g:coins") == 5);
+  CHECK(std::fabs(loaded.player().x - game.player().x) < 1.0f);
+
+  const std::filesystem::path save_path =
+      std::filesystem::temp_directory_path() / "pocketloom_save0.dat";
+  std::filesystem::remove(save_path);
+  CHECK(game.SaveToFile(save_path.u8string()));
+  r4::Game from_file;
+  CHECK(from_file.Init(p, &err));
+  CHECK(from_file.LoadFromFile(save_path.u8string()));
+  CHECK(from_file.UiValue("g:coins") == 5);
+  std::filesystem::remove(save_path);
+}
+
 void TestModalList() {
   r4::P3d p = BaseP3d();
   r4::UiScreenData menu;
@@ -459,6 +510,7 @@ int main() {
   std::printf("collision...\n"); TestCollisionBlock();
   std::printf("trigger...\n"); TestTriggerWin();
   std::printf("modal...\n"); TestModalStack();
+  std::printf("save/load...\n"); TestSaveLoad();
   std::printf("modal list...\n"); TestModalList();
   std::printf("camera...\n"); TestFixedCameraCenters();
   std::printf("p3d roundtrip...\n"); TestP3dRoundTrip();

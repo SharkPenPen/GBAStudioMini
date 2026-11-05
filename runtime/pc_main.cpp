@@ -117,6 +117,11 @@ int main(int argc, char** argv) {
     eng::Platform().shutdown();
     return 6;
   }
+  {
+    const std::filesystem::path save_path =
+        std::filesystem::path(p3d_path).parent_path() / "save0.dat";
+    game.SetSavePath(save_path.u8string());
+  }
 
   eng::DrawList dl;
   dl.ResetScreenSizes();
