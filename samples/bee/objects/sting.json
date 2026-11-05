@@ -1,0 +1,53 @@
+{
+  "format_version": 1,
+  "id": "sting",
+  "name": "Sting",
+  "type": "bullet",
+  "image": "assets/sting.png",
+  "frame": {
+    "w": 8,
+    "h": 8
+  },
+  "collision": {
+    "x": -4,
+    "y": -8,
+    "w": 8,
+    "h": 8
+  },
+  "hurt": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+  },
+  "attack": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+  },
+  "team": "player",
+  "physics": {
+    "speed": 260,
+    "gravity": 0,
+    "limit_screen": false
+  },
+  "attrs": [
+    {
+      "name": "hp",
+      "value": 1
+    },
+    {
+      "name": "bullet_speed",
+      "value": 260
+    },
+    {
+      "name": "atk",
+      "value": 1
+    }
+  ],
+  "animation": "sting_anim",
+  "flow": {
+    "default": "idle"
+  }
+}

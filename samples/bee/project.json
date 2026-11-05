@@ -1,0 +1,52 @@
+{
+  "variables": {},
+  "format_version": 1,
+  "name": "Bee Swatter",
+  "settings": {
+    "initial_scene": "garden"
+  },
+  "persistent_ui": "",
+  "title_ui": "",
+  "assets": [
+    {
+      "id": "player",
+      "name": "player",
+      "type": "image",
+      "path": "assets/player.png",
+      "width": 16,
+      "height": 16,
+      "split_x": 1,
+      "split_y": 1
+    },
+    {
+      "id": "bee",
+      "name": "bee",
+      "type": "image",
+      "path": "assets/bee.png",
+      "width": 16,
+      "height": 16,
+      "split_x": 1,
+      "split_y": 1
+    },
+    {
+      "id": "sting",
+      "name": "sting",
+      "type": "image",
+      "path": "assets/sting.png",
+      "width": 8,
+      "height": 8,
+      "split_x": 1,
+      "split_y": 1
+    },
+    {
+      "id": "grass",
+      "name": "grass",
+      "type": "image",
+      "path": "assets/grass.png",
+      "width": 16,
+      "height": 16,
+      "split_x": 1,
+      "split_y": 1
+    }
+  ]
+}

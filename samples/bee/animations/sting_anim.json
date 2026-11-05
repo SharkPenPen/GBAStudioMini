@@ -1,0 +1,49 @@
+{
+  "format_version": 1,
+  "id": "sting_anim",
+  "name": "Sting",
+  "image": "assets/sting.png",
+  "frame_w": 8,
+  "frame_h": 8,
+  "actions": [
+    {
+      "name": "idle",
+      "frames": [
+        {
+          "image": 0,
+          "hold": 2,
+          "origin": {
+            "x": 4,
+            "y": 8
+          },
+          "collision": {
+            "x": -4,
+            "y": -8,
+            "w": 8,
+            "h": 8
+          },
+          "attack": {
+            "none": true
+          },
+          "hurt": {
+            "none": true
+          }
+        }
+      ],
+      "origin": {
+        "x": 4,
+        "y": 8
+      },
+      "offset": {
+        "x": 0,
+        "y": 0
+      },
+      "flip_h": false,
+      "flip_v": false,
+      "fps": 8,
+      "loop": true,
+      "base_variant": "默认",
+      "directions": []
+    }
+  ]
+}

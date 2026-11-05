@@ -1,0 +1,11 @@
+{
+  "format_version": 2,
+  "id": "grass",
+  "name": "Grass",
+  "image": "assets/grass.png",
+  "tile_w": 8,
+  "tile_h": 8,
+  "columns": 1,
+  "offset_x": 0,
+  "offset_y": 0
+}

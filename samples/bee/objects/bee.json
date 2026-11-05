@@ -1,0 +1,71 @@
+{
+  "format_version": 1,
+  "id": "bee",
+  "name": "Bee",
+  "type": "enemy",
+  "image": "assets/bee.png",
+  "frame": {
+    "w": 16,
+    "h": 16
+  },
+  "collision": {
+    "x": -8,
+    "y": -16,
+    "w": 16,
+    "h": 16
+  },
+  "hurt": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+  },
+  "attack": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+  },
+  "team": "enemy",
+  "physics": {
+    "speed": 45,
+    "gravity": 0,
+    "limit_screen": false
+  },
+  "attrs": [
+    {
+      "name": "hp",
+      "value": 1
+    }
+  ],
+  "rules": [
+    {
+      "name": "fly",
+      "enabled": true,
+      "when": [
+        {
+          "type": "always",
+          "op": 1,
+          "value": 0
+        }
+      ],
+      "do": [
+        {
+          "type": "move",
+          "x": -45,
+          "y": 0
+        },
+        {
+          "type": "anim",
+          "x": 0,
+          "y": 0,
+          "text": "fly"
+        }
+      ]
+    }
+  ],
+  "animation": "bee_anim",
+  "flow": {
+    "default": "idle"
+  }
+}

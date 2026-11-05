@@ -1,26 +1,39 @@
-# Demo
+# 示例
 
-`demo.p3d` 是 PC 播放器的最小示例：
+## Bee Swatter / 打蜜蜂
 
-- 16×16 地砖一层；
-- 一个 16×16 玩家方块；
-- 左右键移动；
-- HUD 显示 “PocketLoom Demo”。
+工程目录：`samples/bee`
 
-运行：
+- 在编辑器里打开 `samples/bee/project.json`；
+- F5 试玩；
+- 左右键移动，X 发射；
+- 蜜蜂从右往左飞，子弹命中后消失；
+- HUD 显示操作提示。
+
+内容全部是编辑器数据：
+
+- 场景：`scenes/garden.json`；
+- 对象：`objects/swatter.json` / `objects/bee.json` / `objects/sting.json`；
+- 动画：`animations/*.json`；
+- 规则：玩家移动 / 发射 / 蜜蜂飞行都在对象 JSON 的 rules 里；
+- 界面：`ui/hud.json`。
+
+`bee.p3d` 是用编辑器命令行重新导出的：
+
+~~~powershell
+.\build\host\bin\ploom.exe --open samples\bee\project.json --export-p3d samples\bee\bee.p3d
+~~~
+
+直接运行：
+
+~~~powershell
+.\build\host\bin\PocketLoom-Play.exe --p3d samples\bee\bee.p3d
+~~~
+
+## Demo
+
+`samples/demo/demo.p3d` 是最小渲染示例：
 
 ~~~powershell
 .\build\host\bin\PocketLoom-Play.exe --p3d samples\demo\demo.p3d
-~~~
-
-发布包里从包根目录运行：
-
-~~~powershell
-.\bin\PocketLoom-Play.exe --p3d samples\demo\demo.p3d
-~~~
-
-重新生成：
-
-~~~powershell
-.\build\host\bin\make-demo.exe samples\demo\demo.p3d
 ~~~
