@@ -98,6 +98,9 @@ int FaceLineHeight(int size) {
   return h + 2;
 }
 
+// 12px 汉字字形占满 12 格；加 1px 字距，避免相邻字粘在一起。
+int FaceSpacing(int size) { return size <= 12 ? 1 : 0; }
+
 int MapValue(const UiBinding& b, int raw) {
   if (b.map == 1) {
     const int in_span = b.in_max - b.in_min;
@@ -202,7 +205,7 @@ std::string UiFormatText(const std::string& text, const UiDrawContext& ctx) {
 void DrawText(const std::string& text, UiRect r, const UiElement& e,
               const UiDrawContext& ctx) {
   const std::vector<std::string> lines =
-      UiWrapText(text, std::max(1, r.w), e.font_size, 0);
+      UiWrapText(text, std::max(1, r.w), e.font_size, FaceSpacing(e.font_size));
   const int line_h = FaceLineHeight(e.font_size);
   int face_w = 0;
   int face_h = 0;
@@ -210,7 +213,7 @@ void DrawText(const std::string& text, UiRect r, const UiElement& e,
   FaceData(e.font_size, &face_count, &face_w, &face_h);
   int y = r.y;
   for (const std::string& line : lines) {
-    const int line_w = UiTextWidth(line, e.font_size, 0);
+    const int line_w = UiTextWidth(line, e.font_size, FaceSpacing(e.font_size));
     int x = r.x;
     if (e.align == 1) x = r.x + (r.w - line_w) / 2;
     else if (e.align == 2) x = r.x + r.w - line_w;
@@ -236,7 +239,7 @@ void DrawText(const std::string& text, UiRect r, const UiElement& e,
             rx += run;
           }
         }
-        x += g->advance;
+        x += g->advance + FaceSpacing(e.font_size);
       } else {
         x += 8;  // 缺字：留空，避免和下一个字挤在一起
       }
@@ -286,7 +289,7 @@ void DrawElement(const UiElement& e, UiRect parent, const UiDrawContext& ctx,
   int iw = e.w;
   int ih = e.h;
   if (iw <= 0) {
-    if (e.kind == UiKind::kText) iw = UiTextWidth(e.text, e.font_size, 0);
+    if (e.kind == UiKind::kText) iw = UiTextWidth(e.text, e.font_size, FaceSpacing(e.font_size));
     else if (e.texture != 0) {
       const eng::Texture* t = eng::TextureGet(e.texture);
       if (t != nullptr && t->valid()) iw = t->width;

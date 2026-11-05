@@ -129,6 +129,7 @@ docs/          设计与使用文档
 - [存档](docs/17-存档.md)
 - [PC 窗口与调试](docs/18-PC窗口与调试.md)
 - [发布与打包](docs/19-发布与打包.md)
+- [字体 1:1 预览](docs/font-preview/README.md)
 
 GBA 时期历史文档（不再维护）：docs/04、docs/06、docs/10。
 
