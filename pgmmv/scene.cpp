@@ -136,42 +136,24 @@ const SceneChunk* SceneDoc::FindChunk(int layer, int cx, int cy) const {
 }
 
 void SceneDoc::EnsureLayers() {
-  static const char* names[kSceneLayerCount] = {"HUD", "前景", "主层", "背景"};
+  static const char* names[kSceneLayerCount] = {"层 1", "层 2", "层 3", "层 4"};
   std::vector<SceneLayer> old = std::move(layers);
   layers.clear();
   layers.resize(kSceneLayerCount);
   for (int i = 0; i < kSceneLayerCount; ++i) {
-    layers[i].bg_slot = i;
     layers[i].name = names[i];
     layers[i].priority = i;
-    layers[i].enabled = (i != 0);
-  }
-  if (old.size() == 3) {
-    // 旧 3 层：背景 → BG3，主层 → BG2，前景 → BG1；BG0 空。
-    layers[3] = std::move(old[0]);
-    layers[2] = std::move(old[1]);
-    layers[1] = std::move(old[2]);
-    for (int i = 0; i < kSceneLayerCount; ++i) {
-      layers[i].bg_slot = i;
+    layers[i].enabled = true;
+    if (i < static_cast<int>(old.size())) {
+      layers[i] = std::move(old[i]);
       if (layers[i].name.empty()) layers[i].name = names[i];
-      layers[i].priority = i;
-      if (i == 0) layers[i].enabled = false;
-    }
-  } else {
-    for (SceneLayer& layer : old) {
-      int slot = layer.bg_slot;
-      if (slot < 0 || slot >= kSceneLayerCount) slot = 0;
-      if (layer.name.empty()) layer.name = names[slot];
-      if (!layer.enabled && slot == 0) layer.enabled = false;
-      layers[slot] = std::move(layer);
+      if (layers[i].priority < 0 || layers[i].priority >= kSceneLayerCount) {
+        layers[i].priority = i;
+      }
     }
   }
-  for (int i = 0; i < kSceneLayerCount; ++i) {
-    layers[i].bg_slot = i;
-    if (layers[i].name.empty()) layers[i].name = names[i];
-  }
-  if (map_w != 32 && map_w != 64) map_w = 64;
-  if (map_h != 32 && map_h != 64) map_h = 32;
+  if (map_w < 1) map_w = 64;
+  if (map_h < 1) map_h = 32;
 }
 
 SceneObject* SceneDoc::FindSceneObject(const std::string& instance_id) {
@@ -403,13 +385,11 @@ SceneDoc SceneCreateDefault(const std::string& id, const std::string& name,
   s.id = id;
   s.name = name.empty() ? id : name;
   s.layers.resize(kSceneLayerCount);
-  static const char* names[kSceneLayerCount] = {"HUD", "前景", "主层", "背景"};
+  static const char* names[kSceneLayerCount] = {"层 1", "层 2", "层 3", "层 4"};
   for (int i = 0; i < kSceneLayerCount; ++i) {
-    s.layers[i].bg_slot = i;
     s.layers[i].name = names[i];
-    s.layers[i].tileset = tileset;
     s.layers[i].visible = true;
-    s.layers[i].enabled = (i != 0);
+    s.layers[i].enabled = true;
     s.layers[i].priority = i;
   }
   if (!tileset.empty()) s.tilesets.push_back(tileset);
@@ -461,8 +441,7 @@ bool SceneLoad(const std::filesystem::path& path, SceneDoc* out,
   }
   if (s.name.empty()) s.name = s.id;
   auto parse_layers = [&](const JsonValue* arr, const char* what,
-                          std::vector<SceneLayer>* out,
-                          std::vector<std::string>* tsl) -> bool {
+                          std::vector<SceneLayer>* out) -> bool {
     if (arr == nullptr) return true;
     if (!arr->IsArray()) {
       if (error != nullptr) *error = std::string("scene.") + what + " must be array";
@@ -475,27 +454,12 @@ bool SceneLoad(const std::filesystem::path& path, SceneDoc* out,
       }
       SceneLayer layer;
       if (!ReadString(lv, "name", &layer.name, &found, error)) return false;
-      if (!ReadString(lv, "tileset", &layer.tileset, &found, error)) return false;
-      if (!layer.tileset.empty()) {
-        bool exists = false;
-        for (const std::string& id : *tsl) {
-          if (id == layer.tileset) { exists = true; break; }
-        }
-        if (!exists) tsl->push_back(layer.tileset);
-      }
       if (!ReadBool(lv, "visible", &layer.visible, &found, error)) return false;
       if (!ReadBool(lv, "locked", &layer.locked, &found, error)) return false;
-      if (!ReadInt(lv, "bg_slot", &layer.bg_slot, &found, error)) return false;
       if (!ReadBool(lv, "enabled", &layer.enabled, &found, error)) return false;
       if (!ReadInt(lv, "priority", &layer.priority, &found, error)) return false;
       if (!ReadInt(lv, "parallax_x", &layer.parallax_x, &found, error)) return false;
       if (!ReadInt(lv, "parallax_y", &layer.parallax_y, &found, error)) return false;
-      // 旧字段兼容：scroll_x/y → parallax_x/y；foreground 由旧 3 层迁移处理。
-      int old_scroll = 0;
-      if (!ReadInt(lv, "scroll_x", &old_scroll, &found, error)) return false;
-      if (found) layer.parallax_x = old_scroll;
-      if (!ReadInt(lv, "scroll_y", &old_scroll, &found, error)) return false;
-      if (found) layer.parallax_y = old_scroll;
       const JsonValue* chunks = lv.Find("chunks");
       if (chunks != nullptr) {
         if (!chunks->IsArray()) {
@@ -541,7 +505,7 @@ bool SceneLoad(const std::filesystem::path& path, SceneDoc* out,
     }
     return true;
   };
-  if (!parse_layers(root.Find("layers"), "layers", &s.layers, &s.tilesets)) {
+  if (!parse_layers(root.Find("layers"), "layers", &s.layers)) {
     return false;
   }
   if (!ReadInt(root, "map_w", &s.map_w, &found, error)) return false;
@@ -553,27 +517,6 @@ bool SceneLoad(const std::filesystem::path& path, SceneDoc* out,
                " 格";
     }
     return false;
-  }
-  // ★ 老工程迁移（没有 tilesets 字段）★
-  //   v4 及以前：每个图层自带 tileset，格子里是那张图里的裸索引。
-  //   v5 起：scene.tilesets 是图集表，格子 = PackCell(槽位, 索引)。
-  //   这里就地改写，之后编辑器/导出都只认一种编码。
-  if (tsl == nullptr) {
-    for (SceneLayer& layer : s.layers) {
-      if (layer.tileset.empty()) continue;
-      int slot = 0;
-      for (size_t i = 0; i < s.tilesets.size(); ++i) {
-        if (s.tilesets[i] == layer.tileset) {
-          slot = static_cast<int>(i);
-          break;
-        }
-      }
-      for (auto& entry : layer.chunks) {
-        for (int& v : entry.second.cells) {
-          if (v >= 0) v = PackCell(slot, v);
-        }
-      }
-    }
   }
   const JsonValue* collision = root.Find("collision");
   if (collision != nullptr && collision->IsObject()) {
@@ -846,8 +789,6 @@ void SceneSyncRaw(SceneDoc* s) {
       JsonValue lv = JsonValue::Object();
       lv.Set("id", JsonValue::Number(static_cast<double>(i + 1)));
       lv.Set("name", JsonValue::String(l.name));
-      lv.Set("tileset", JsonValue::String(l.tileset));
-      lv.Set("bg_slot", JsonValue::Number(static_cast<double>(l.bg_slot)));
       lv.Set("enabled", JsonValue::Bool(l.enabled));
       lv.Set("visible", JsonValue::Bool(l.visible));
       lv.Set("locked", JsonValue::Bool(l.locked));

@@ -467,7 +467,6 @@ bool ReadScene(Reader& r, Scene* s, std::string* error) {
   s->layers.resize(lc);
   for (uint16_t li = 0; li < lc; ++li) {
     SceneLayer& layer = s->layers[li];
-    layer.tileset = r.I32();
     layer.visible = (r.U8() != 0);
     layer.scroll_x = r.I32();
     layer.scroll_y = r.I32();
@@ -923,7 +922,6 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
     }
     w.U16(static_cast<uint16_t>(s.layers.size()));
     for (const SceneLayer& layer : s.layers) {
-      w.I32(layer.tileset);
       w.U8(layer.visible ? 1 : 0);
       w.I32(layer.scroll_x);
       w.I32(layer.scroll_y);

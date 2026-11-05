@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 73;  // 73: 项目视口 view_w/view_h
+constexpr uint32_t kP3dVersion = 74;  // 74: 删掉 SceneLayer.tileset
+                                      // 73: 项目视口 view_w/view_h
                                       // 72: 对象可推动标记
                                       // 69: 单屏，移除旧双屏字段与 UI 按钮动作
                                       // 66: 卷轴关卡结束点（scroll_end_x/y + scroll_next）
@@ -220,7 +221,6 @@ inline int P3dCellSlot(int cell) { return cell < 0 ? -1 : (cell >> 20); }
 inline int P3dCellIndex(int cell) { return cell < 0 ? -1 : (cell & 0xFFFFF); }
 
 struct SceneLayer {
-  int tileset = -1;  // 旧字段：v41 起不再使用（导出写 -1）；用 Scene::tilesets 页表
   bool visible = true;
   int scroll_x = 100;  // v25
   int scroll_y = 100;

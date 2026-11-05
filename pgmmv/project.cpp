@@ -347,19 +347,7 @@ void ProjectSyncRaw(Project* p) {
       (root.Find("settings") != nullptr && root.Find("settings")->IsObject())
           ? *root.Find("settings")
           : JsonValue::Object();
-  settings.Set("tile_size", JsonValue::Number(static_cast<double>(p->settings.tile_size)));
   settings.Set("initial_scene", JsonValue::String(p->settings.initial_scene));
-
-  // 不再兼容旧工程：视口固定 480×272。
-  p->settings.top_width = kScreenWidth;
-  p->settings.top_height = kScreenHeight;
-  JsonValue screen = JsonValue::Object();
-  JsonValue top = JsonValue::Array();
-  top.Push(JsonValue::Number(static_cast<double>(p->settings.top_width)));
-  top.Push(JsonValue::Number(static_cast<double>(p->settings.top_height)));
-  screen.Set("top", std::move(top));
-  settings.Set("screen", std::move(screen));
-  settings.Set("player_count", JsonValue::Number(static_cast<double>(p->settings.player_count)));
   root.Set("settings", std::move(settings));
 
   JsonValue assets = JsonValue::Array();
@@ -518,42 +506,10 @@ bool ProjectLoad(const std::filesystem::path& project_json_path, Project* out,
       }
       return false;
     }
-    int v = 0;
-    if (!ReadOptionalInt(*settings, "tile_size", &v, &found, error)) return false;
-    if (found) p.settings.tile_size = v;
     if (!ReadOptionalString(*settings, "initial_scene", &p.settings.initial_scene, &found, error)) {
       return false;
     }
-    if (!ReadOptionalInt(*settings, "player_count", &v, &found, error)) return false;
-    if (found) p.settings.player_count = v;
-
-    const JsonValue* screen = settings->Find("screen");
-    if (screen != nullptr) {
-      if (!screen->IsObject()) {
-        if (error != nullptr) {
-          *error = "settings.screen must be an object";
-        }
-        return false;
-      }
-      const JsonValue* top = screen->Find("top");
-      if (top != nullptr) {
-        if (!top->IsArray() || top->items.size() != 2 ||
-            !NumberToInt(top->items[0], &p.settings.top_width) ||
-            !NumberToInt(top->items[1], &p.settings.top_height)) {
-          if (error != nullptr) *error = "settings.screen.top is invalid";
-          return false;
-        }
-      }
-    }
-    if (p.settings.top_width <= 0 || p.settings.top_height <= 0) {
-      p.settings.top_width = kScreenWidth;
-      p.settings.top_height = kScreenHeight;
-    }
   }
-
-  // 不再兼容旧工程：视口固定 480×272。
-  p.settings.top_width = kScreenWidth;
-  p.settings.top_height = kScreenHeight;
 
   const JsonValue* assets = root.Find("assets");
   if (assets != nullptr) {

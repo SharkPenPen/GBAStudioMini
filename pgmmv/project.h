@@ -56,11 +56,7 @@ constexpr int kScreenWidth = 480;
 constexpr int kScreenHeight = 272;
 
 struct ProjectSettings {
-  int tile_size = 16;
   std::string initial_scene;
-  int top_width = kScreenWidth;
-  int top_height = kScreenHeight;
-  int player_count = 1;
 };
 
 struct Project {

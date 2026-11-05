@@ -199,10 +199,9 @@ struct TilePage {
   std::vector<SourceTile> placed;  // placed[i] = 页内索引 i 对应的源图块
 };
 
-// 格子 → (图块组 id, 源索引)。兼容没迁移过的裸索引（图层自带 tileset）。
+// 格子 → (图块组 id, 源索引)。
 bool ResolveSceneCellList(const std::vector<std::string>& tilesets,
-                          const SceneLayer& layer, int cell,
-                          const Project& project, std::string* out_id,
+                          int cell, const Project& project, std::string* out_id,
                           int* out_index) {
   if (cell < 0) return false;
   const int slot = CellSlot(cell);
@@ -211,20 +210,15 @@ bool ResolveSceneCellList(const std::vector<std::string>& tilesets,
   if (slot >= 0 && slot < static_cast<int>(tilesets.size())) {
     id = tilesets[slot];
   }
-  if (project.FindTileset(id) == nullptr) {
-    if (layer.tileset.empty()) return false;
-    id = layer.tileset;  // 老数据兜底：整层一张图
-  }
   if (project.FindTileset(id) == nullptr) return false;
   *out_id = std::move(id);
   *out_index = index;
   return true;
 }
 
-bool ResolveSceneCell(const SceneDoc& s, const SceneLayer& layer, int cell,
-                      const Project& project, std::string* out_id,
-                      int* out_index) {
-  return ResolveSceneCellList(s.tilesets, layer, cell, project, out_id, out_index);
+bool ResolveSceneCell(const SceneDoc& s, int cell, const Project& project,
+                      std::string* out_id, int* out_index) {
+  return ResolveSceneCellList(s.tilesets, cell, project, out_id, out_index);
 }
 
 // 把每组源图块按页切开并栅格化；placement[(组, 索引)] = (页号, 页内索引)。
@@ -375,7 +369,7 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
         for (int cell : entry.second.cells) {
           std::string id;
           int index = 0;
-          const bool ok = ResolveSceneCell(s, layer, cell, project, &id, &index);
+          const bool ok = ResolveSceneCell(s, cell, project, &id, &index);
           if (!ok) continue;
           const TilesetDoc* ts = project.FindTileset(id);
           if (ts == nullptr) continue;
@@ -690,7 +684,7 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
         for (int cell : entry.second.cells) {
           std::string id;
           int index = 0;
-          if (!ResolveSceneCell(s, layer, cell, project, &id, &index)) continue;
+          if (!ResolveSceneCell(s, cell, project, &id, &index)) continue;
           auto pl = placement.find(std::make_pair(id, index));
           if (pl == placement.end()) continue;
           page_slot.emplace(pl->second.first,
@@ -709,8 +703,7 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
         rl.scroll_x = layer.parallax_x;
         rl.scroll_y = layer.parallax_y;
         rl.foreground = (layer.priority <= 1);
-        rl.tileset = -1;  // 旧字段：v41 起不再使用
-        for (const auto& entry : layer.chunks) {
+          for (const auto& entry : layer.chunks) {
           r4::SceneChunk rc;
           rc.cx = entry.second.cx;
           rc.cy = entry.second.cy;
@@ -719,7 +712,7 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
             if (v < 0) continue;
             std::string id;
             int index = 0;
-            const bool ok = ResolveSceneCell(s, layer, v, project, &id, &index);
+            const bool ok = ResolveSceneCell(s, v, project, &id, &index);
             if (!ok) {
               v = -1;
               continue;
@@ -883,8 +876,8 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
   }
 
   p.initial_scene = 0;
-  p.view_w = project.settings.top_width > 0 ? project.settings.top_width : 480;
-  p.view_h = project.settings.top_height > 0 ? project.settings.top_height : 272;
+  p.view_w = kScreenWidth;
+  p.view_h = kScreenHeight;
   for (size_t i = 0; i < project.scenes.size(); ++i) {
     if (project.scenes[i].id == project.settings.initial_scene) {
       p.initial_scene = static_cast<int>(i);

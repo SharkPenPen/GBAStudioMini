@@ -602,12 +602,6 @@ int SceneSpawnY(pgmmv::SceneDoc* s);
 // 老工程/新场景的 tilesets 可能是空表：用第一层的旧字段补一条，保证槽位 0 有东西。
 void EnsureSceneTilesets(pgmmv::SceneDoc* s) {
   if (s == nullptr || !s->tilesets.empty()) return;
-  for (const pgmmv::SceneLayer& l : s->layers) {
-    if (!l.tileset.empty()) {
-      s->tilesets.push_back(l.tileset);
-      return;
-    }
-  }
   if (!g_project.tilesets.empty()) {
     s->tilesets.push_back(g_project.tilesets.front().id);
   }
@@ -728,12 +722,6 @@ bool TilesetUsedInScenes(const std::string& id, std::string* where) {
   for (const pgmmv::SceneDoc& s : g_project.scenes) {
     for (const std::string& t : s.tilesets) {
       if (t == id) {
-        if (where != nullptr) *where = s.id;
-        return true;
-      }
-    }
-    for (const pgmmv::SceneLayer& layer : s.layers) {
-      if (layer.tileset == id) {
         if (where != nullptr) *where = s.id;
         return true;
       }
@@ -1627,7 +1615,7 @@ bool LoadUiFont() {
 }
 
 // ---- UI --------------------------------------------------------------------
-const char* kTools[] = {"场景", "图块", "动画", "对象", "资源", "流程", "插件", "数据库"};
+const char* kTools[] = {"场景", "图块", "动画", "对象", "资源", "流程"};
 const char* ToolName(int i) {
   return (i >= 0 && i < static_cast<int>(sizeof(kTools) / sizeof(kTools[0])))
              ? kTools[i]
@@ -1668,7 +1656,7 @@ void DrawProjectSettingsModal() {
       ImGui::EndCombo();
     }
     ImGui::Separator();
-    ImGui::TextDisabled("屏幕：%d×%d", g_project.settings.top_width, g_project.settings.top_height);
+    ImGui::TextDisabled("屏幕：%d×%d", pgmmv::kScreenWidth, pgmmv::kScreenHeight);
     ImGui::Separator();
     if (ImGui::Button("关闭", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
     ImGui::EndPopup();
@@ -3076,7 +3064,7 @@ void DrawPgTabs() {
   const ImVec2 start = ImGui::GetCursorScreenPos();
   const float h = 44.0f;
   float x = start.x;
-  for (int i = 0; i < 8; ++i) {
+  for (int i = 0; i < static_cast<int>(sizeof(kTools) / sizeof(kTools[0])); ++i) {
     const float tw = ImGui::CalcTextSize(kTools[i]).x;
     const float w = 8.0f + 24.0f + 8.0f + tw + 14.0f;
     const ImVec2 p(x, start.y);
@@ -3735,9 +3723,8 @@ void DrawScenePageCenter() {
   ClampPaintSlot(*s);
 
   // 网格尺寸：沿用图层自己的图块组（旧字段）；没有就退回场景第一个图集。
-  const pgmmv::TilesetDoc* grid_ts =
-      layer.tileset.empty() ? nullptr : g_project.FindTileset(layer.tileset);
-  if (grid_ts == nullptr && !s->tilesets.empty()) {
+  const pgmmv::TilesetDoc* grid_ts = nullptr;
+  if (!s->tilesets.empty()) {
     grid_ts = g_project.FindTileset(s->tilesets.front());
   }
   const int tw = grid_ts != nullptr ? std::max(1, grid_ts->tile_w) : 16;
@@ -3858,9 +3845,9 @@ void DrawScenePageCenter() {
     float min_x = any ? static_cast<float>(minc * pgmmv::kSceneBase) : 0.0f;
     float min_y = any ? static_cast<float>(minr * pgmmv::kSceneBase) : 0.0f;
     float max_x = any ? static_cast<float>((maxc + 1) * pgmmv::kSceneBase)
-                      : static_cast<float>(g_project.settings.top_width);
+                      : static_cast<float>(pgmmv::kScreenWidth);
     float max_y = any ? static_cast<float>((maxr + 1) * pgmmv::kSceneBase)
-                      : static_cast<float>(g_project.settings.top_height);
+                      : static_cast<float>(pgmmv::kScreenHeight);
     for (const pgmmv::SceneObject& o : s->objects) {
       const pgmmv::ObjectDoc* od = g_project.FindObject(o.object);
       const float fw = od != nullptr ? static_cast<float>(std::max(1, od->frame.w)) : 32.0f;
@@ -4262,8 +4249,8 @@ void DrawScenePageCenter() {
     }
   }
   {
-    const float tw_px = static_cast<float>(g_project.settings.top_width);
-    const float th_px = static_cast<float>(g_project.settings.top_height);
+    const float tw_px = static_cast<float>(pgmmv::kScreenWidth);
+    const float th_px = static_cast<float>(pgmmv::kScreenHeight);
     const bool cam_follow = g_camera_frame_follow_spawn && s->camera_mode == "follow";
     const float frame_x = cam_follow ? static_cast<float>(SceneSpawnX(s)) - tw_px * 0.5f : 0.0f;
     const float frame_y = cam_follow ? static_cast<float>(SceneSpawnY(s)) - th_px * 0.5f : 0.0f;
@@ -4533,24 +4520,17 @@ void DrawScenePageRight() {
     }
   }
   ImGui::TextDisabled("出生点 = 场景里玩家对象实例的位置");
-  ImGui::TextUnformatted("地图尺寸（最大 512px）");
-  ImGui::SetNextItemWidth(-1.0f);
-  const bool is64x64 = (s->map_w == 64 && s->map_h == 64);
-  if (ImGui::BeginCombo("##map_size", is64x64 ? "64 × 64（512×512）"
-                                            : "64 × 32（512×256）")) {
-    if (ImGui::Selectable("64 × 32（512×256）", !is64x64)) {
-      PushUndo();
-      s->map_w = 64;
-      s->map_h = 32;
-      MarkDirty();
-    }
-    if (ImGui::Selectable("64 × 64（512×512）", is64x64)) {
-      PushUndo();
-      s->map_w = 64;
-      s->map_h = 64;
-      MarkDirty();
-    }
-    ImGui::EndCombo();
+  ImGui::TextUnformatted("地图尺寸（格）");
+  ImGui::SetNextItemWidth(90.0f);
+  if (UndoIntField("##map_w", &s->map_w, 1)) {
+    s->map_w = std::max(1, s->map_w);
+  }
+  ImGui::SameLine();
+  ImGui::TextUnformatted("×");
+  ImGui::SameLine();
+  ImGui::SetNextItemWidth(90.0f);
+  if (UndoIntField("##map_h", &s->map_h, 1)) {
+    s->map_h = std::max(1, s->map_h);
   }
   ImGui::TextUnformatted("背景音乐");
   ImGui::SetNextItemWidth(-1.0f);
@@ -4581,25 +4561,6 @@ void DrawScenePageRight() {
   //   显示/锁定/碰撞层/触发层 在画布上方；这里管网格尺寸、前景、视差。
   if (show_layer) {
   ImGui::Text("当前：%s", layer.name.empty() ? "(未命名)" : layer.name.c_str());
-  ImGui::TextUnformatted("网格图块组（决定格子大小）");
-  ImGui::SetNextItemWidth(-1.0f);
-  const char* cur = layer.tileset.empty() ? "(按第一个图集)" : layer.tileset.c_str();
-  if (ImGui::BeginCombo("##scene_ts", cur)) {
-    if (ImGui::Selectable("(按第一个图集)", layer.tileset.empty())) {
-      PushUndo();
-      layer.tileset.clear();
-      MarkDirty();
-    }
-    for (const pgmmv::TilesetDoc& ts : g_project.tilesets) {
-      if (ImGui::Selectable(ts.name.c_str(), layer.tileset == ts.id)) {
-        PushUndo();
-        layer.tileset = ts.id;
-        MarkDirty();
-      }
-    }
-    ImGui::EndCombo();
-  }
-  ImGui::TextDisabled("槽位：%d", layer.bg_slot);
   {
     bool en = layer.enabled;
     if (ImGui::Checkbox("启用该层", &en)) {
@@ -4808,8 +4769,8 @@ void DrawScenePageRight() {
     ImGui::SameLine();
     if (ImGui::Button("铺满屏幕", ImVec2(80, 22))) {
       PushUndo();
-      s->camera.deadzone_w = g_project.settings.top_width;
-      s->camera.deadzone_h = g_project.settings.top_height;
+      s->camera.deadzone_w = pgmmv::kScreenWidth;
+      s->camera.deadzone_h = pgmmv::kScreenHeight;
       MarkDirty();
     }
     ImGui::TextUnformatted("偏移 X / Y");
@@ -5348,43 +5309,6 @@ void DrawScenePageRight() {
   }  // show_scene
 }
 
-
-// 插件 / 数据库空壳
-void DrawPluginPageLeft() {
-  ImGui::TextDisabled("插件列表");
-  ImGui::Separator();
-  ImGui::TextDisabled("暂无插件");
-  ImGui::TextWrapped("插件页先做空壳，等引擎有插件接口再接。");
-}
-
-void DrawPluginPageCenter() {
-  ImGui::TextDisabled("插件管理（空壳）");
-  ImGui::Separator();
-  ImGui::TextWrapped("这里以后放插件启用/禁用、参数配置。");
-}
-
-void DrawPluginPageRight() {
-  ImGui::TextDisabled("插件属性（空壳）");
-}
-
-void DrawDatabasePageLeft() {
-  ImGui::TextDisabled("数据库");
-  static int cat = 0;
-  const char* cats[] = {"道具", "敌人", "子弹", "掉落", "商店"};
-  for (int i = 0; i < 5; ++i) {
-    if (ImGui::Selectable(cats[i], cat == i)) cat = i;
-  }
-}
-
-void DrawDatabasePageCenter() {
-  ImGui::TextDisabled("数据库（空壳）");
-  ImGui::Separator();
-  ImGui::TextWrapped("分类列表先占位；数据表和字段等有实际玩法需求再接。");
-}
-
-void DrawDatabasePageRight() {
-  ImGui::TextDisabled("字段（空壳）");
-}
 
 
 // ------------------------- 动画页精修 -------------------------
@@ -6840,8 +6764,6 @@ void DrawShell() {
     case 3: DrawObjectLeft(); break;
     case 4: DrawResourceLeft2(); break;
     case 5: DrawFlowPageLeft(); break;
-    case 6: DrawPluginPageLeft(); break;
-    case 7: DrawDatabasePageLeft(); break;
     default: DrawPlaceholder(ToolName(g_current_tool)); break;
   }
   ImGui::EndChild();
@@ -6854,8 +6776,6 @@ void DrawShell() {
     case 3: DrawObjectPageCenter(); break;
     case 4: DrawResourceCenter2(); break;
     case 5: DrawFlowPageCenter(); break;
-    case 6: DrawPluginPageCenter(); break;
-    case 7: DrawDatabasePageCenter(); break;
     default: DrawPlaceholder(ToolName(g_current_tool)); break;
   }
   ImGui::EndChild();
@@ -6875,8 +6795,6 @@ void DrawShell() {
     case 3: DrawObjectPageRight(); break;
     case 4: DrawResourceRight2(); break;
     case 5: DrawFlowPageRight(); break;
-    case 6: DrawPluginPageRight(); break;
-    case 7: DrawDatabasePageRight(); break;
     default: DrawPlaceholder(ToolName(g_current_tool)); break;
   }
   ImGui::EndChild();
@@ -6921,7 +6839,7 @@ int main(int argc, char** argv) {
     } else if (a == "--frames" && i + 1 < argc) {
       g_frames_left = std::atoi(argv[++i]);
     } else if (a == "--tool" && i + 1 < argc) {
-      g_current_tool = std::atoi(argv[++i]);
+      g_current_tool = std::max(0, std::min(5, std::atoi(argv[++i])));
     } else if (a == "--import-png" && i + 1 < argc) {
       import_png = argv[++i];
     } else if (a == "--export-p3d" && i + 1 < argc) {

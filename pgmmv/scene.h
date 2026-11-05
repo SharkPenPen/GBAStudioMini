@@ -87,10 +87,8 @@ inline int CellSlot(int cell) { return cell < 0 ? -1 : (cell >> 20); }
 inline int CellIndex(int cell) { return cell < 0 ? -1 : (cell & 0xFFFFF); }
 
 struct SceneLayer {
-  int bg_slot = 0;  // 0..3，固定硬件槽
   std::string name;
-  std::string tileset;  // 旧字段：仅用于老工程迁移（= scene.tilesets[0]）
-  bool enabled = true;   // 空槽 = false
+  bool enabled = true;
   bool visible = true;
   bool locked = false;  // 编辑器只读：运行时仍加载
   int priority = 0;     // 0 最前 .. 3 最后
