@@ -364,6 +364,16 @@ void DrawElement(const UiElement& e, UiRect parent, const UiDrawContext& ctx,
           text.h = rr.h;
           DrawText(e.items[static_cast<size_t>(idx2)], rr, text, ctx);
         }
+        const int n = static_cast<int>(e.items.size());
+        if (n > rows) {
+          const int track_w = 4;
+          const int track_x = r.x + r.w - track_w;
+          ctx.dl->DrawRect(R(track_x, r.y, track_w, r.h), 0xFF303040u);
+          const int thumb_h = std::max(6, r.h * rows / n);
+          const int max_first = std::max(1, n - rows);
+          const int thumb_y = r.y + (r.h - thumb_h) * first / max_first;
+          ctx.dl->DrawRect(R(track_x, thumb_y, track_w, thumb_h), 0xFFA0A0C0u);
+        }
       }
       break;
     }
@@ -548,6 +558,7 @@ UiScreen UiScreenFromData(const UiScreenData& d, const eng::TextureId* textures,
   s.dismiss = d.dismiss;
   s.dismiss_frames = d.dismiss_frames;
   s.fade_frames = d.fade_frames;
+  s.fade_out_frames = d.fade_out_frames;
   for (const UiElementData& e : d.elements) {
     s.elements.push_back(UiElementFromData(e, textures, texture_count));
   }

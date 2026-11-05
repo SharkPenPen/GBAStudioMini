@@ -65,6 +65,7 @@ struct UiScreenDoc {
   int dismiss = 0;  // 0 confirm / 1 cancel / 2 timer / 3 none
   int dismiss_frames = 0;
   int fade_frames = 0;
+  int fade_out_frames = 0;
   std::vector<UiElementDoc> elements;
   JsonValue raw;
 };

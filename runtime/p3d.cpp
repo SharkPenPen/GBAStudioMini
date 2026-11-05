@@ -574,6 +574,7 @@ bool ReadUiScreen(Reader& r, UiScreenData* s) {
   s->dismiss = r.U8();
   s->dismiss_frames = r.I32();
   s->fade_frames = r.I32();
+  s->fade_out_frames = r.I32();
   const uint16_t n = r.U16();
   if (!r.ok || n > 4096) return false;
   s->elements.resize(n);
@@ -634,6 +635,7 @@ void WriteUiScreen(Writer& w, const UiScreenData& s) {
   w.U8(static_cast<uint8_t>(s.dismiss));
   w.I32(s.dismiss_frames);
   w.I32(s.fade_frames);
+  w.I32(s.fade_out_frames);
   w.U16(static_cast<uint16_t>(std::min<size_t>(4096, s.elements.size())));
   for (const UiElementData& e : s.elements) WriteUiElement(w, e);
 }

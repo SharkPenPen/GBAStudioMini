@@ -160,6 +160,7 @@ void TestModalList() {
   menu.modal = true;
   menu.dismiss = 0;
   menu.fade_frames = 2;
+  menu.fade_out_frames = 3;
   r4::UiElementData list;
   list.kind = 6;
   list.items = {"a", "b", "c"};
@@ -199,6 +200,8 @@ void TestModalList() {
   eng::InputState cancel;
   cancel.pressed[static_cast<int>(eng::Key::kB)] = true;
   game.Update(1.0f / 60.0f, cancel);
+  CHECK(game.UiModalActive());
+  for (int i = 0; i < 3; ++i) game.Update(1.0f / 60.0f, EmptyInput());
   CHECK(!game.UiModalActive());
 }
 
@@ -271,6 +274,7 @@ void TestP3dRoundTrip() {
   label.y = 10;
   hud.elements.push_back(label);
   hud.fade_frames = 3;
+  hud.fade_out_frames = 4;
   label.items.push_back("a");
   label.items.push_back("b");
   hud.elements[0] = label;
@@ -292,6 +296,7 @@ void TestP3dRoundTrip() {
   CHECK(q.ui_screens.size() == 1);
   CHECK(q.scenes[0].hud_ui == 0);
   CHECK(q.ui_screens[0].fade_frames == 3);
+  CHECK(q.ui_screens[0].fade_out_frames == 4);
   if (!q.ui_screens.empty()) {
     CHECK(q.ui_screens[0].elements.size() == 1);
     CHECK(q.ui_screens[0].elements[0].items.size() == 2);

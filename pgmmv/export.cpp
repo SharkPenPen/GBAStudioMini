@@ -465,6 +465,7 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
     screen.dismiss = us.dismiss;
     screen.dismiss_frames = us.dismiss_frames;
     screen.fade_frames = us.fade_frames;
+    screen.fade_out_frames = us.fade_out_frames;
     for (const UiElementDoc& ue : us.elements) {
       screen.elements.push_back(ConvertUiElement(
           ue, project, &image_cache, &ui_image_index, &p, error));

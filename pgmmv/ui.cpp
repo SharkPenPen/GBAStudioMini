@@ -156,6 +156,7 @@ bool UiScreenLoad(const std::filesystem::path& path, UiScreenDoc* out,
   ReadInt(root, "dismiss", &out->dismiss);
   ReadInt(root, "dismiss_frames", &out->dismiss_frames);
   ReadInt(root, "fade_frames", &out->fade_frames);
+  ReadInt(root, "fade_out_frames", &out->fade_out_frames);
   const JsonValue* elements = root.Find("elements");
   if (elements != nullptr && elements->IsArray()) {
     for (const JsonValue& ev : elements->items) {
@@ -179,6 +180,7 @@ bool UiScreenSave(const std::filesystem::path& path, UiScreenDoc* doc,
   root.Set("dismiss", JsonValue::Number(doc->dismiss));
   root.Set("dismiss_frames", JsonValue::Number(doc->dismiss_frames));
   root.Set("fade_frames", JsonValue::Number(doc->fade_frames));
+  root.Set("fade_out_frames", JsonValue::Number(doc->fade_out_frames));
   JsonValue elements = JsonValue::Array();
   for (const UiElementDoc& e : doc->elements) elements.Push(WriteElement(e));
   root.Set("elements", std::move(elements));

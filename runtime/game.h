@@ -164,6 +164,7 @@ class Game {
                      int texture_count) const;
   void OpenUiById(const std::string& id);
   void CloseUi();
+  void RequestCloseUi();
   void MoveModalFocus(int dir, bool allow_list);
   void ActivateModalFocus();
   void UpdateInteraction(const eng::InputState& input);
@@ -246,6 +247,9 @@ class Game {
   int modal_timer_ = 0;
   int modal_fade_ = 0;
   int modal_fade_total_ = 0;
+  bool modal_closing_ = false;
+  int modal_close_fade_ = 0;
+  int modal_close_total_ = 0;
   bool has_pending_ui_ = false;
   Trigger pending_trigger_;
   std::vector<TriggerAction> pending_actions_;

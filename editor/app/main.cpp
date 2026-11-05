@@ -6925,6 +6925,7 @@ void DrawUiPageRight() {
       if (UndoIntField("多少帧后关", &s->dismiss_frames, 1)) MarkDirty();
     }
     if (UndoIntField("淡入帧数", &s->fade_frames, 0)) MarkDirty();
+    if (UndoIntField("淡出帧数", &s->fade_out_frames, 0)) MarkDirty();
     ImGui::Separator();
     ImGui::TextUnformatted("挂载");
     bool persistent = (g_project.persistent_ui == s->id);

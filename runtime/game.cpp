@@ -172,6 +172,9 @@ void Game::SetScene(int index) {
   modal_stack_.clear();
   modal_focus_ = -1;
   modal_timer_ = 0;
+  modal_closing_ = false;
+  modal_close_fade_ = 0;
+  modal_close_total_ = 0;
   has_pending_ui_ = false;
   pending_actions_.clear();
   scene_index_ = index;
@@ -717,13 +720,18 @@ void Game::DrawUiScreens(eng::DrawList& dl, const eng::TextureId* textures,
       ctx.list_selected = top ? modal_list_index_ : 0;
       UiDrawScreen(screen, ctx);
     }
-    if (modal_fade_ > 0 && modal_fade_total_ > 0) {
-      int a = modal_fade_ * 255 / modal_fade_total_;
-      a = std::max(0, std::min(255, a));
+    int fade_alpha = 0;
+    if (modal_closing_ && modal_close_total_ > 0) {
+      fade_alpha = modal_close_fade_ * 255 / modal_close_total_;
+    } else if (modal_fade_ > 0 && modal_fade_total_ > 0) {
+      fade_alpha = modal_fade_ * 255 / modal_fade_total_;
+    }
+    if (fade_alpha > 0) {
+      fade_alpha = std::max(0, std::min(255, fade_alpha));
       dl.DrawRect(eng::Rect2{eng::Vec2{0.0f, 0.0f},
                              eng::Vec2{static_cast<float>(view_w_),
                                        static_cast<float>(view_h_)}},
-                  static_cast<eng::u32>(a) << 24);
+                  static_cast<eng::u32>(fade_alpha) << 24);
     }
   }
 }
@@ -754,9 +762,29 @@ void Game::OpenUiById(const std::string& id) {
       modal_timer_ = screen.dismiss_frames;
       modal_fade_total_ = screen.fade_frames;
       modal_fade_ = modal_fade_total_;
+      modal_closing_ = false;
+      modal_close_fade_ = 0;
+      modal_close_total_ = 0;
       return;
     }
   }
+}
+
+void Game::RequestCloseUi() {
+  if (p3d_ == nullptr || modal_stack_.empty() || modal_closing_) return;
+  const int idx = modal_stack_.back();
+  if (idx < 0 || idx >= static_cast<int>(p3d_->ui_screens.size())) {
+    CloseUi();
+    return;
+  }
+  const int total = p3d_->ui_screens[static_cast<size_t>(idx)].fade_out_frames;
+  if (total <= 0) {
+    CloseUi();
+    return;
+  }
+  modal_closing_ = true;
+  modal_close_fade_ = 0;
+  modal_close_total_ = total;
 }
 
 void Game::CloseUi() {
@@ -766,6 +794,9 @@ void Game::CloseUi() {
   modal_timer_ = 0;
   modal_fade_ = 0;
   modal_fade_total_ = 0;
+  modal_closing_ = false;
+  modal_close_fade_ = 0;
+  modal_close_total_ = 0;
   if (modal_stack_.empty() && has_pending_ui_) {
     has_pending_ui_ = false;
     const Trigger trigger = pending_trigger_;
@@ -822,7 +853,7 @@ void Game::ActivateModalFocus() {
         0, std::min(static_cast<int>(e.items.size()) - 1, modal_list_index_));
     const std::string& item = e.items[static_cast<size_t>(sel)];
     if (e.action.empty() || e.action == "close") {
-      CloseUi();
+      RequestCloseUi();
       return;
     }
     if (e.action == "scene") {
@@ -846,7 +877,7 @@ void Game::ActivateModalFocus() {
   }
   if (e.kind != 7) return;
   if (e.action.empty() || e.action == "close") {
-    CloseUi();
+    RequestCloseUi();
     return;
   }
   if (e.action == "open_ui") {
@@ -1693,7 +1724,7 @@ bool Game::RunTriggerList(const Trigger& trigger,
       continue;
     }
     if (action.type == 10) {  // close_ui
-      CloseUi();
+      RequestCloseUi();
       continue;
     }
     if (action.type == 0) {  // change_scene
@@ -2670,10 +2701,16 @@ void Game::Update(float dt, const eng::InputState& input) {
     const int top = modal_stack_.back();
     if (top >= 0 && top < static_cast<int>(p3d_->ui_screens.size())) {
       const UiScreenData& screen = p3d_->ui_screens[static_cast<size_t>(top)];
+      if (modal_closing_) {
+        ++modal_close_fade_;
+        if (modal_close_fade_ >= modal_close_total_) CloseUi();
+        prev_input_ = input;
+        return;
+      }
       if (screen.dismiss == 2) {
         --modal_timer_;
         if (modal_timer_ <= 0) {
-          CloseUi();
+          RequestCloseUi();
           prev_input_ = input;
           return;
         }
@@ -2695,13 +2732,13 @@ void Game::Update(float dt, const eng::InputState& input) {
         if (modal_focus_ >= 0) {
           ActivateModalFocus();
         } else if (screen.dismiss == 0) {
-          CloseUi();
+          RequestCloseUi();
         }
       }
       if ((input.pressed[static_cast<int>(eng::Key::kB)] ||
            input.pressed[static_cast<int>(eng::Key::kStart)]) &&
           screen.dismiss != 3) {
-        CloseUi();
+        RequestCloseUi();
       }
     }
     prev_input_ = input;

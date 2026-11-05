@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 78;  // 78: UI 列表项 / 淡入帧数
+constexpr uint32_t kP3dVersion = 79;  // 79: UI 淡出帧数
+                                      // 78: UI 列表项 / 淡入帧数
                                       // 77: UI 按钮 / 关闭方式
                                       // 76: 删掉旧 Scene::UiText
                                       // 75: UI 屏幕 / 元素
@@ -378,6 +379,7 @@ struct UiScreenData {
   int dismiss = 0;  // 0 confirm / 1 cancel / 2 timer / 3 none
   int dismiss_frames = 0;
   int fade_frames = 0;
+  int fade_out_frames = 0;
   std::vector<UiElementData> elements;
 };
 
