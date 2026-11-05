@@ -974,14 +974,22 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
 //   瓦片行：r' = H/8 - 1 - r      碰撞 mask：上/下两位互换（bit0 <-> bit2）
 //
 //   行号翻转不是 32 的倍数（240/32 = 7.5），chunk 会跨两个，所以重新分块。
+//   图块行按场景 tileset 的 tile_h；碰撞层是独立的 8px 网格。
 void MirrorSceneYUp(P3d& p3d, int view_h) {
-  if (view_h <= 0 || (view_h % 8) != 0) {
-    return;
-  }
-  const int rows_total = view_h / 8;
+  if (view_h <= 0) return;
   auto floor_div = [](int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b); };
 
   for (Scene& s : p3d.scenes) {
+    int tile_h = 8;
+    if (!s.tilesets.empty()) {
+      const int ti = s.tilesets.front();
+      if (ti >= 0 && ti < static_cast<int>(p3d.tilesets.size()) &&
+          p3d.tilesets[static_cast<size_t>(ti)].tile_h > 0) {
+        tile_h = p3d.tilesets[static_cast<size_t>(ti)].tile_h;
+      }
+    }
+    const int rows_total = std::max(1, view_h / tile_h);
+    const int collision_rows = std::max(1, view_h / 8);
     if (s.camera_offset_y != 0) s.camera_offset_y = -s.camera_offset_y;
     for (SceneObject& o : s.objects) o.y = view_h - o.y;
     for (Trigger& t : s.triggers) t.y = view_h - (t.y + t.h);
@@ -1030,7 +1038,7 @@ void MirrorSceneYUp(P3d& p3d, int view_h) {
               ((m & 1u) << 2) | (m & 2u) | ((m & 4u) >> 2) | (m & 8u));
           const int col = c.cx * kP3dChunkCells + lx;
           const int row = c.cy * kP3dChunkCells + ly;
-          const int nrow = rows_total - 1 - row;
+          const int nrow = collision_rows - 1 - row;
           const int ncx = floor_div(col, kP3dChunkCells);
           const int ncy = floor_div(nrow, kP3dChunkCells);
           const int nlx = col - ncx * kP3dChunkCells;

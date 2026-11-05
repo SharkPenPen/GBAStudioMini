@@ -1270,10 +1270,20 @@ void Game::UpdateCamera(float dt) {
       }
     }
   }
-  const float world_l = static_cast<float>(min_c) * 8.0f;
-  const float world_t = static_cast<float>(min_r) * 8.0f;
-  const float world_r = static_cast<float>(max_c) * 8.0f;
-  const float world_b = static_cast<float>(max_r) * 8.0f;
+  float tile_w = 8.0f;
+  float tile_h = 8.0f;
+  if (!s.tilesets.empty()) {
+    const int ti = s.tilesets.front();
+    if (ti >= 0 && ti < static_cast<int>(p3d_->tilesets.size())) {
+      const Tileset& ts = p3d_->tilesets[static_cast<size_t>(ti)];
+      if (ts.tile_w > 0) tile_w = static_cast<float>(ts.tile_w);
+      if (ts.tile_h > 0) tile_h = static_cast<float>(ts.tile_h);
+    }
+  }
+  const float world_l = static_cast<float>(min_c) * tile_w;
+  const float world_t = static_cast<float>(min_r) * tile_h;
+  const float world_r = static_cast<float>(max_c) * tile_w;
+  const float world_b = static_cast<float>(max_r) * tile_h;
   const float ww = world_r - world_l;
   const float wh = world_b - world_t;
   if (camera_mode_ == CameraMode::kFixed) {
