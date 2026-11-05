@@ -637,6 +637,28 @@ bool ProjectLoad(const std::filesystem::path& project_json_path, Project* out,
     }
   }
 
+  // ---- ui/*.json ----
+  const std::filesystem::path ui_dir = p.root_dir / "ui";
+  std::error_code ue;
+  if (std::filesystem::exists(ui_dir, ue)) {
+    for (const auto& entry : std::filesystem::directory_iterator(ui_dir, ue)) {
+      if (ue) break;
+      if (!entry.is_regular_file()) continue;
+      if (entry.path().extension() != ".json") continue;
+      UiScreenDoc screen;
+      std::string uerr;
+      if (!UiScreenLoad(entry.path(), &screen, &uerr)) {
+        if (error != nullptr) *error = "ui load failed: " + uerr;
+        return false;
+      }
+      p.ui_screens.push_back(std::move(screen));
+    }
+    if (ue) {
+      if (error != nullptr) *error = "cannot scan ui directory: " + ue.message();
+      return false;
+    }
+  }
+
   // ---- animations/*.json ----
   const std::filesystem::path anim_dir = p.root_dir / "animations";
   std::error_code ae;
@@ -749,6 +771,13 @@ bool ProjectSave(Project* p, std::string* error) {
     }
     return false;
   }
+  std::filesystem::create_directories(p->root_dir / "ui", ec);
+  if (ec) {
+    if (error != nullptr) {
+      *error = "cannot create ui directory: " + ec.message();
+    }
+    return false;
+  }
 
   // 项目级公式库
   {
@@ -785,6 +814,15 @@ bool ProjectSave(Project* p, std::string* error) {
       return false;
     }
     if (!SceneSave(ProjectScenePath(*p, s), &s, error)) {
+      return false;
+    }
+  }
+  for (UiScreenDoc& s : p->ui_screens) {
+    if (s.id.empty()) {
+      if (error != nullptr) *error = "ui screen has empty id";
+      return false;
+    }
+    if (!UiScreenSave(p->root_dir / "ui" / (s.id + ".json"), &s, error)) {
       return false;
     }
   }

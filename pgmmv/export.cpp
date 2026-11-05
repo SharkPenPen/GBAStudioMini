@@ -345,6 +345,63 @@ int FindAction(const r4::Object& o, const std::string& name) {
   return 0;
 }
 
+int AnchorFromName(const std::string& a) {
+  if (a == "top_center") return 1;
+  if (a == "top_right") return 2;
+  if (a == "mid_left") return 3;
+  if (a == "center") return 4;
+  if (a == "mid_right") return 5;
+  if (a == "bottom_left") return 6;
+  if (a == "bottom_center") return 7;
+  if (a == "bottom_right") return 8;
+  return 0;
+}
+
+r4::UiElementData ConvertUiElement(const UiElementDoc& u) {
+  r4::UiElementData e;
+  e.id = u.id;
+  if (u.kind == "text") e.kind = 1;
+  else if (u.kind == "image") e.kind = 2;
+  else if (u.kind == "value_image") e.kind = 3;
+  else if (u.kind == "value_bar") e.kind = 4;
+  else e.kind = 0;
+  e.anchor = AnchorFromName(u.anchor);
+  e.x = u.x;
+  e.y = u.y;
+  e.w = u.w;
+  e.h = u.h;
+  e.slice_l = u.slice_l;
+  e.slice_r = u.slice_r;
+  e.slice_t = u.slice_t;
+  e.slice_b = u.slice_b;
+  e.slice_tile = u.slice_tile;
+  e.image = -1;  // 图片元素下一步接资源索引
+  e.src_x = u.src_x;
+  e.src_y = u.src_y;
+  e.src_w = u.src_w;
+  e.src_h = u.src_h;
+  e.frames = u.frames;
+  e.frame = u.frame;
+  e.text = u.text;
+  e.font_size = u.font_size;
+  e.color = u.color;
+  e.align = u.align;
+  e.binding.name = u.value_var;
+  e.binding.map = u.map;
+  e.binding.in_min = u.in_min;
+  e.binding.in_max = u.in_max;
+  e.binding.out_min = u.out_min;
+  e.binding.out_max = u.out_max;
+  e.binding.format = u.format;
+  e.visible_var = u.visible_var;
+  e.visible_value = u.visible_value;
+  e.padding = u.padding;
+  for (const UiElementDoc& child : u.children) {
+    e.children.push_back(ConvertUiElement(child));
+  }
+  return e;
+}
+
 }  // namespace
 
 bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
@@ -357,6 +414,23 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
   r4::P3d p;
   p.formulas = project.formulas;
   for (const auto& kv : project.variables) p.global_vars.emplace_back(kv.first, kv.second);
+  std::map<std::string, int> ui_index;
+  for (const UiScreenDoc& us : project.ui_screens) {
+    r4::UiScreenData screen;
+    screen.id = us.id;
+    screen.name = us.name;
+    screen.modal = us.modal;
+    screen.layout = (us.layout == "safe") ? 1 : 0;
+    for (const UiElementDoc& ue : us.elements) {
+      screen.elements.push_back(ConvertUiElement(ue));
+    }
+    ui_index[us.id] = static_cast<int>(p.ui_screens.size());
+    p.ui_screens.push_back(std::move(screen));
+  }
+  {
+    auto it = ui_index.find(project.persistent_ui);
+    p.persistent_ui = it == ui_index.end() ? -1 : it->second;
+  }
   std::map<std::string, LoadedImage> image_cache;
 
   // 1) 图块：按 (tile_w, tile_h) 分组，组内只填场景实际用到的块，按页切开。
@@ -855,7 +929,10 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
       rt.inside_interval = t.inside_interval;
       rs.triggers.push_back(std::move(rt));
     }
-    if (!s.ui_texts.empty()) {
+    if (!s.hud_ui.empty()) {
+      auto it = ui_index.find(s.hud_ui);
+      rs.hud_ui = it == ui_index.end() ? -1 : it->second;
+    } else if (!s.ui_texts.empty()) {
       r4::UiScreenData hud;
       hud.id = s.id + ":hud";
       hud.name = "HUD";

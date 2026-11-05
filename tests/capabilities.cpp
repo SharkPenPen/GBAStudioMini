@@ -7,6 +7,7 @@
 
 #include "engine/platform/platform.h"
 #include "engine/render/font.h"
+#include "pgmmv/ui.h"
 #include "engine/render/texture.h"
 #include "runtime/game.h"
 #include "runtime/p3d.h"
@@ -270,6 +271,33 @@ void TestUiNineSlice() {
   eng::TextureDestroy(tex);
 }
 
+void TestUiDocRoundTrip() {
+  pgmmv::UiScreenDoc screen;
+  screen.id = "hud";
+  screen.name = "HUD";
+  pgmmv::UiElementDoc label;
+  label.id = "hp";
+  label.kind = "text";
+  label.text = "{hp}";
+  label.value_var = "hp";
+  screen.elements.push_back(label);
+  const std::filesystem::path path =
+      std::filesystem::temp_directory_path() / "pocketloom_ui_screen.json";
+  std::filesystem::remove(path);
+  std::string err;
+  CHECK(pgmmv::UiScreenSave(path, &screen, &err));
+  pgmmv::UiScreenDoc loaded;
+  CHECK(pgmmv::UiScreenLoad(path, &loaded, &err));
+  CHECK(loaded.id == "hud");
+  CHECK(loaded.elements.size() == 1);
+  if (!loaded.elements.empty()) {
+    CHECK(loaded.elements[0].kind == "text");
+    CHECK(loaded.elements[0].text == "{hp}");
+    CHECK(loaded.elements[0].value_var == "hp");
+  }
+  std::filesystem::remove(path);
+}
+
 void TestUiValueBar() {
   eng::DrawList dl;
   dl.ResetScreenSizes();
@@ -305,6 +333,7 @@ int main() {
   std::printf("ui anchor...\n"); TestUiAnchor();
   std::printf("ui wrap...\n"); TestUiWrap();
   std::printf("ui nine-slice...\n"); TestUiNineSlice();
+  std::printf("ui doc roundtrip...\n"); TestUiDocRoundTrip();
   std::printf("ui value bar...\n"); TestUiValueBar();
   if (g_failures != 0) {
     std::printf("%d check(s) failed\n", g_failures);

@@ -195,6 +195,8 @@ std::map<std::string, std::vector<std::string>> g_asset_tileset_refs;
 std::map<std::string, std::vector<std::string>> g_asset_scene_refs;
 int g_selected_placed_object = -1;
 int g_selected_trigger = -1;
+std::string g_selected_ui_screen;
+int g_selected_ui_element = -1;
 std::set<int> g_placed_multi;
 std::vector<pgmmv::SceneObject> g_scene_clipboard;
 int g_selected_tile = 0;
@@ -1615,7 +1617,7 @@ bool LoadUiFont() {
 }
 
 // ---- UI --------------------------------------------------------------------
-const char* kTools[] = {"场景", "图块", "动画", "对象", "资源", "流程"};
+const char* kTools[] = {"场景", "图块", "动画", "对象", "资源", "流程", "界面"};
 const char* ToolName(int i) {
   return (i >= 0 && i < static_cast<int>(sizeof(kTools) / sizeof(kTools[0])))
              ? kTools[i]
@@ -6718,6 +6720,336 @@ void DrawObjectPageRight() {
   DrawFormulaLibrary();
 }
 
+// ------------------------- 界面页 -------------------------
+pgmmv::UiScreenDoc* CurrentUiScreen() {
+  if (!g_has_project) return nullptr;
+  for (pgmmv::UiScreenDoc& s : g_project.ui_screens) {
+    if (s.id == g_selected_ui_screen) return &s;
+  }
+  if (!g_project.ui_screens.empty()) {
+    g_selected_ui_screen = g_project.ui_screens.front().id;
+    return &g_project.ui_screens.front();
+  }
+  return nullptr;
+}
+
+pgmmv::UiElementDoc* CurrentUiElement() {
+  pgmmv::UiScreenDoc* s = CurrentUiScreen();
+  if (s == nullptr) return nullptr;
+  if (g_selected_ui_element < 0 ||
+      g_selected_ui_element >= static_cast<int>(s->elements.size())) {
+    return nullptr;
+  }
+  return &s->elements[static_cast<size_t>(g_selected_ui_element)];
+}
+
+std::string UniqueUiId(const char* prefix) {
+  for (int i = 1; i < 10000; ++i) {
+    const std::string id = std::string(prefix) + std::to_string(i);
+    bool used = false;
+    for (const pgmmv::UiScreenDoc& s : g_project.ui_screens) {
+      if (s.id == id) { used = true; break; }
+    }
+    if (!used) return id;
+  }
+  return std::string(prefix) + "x";
+}
+
+std::string UniqueUiElementId(const pgmmv::UiScreenDoc& s, const char* prefix) {
+  for (int i = 1; i < 10000; ++i) {
+    const std::string id = std::string(prefix) + std::to_string(i);
+    bool used = false;
+    for (const pgmmv::UiElementDoc& e : s.elements) {
+      if (e.id == id) { used = true; break; }
+    }
+    if (!used) return id;
+  }
+  return std::string(prefix) + "x";
+}
+
+const char* kUiKinds[] = {"panel", "text", "image", "value_image", "value_bar"};
+const char* kUiAnchors[] = {"top_left",  "top_center",  "top_right",
+                            "mid_left",  "center",      "mid_right",
+                            "bottom_left", "bottom_center", "bottom_right"};
+
+ImVec2 UiElementSize(const pgmmv::UiElementDoc& e) {
+  float w = e.w > 0 ? static_cast<float>(e.w) : 32.0f;
+  float h = e.h > 0 ? static_cast<float>(e.h) : 16.0f;
+  if (e.kind == "text") {
+    const ImVec2 ts = ImGui::CalcTextSize(e.text.c_str());
+    if (e.w <= 0) w = ts.x;
+    if (e.h <= 0) h = ts.y;
+  }
+  return ImVec2(w, h);
+}
+
+ImVec2 UiElementPos(const pgmmv::UiElementDoc& e, ImVec2 lp, ImVec2 ls,
+                    ImVec2 sz) {
+  int col = 0;
+  int row = 1;
+  if (e.anchor == "top_left" || e.anchor == "top_center" ||
+      e.anchor == "top_right") {
+    row = 0;
+  } else if (e.anchor == "bottom_left" || e.anchor == "bottom_center" ||
+             e.anchor == "bottom_right") {
+    row = 2;
+  }
+  if (e.anchor == "top_right" || e.anchor == "mid_right" ||
+      e.anchor == "bottom_right") {
+    col = 2;
+  } else if (e.anchor == "top_center" || e.anchor == "center" ||
+             e.anchor == "bottom_center") {
+    col = 1;
+  }
+  return ImVec2(lp.x + (ls.x - sz.x) * col / 2 + e.x,
+                lp.y + (ls.y - sz.y) * row / 2 + e.y);
+}
+
+void DrawUiPageLeft() {
+  if (!g_has_project) {
+    ImGui::TextDisabled("先打开项目");
+    return;
+  }
+  ImGui::TextUnformatted("界面列表");
+  if (ImGui::Button("+ 新界面")) {
+    PushUndo();
+    pgmmv::UiScreenDoc s;
+    s.id = UniqueUiId("ui_");
+    s.name = "界面";
+    g_project.ui_screens.push_back(s);
+    g_selected_ui_screen = s.id;
+    g_selected_ui_element = -1;
+    MarkDirty();
+  }
+  ImGui::Separator();
+  for (const pgmmv::UiScreenDoc& s : g_project.ui_screens) {
+    const std::string label = s.name.empty() ? s.id : s.name + " (" + s.id + ")";
+    if (ImGui::Selectable(label.c_str(), s.id == g_selected_ui_screen)) {
+      g_selected_ui_screen = s.id;
+      g_selected_ui_element = -1;
+    }
+  }
+  pgmmv::UiScreenDoc* s = CurrentUiScreen();
+  if (s == nullptr) return;
+  ImGui::Separator();
+  ImGui::TextUnformatted("元素");
+  if (ImGui::Button("+ 元素")) {
+    PushUndo();
+    pgmmv::UiElementDoc e;
+    e.id = UniqueUiElementId(*s, "el_");
+    e.kind = "text";
+    e.text = "Text";
+    s->elements.push_back(e);
+    g_selected_ui_element = static_cast<int>(s->elements.size()) - 1;
+    MarkDirty();
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("删除元素") && g_selected_ui_element >= 0 &&
+      g_selected_ui_element < static_cast<int>(s->elements.size())) {
+    PushUndo();
+    s->elements.erase(s->elements.begin() + g_selected_ui_element);
+    g_selected_ui_element = -1;
+    MarkDirty();
+  }
+  for (int i = 0; i < static_cast<int>(s->elements.size()); ++i) {
+    const pgmmv::UiElementDoc& e = s->elements[static_cast<size_t>(i)];
+    const std::string label = e.kind + "  " + e.id;
+    if (ImGui::Selectable(label.c_str(), g_selected_ui_element == i)) {
+      g_selected_ui_element = i;
+    }
+  }
+  ImGui::Separator();
+  if (ImGui::Button("删除界面")) {
+    PushUndo();
+    for (size_t i = 0; i < g_project.ui_screens.size(); ++i) {
+      if (g_project.ui_screens[i].id == g_selected_ui_screen) {
+        g_project.ui_screens.erase(g_project.ui_screens.begin() + i);
+        break;
+      }
+    }
+    g_selected_ui_screen.clear();
+    g_selected_ui_element = -1;
+    MarkDirty();
+  }
+}
+
+void DrawUiPageCenter() {
+  pgmmv::UiScreenDoc* s = CurrentUiScreen();
+  if (s == nullptr) {
+    ImGui::TextDisabled("左侧选一个界面");
+    return;
+  }
+  ImGui::Text("预览 480×272  ·  %s", s->name.c_str());
+  ImGui::SameLine();
+  ImGui::TextDisabled("（点元素选中）");
+  ImVec2 avail = ImGui::GetContentRegionAvail();
+  if (avail.x < 64.0f || avail.y < 64.0f) return;
+  float scale = std::min(avail.x / 480.0f, avail.y / 272.0f);
+  scale = std::min(scale, 3.0f);
+  if (scale < 0.5f) scale = 0.5f;
+  const ImVec2 canvas(480.0f * scale, 272.0f * scale);
+  const ImVec2 origin = ImGui::GetCursorScreenPos();
+  ImDrawList* dl = ImGui::GetWindowDrawList();
+  dl->AddRectFilled(origin, ImVec2(origin.x + canvas.x, origin.y + canvas.y),
+                    IM_COL32(0, 0, 0, 255));
+  dl->AddRect(origin, ImVec2(origin.x + canvas.x, origin.y + canvas.y),
+              IM_COL32(90, 90, 90, 255));
+  ImVec2 lp = origin;
+  ImVec2 ls = canvas;
+  if (s->layout == "safe") {
+    ls = ImVec2(400.0f * scale, 240.0f * scale);
+    lp = ImVec2(origin.x + (canvas.x - ls.x) / 2,
+                origin.y + (canvas.y - ls.y) / 2);
+    dl->AddRect(lp, ImVec2(lp.x + ls.x, lp.y + ls.y),
+                IM_COL32(80, 150, 240, 255));
+  }
+  const bool clicked = ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0);
+  for (int i = 0; i < static_cast<int>(s->elements.size()); ++i) {
+    const pgmmv::UiElementDoc& e = s->elements[static_cast<size_t>(i)];
+    ImVec2 sz = UiElementSize(e);
+    sz = ImVec2(sz.x * scale, sz.y * scale);
+    const ImVec2 p = UiElementPos(e, lp, ls, sz);
+    const ImU32 col =
+        IM_COL32((e.color >> 24) & 0xFF, (e.color >> 16) & 0xFF,
+                 (e.color >> 8) & 0xFF, e.color & 0xFF);
+    dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y),
+                      (col & 0x00FFFFFFu) | (50u << 24));
+    dl->AddRect(p, ImVec2(p.x + sz.x, p.y + sz.y), col);
+    if (e.kind == "text") dl->AddText(p, col, e.text.c_str());
+    if (clicked && ImGui::IsMouseHoveringRect(p, ImVec2(p.x + sz.x, p.y + sz.y))) {
+      g_selected_ui_element = i;
+    }
+  }
+  ImGui::Dummy(canvas);
+}
+
+void DrawUiPageRight() {
+  pgmmv::UiScreenDoc* s = CurrentUiScreen();
+  if (s == nullptr) {
+    ImGui::TextDisabled("左侧选一个界面");
+    return;
+  }
+  pgmmv::UiElementDoc* e = CurrentUiElement();
+  if (e == nullptr) {
+    char name_buf[128];
+    std::snprintf(name_buf, sizeof(name_buf), "%s", s->name.c_str());
+    if (ImGui::InputText("界面名", name_buf, sizeof(name_buf))) {
+      s->name = name_buf;
+      MarkDirty();
+    }
+    if (ImGui::Checkbox("模态（暂停 + 锁输入）", &s->modal)) MarkDirty();
+    int layout = (s->layout == "safe") ? 1 : 0;
+    const char* layouts[] = {"screen", "safe"};
+    if (ImGui::Combo("布局区", &layout, layouts, 2)) {
+      s->layout = layouts[layout];
+      MarkDirty();
+    }
+    ImGui::Separator();
+    ImGui::TextUnformatted("挂载");
+    bool persistent = (g_project.persistent_ui == s->id);
+    if (ImGui::Checkbox("工程常驻", &persistent)) {
+      g_project.persistent_ui = persistent ? s->id : "";
+      MarkDirty();
+    }
+    for (pgmmv::SceneDoc& sc : g_project.scenes) {
+      bool is_hud = (sc.hud_ui == s->id);
+      const std::string label = "场景 HUD: " + (sc.name.empty() ? sc.id : sc.name);
+      if (ImGui::Checkbox(label.c_str(), &is_hud)) {
+        sc.hud_ui = is_hud ? s->id : "";
+        MarkDirty();
+      }
+    }
+    ImGui::TextDisabled("选中一个元素后编辑属性");
+    return;
+  }
+  ImGui::Text("元素：%s", e->id.c_str());
+  char id_buf[64];
+  std::snprintf(id_buf, sizeof(id_buf), "%s", e->id.c_str());
+  if (ImGui::InputText("id", id_buf, sizeof(id_buf))) {
+    e->id = id_buf;
+    MarkDirty();
+  }
+  int kind = 0;
+  for (int i = 0; i < 5; ++i) if (e->kind == kUiKinds[i]) kind = i;
+  if (ImGui::Combo("类型", &kind, kUiKinds, 5)) {
+    e->kind = kUiKinds[kind];
+    MarkDirty();
+  }
+  int anchor = 0;
+  for (int i = 0; i < 9; ++i) if (e->anchor == kUiAnchors[i]) anchor = i;
+  if (ImGui::Combo("锚点", &anchor, kUiAnchors, 9)) {
+    e->anchor = kUiAnchors[anchor];
+    MarkDirty();
+  }
+  if (UndoIntField("X", &e->x, -10000)) MarkDirty();
+  if (UndoIntField("Y", &e->y, -10000)) MarkDirty();
+  if (UndoIntField("宽（0 = 内容）", &e->w, 0)) MarkDirty();
+  if (UndoIntField("高（0 = 内容）", &e->h, 0)) MarkDirty();
+  if (e->kind == "text" || e->kind == "panel") {
+    char text_buf[512];
+    std::snprintf(text_buf, sizeof(text_buf), "%s", e->text.c_str());
+    if (ImGui::InputTextMultiline("文字", text_buf, sizeof(text_buf),
+                                  ImVec2(-1, 60))) {
+      e->text = text_buf;
+      MarkDirty();
+    }
+    if (UndoIntField("字号", &e->font_size, 8)) {
+      e->font_size = std::max(8, std::min(16, e->font_size));
+      MarkDirty();
+    }
+    const char* aligns[] = {"left", "center", "right"};
+    int align = std::max(0, std::min(2, e->align));
+    if (ImGui::Combo("对齐", &align, aligns, 3)) {
+      e->align = align;
+      MarkDirty();
+    }
+  }
+  float col[4] = {((e->color >> 24) & 0xFF) / 255.0f,
+                  ((e->color >> 16) & 0xFF) / 255.0f,
+                  ((e->color >> 8) & 0xFF) / 255.0f,
+                  (e->color & 0xFF) / 255.0f};
+  if (ImGui::ColorEdit4("颜色", col)) {
+    e->color = (static_cast<unsigned>(col[0] * 255.0f + 0.5f) << 24) |
+               (static_cast<unsigned>(col[1] * 255.0f + 0.5f) << 16) |
+               (static_cast<unsigned>(col[2] * 255.0f + 0.5f) << 8) |
+               static_cast<unsigned>(col[3] * 255.0f + 0.5f);
+    MarkDirty();
+  }
+  if (e->kind == "value_bar" || e->kind == "value_image") {
+    char var_buf[64];
+    std::snprintf(var_buf, sizeof(var_buf), "%s", e->value_var.c_str());
+    if (ImGui::InputText("取值变量", var_buf, sizeof(var_buf))) {
+      e->value_var = var_buf;
+      MarkDirty();
+    }
+    if (UndoIntField("上限", &e->out_max, 1)) MarkDirty();
+    if (UndoIntField("帧数", &e->frames, 1)) MarkDirty();
+    char fmt_buf[64];
+    std::snprintf(fmt_buf, sizeof(fmt_buf), "%s", e->format.c_str());
+    if (ImGui::InputText("格式", fmt_buf, sizeof(fmt_buf))) {
+      e->format = fmt_buf;
+      MarkDirty();
+    }
+  }
+  if (ImGui::CollapsingHeader("九宫格 / 容器")) {
+    if (UndoIntField("左", &e->slice_l, 0)) MarkDirty();
+    if (UndoIntField("右", &e->slice_r, 0)) MarkDirty();
+    if (UndoIntField("上", &e->slice_t, 0)) MarkDirty();
+    if (UndoIntField("下", &e->slice_b, 0)) MarkDirty();
+    if (ImGui::Checkbox("中间平铺", &e->slice_tile)) MarkDirty();
+    if (UndoIntField("padding", &e->padding, 0)) MarkDirty();
+  }
+  if (ImGui::CollapsingHeader("显示条件")) {
+    char vis_buf[64];
+    std::snprintf(vis_buf, sizeof(vis_buf), "%s", e->visible_var.c_str());
+    if (ImGui::InputText("变量", vis_buf, sizeof(vis_buf))) {
+      e->visible_var = vis_buf;
+      MarkDirty();
+    }
+    if (UndoIntField("等于", &e->visible_value, -10000)) MarkDirty();
+  }
+}
+
 void DrawShell() {
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->Pos);
@@ -6764,6 +7096,7 @@ void DrawShell() {
     case 3: DrawObjectLeft(); break;
     case 4: DrawResourceLeft2(); break;
     case 5: DrawFlowPageLeft(); break;
+    case 6: DrawUiPageLeft(); break;
     default: DrawPlaceholder(ToolName(g_current_tool)); break;
   }
   ImGui::EndChild();
@@ -6776,6 +7109,7 @@ void DrawShell() {
     case 3: DrawObjectPageCenter(); break;
     case 4: DrawResourceCenter2(); break;
     case 5: DrawFlowPageCenter(); break;
+    case 6: DrawUiPageCenter(); break;
     default: DrawPlaceholder(ToolName(g_current_tool)); break;
   }
   ImGui::EndChild();
@@ -6795,6 +7129,7 @@ void DrawShell() {
     case 3: DrawObjectPageRight(); break;
     case 4: DrawResourceRight2(); break;
     case 5: DrawFlowPageRight(); break;
+    case 6: DrawUiPageRight(); break;
     default: DrawPlaceholder(ToolName(g_current_tool)); break;
   }
   ImGui::EndChild();
@@ -6839,7 +7174,7 @@ int main(int argc, char** argv) {
     } else if (a == "--frames" && i + 1 < argc) {
       g_frames_left = std::atoi(argv[++i]);
     } else if (a == "--tool" && i + 1 < argc) {
-      g_current_tool = std::max(0, std::min(5, std::atoi(argv[++i])));
+      g_current_tool = std::max(0, std::min(6, std::atoi(argv[++i])));
     } else if (a == "--import-png" && i + 1 < argc) {
       import_png = argv[++i];
     } else if (a == "--export-p3d" && i + 1 < argc) {

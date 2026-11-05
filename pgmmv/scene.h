@@ -146,7 +146,8 @@ struct SceneDoc {
   int win_score = 0;        // 分数达到就通关（0 = 不判定；射击类关卡用）
   bool objects_locked = false;  // 编辑器只读：对象层锁定
   std::map<std::string, int> variables;  // 场景初始变量
-  std::vector<UiTextDef> ui_texts;  // UI 文本（屏幕坐标）
+  std::vector<UiTextDef> ui_texts;  // 旧 UI（保留给旧工程）
+  std::string hud_ui;  // v7: 引用工程里的 UiScreenDoc id；空 = 用旧 ui_texts
   std::vector<TriggerDef> triggers;
   std::vector<std::string> controlled;  // 受控实例 id；v1 只用第一个
   JsonValue raw;

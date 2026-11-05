@@ -9,6 +9,7 @@ add_library(pgmmv STATIC
   project.cpp
   scene.cpp
   tileset.cpp
+  ui.cpp
   export.cpp
 )
 

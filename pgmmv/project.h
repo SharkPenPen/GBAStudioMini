@@ -18,6 +18,7 @@
 #include "pgmmv/object.h"
 #include "pgmmv/scene.h"
 #include "pgmmv/tileset.h"
+#include "pgmmv/ui.h"
 
 namespace pgmmv {
 
@@ -72,6 +73,8 @@ struct Project {
   std::map<std::string, std::string> formulas;
   std::vector<TilesetDoc> tilesets;
   std::vector<SceneDoc> scenes;
+  std::vector<UiScreenDoc> ui_screens;
+  std::string persistent_ui;
   std::vector<Transition> transitions;
   std::map<std::string, int> variables;  // 全局变量（跨场景、可存档）
 

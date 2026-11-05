@@ -605,6 +605,7 @@ bool SceneLoad(const std::filesystem::path& path, SceneDoc* out,
       break;  // v1 只保留第一个
     }
   }
+  if (!ReadString(root, "hud_ui", &s.hud_ui, &found, error)) return false;
 
   const JsonValue* camera = root.Find("camera");
   if (camera != nullptr) {
@@ -846,6 +847,11 @@ void SceneSyncRaw(SceneDoc* s) {
     controlled.Push(JsonValue::String(id));
   }
   root.Set("controlled", std::move(controlled));
+  if (!s->hud_ui.empty()) {
+    root.Set("hud_ui", JsonValue::String(s->hud_ui));
+  } else {
+    root.Remove("hud_ui");
+  }
 
   JsonValue camera = JsonValue::Object();
   camera.Set("follow", JsonValue::String(s->camera.follow));
