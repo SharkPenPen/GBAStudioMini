@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <set>
 #include <system_error>
 
 #include "render/png.h"
@@ -718,6 +719,37 @@ bool ProjectSave(Project* p, std::string* error) {
     }
     return false;
   }
+  auto check_unique = [&](const std::vector<std::string>& ids,
+                          const char* what) -> bool {
+    std::set<std::string> seen;
+    for (const std::string& id : ids) {
+      if (id.empty()) {
+        if (error != nullptr) *error = std::string(what) + " has empty id";
+        return false;
+      }
+      if (!seen.insert(id).second) {
+        if (error != nullptr) {
+          *error = std::string(what) + " duplicate id: " + id;
+        }
+        return false;
+      }
+    }
+    return true;
+  };
+  auto ids_of = [](auto&& list) {
+    std::vector<std::string> out;
+    for (const auto& item : list) out.push_back(item.id);
+    return out;
+  };
+  if (!check_unique(ids_of(p->assets), "asset") ||
+      !check_unique(ids_of(p->objects), "object") ||
+      !check_unique(ids_of(p->animations), "animation") ||
+      !check_unique(ids_of(p->tilesets), "tileset") ||
+      !check_unique(ids_of(p->scenes), "scene") ||
+      !check_unique(ids_of(p->ui_screens), "ui screen")) {
+    return false;
+  }
+
   std::error_code ec;
   std::filesystem::create_directories(p->root_dir, ec);
   if (ec) {

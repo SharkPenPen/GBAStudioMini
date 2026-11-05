@@ -1025,9 +1025,11 @@ void Game::UpdateTriggers() {
   };
   for (size_t i = 0; i < s.triggers.size(); ++i) {
     const Trigger& t = s.triggers[i];
+    bool any_action = false;
     auto run_rules = [&](int mode) {
       for (const TriggerRule& rule : t.rules) {
         if (rule.mode != mode || !rule_ok(rule)) continue;
+        any_action = true;
         if (RunTriggerList(t, rule.actions)) return true;
       }
       return false;
@@ -1081,8 +1083,15 @@ void Game::UpdateTriggers() {
       if (value != t.require_value) continue;
     }
     if (was_inside && t.once) continue;
+    any_action = false;
+    if (run_rules(0)) {
+      trigger_done_[i] = 1;
+      return;
+    }
+    // 没有任何规则满足时不要提前标记 done，否则变量条件满足后
+    // 这个 once 触发永远不会再执行。
+    if (!any_action) continue;
     trigger_done_[i] = 1;
-    if (run_rules(0)) return;
   }
 }
 
