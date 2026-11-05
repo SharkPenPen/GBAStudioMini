@@ -29,7 +29,6 @@ struct ProjectileState {
   float vy = 0.0f;
   float life = 0.0f;
   float hit_cd = 0.0f;
-  int damage = 0;
   int parent_scene_object = -1;
   bool destroy_on_hit = true;
   bool destroy_with_parent = false;
@@ -50,13 +49,8 @@ struct EnemyState {
   int action = 0;
   int frame = 0;
   float anim_time = 0.0f;
-  int hp = 1;
-  std::map<std::string, int> attrs;  // 实例属性（规则读写）
-  float hit_flash = 0.0f;
-  float hit_invuln = 0.0f;
   float attack_timer = 0.0f;
   float attack_hold = 0.0f;
-  float attack_hit_cd = 0.0f;
   bool attacking = false;
   bool dying = false;
   bool dead = false;
@@ -74,9 +68,7 @@ struct Player {
   int frame = 0;
   float anim_time = 0.0f;
   bool anim_end = false;
-  int hp = 100;
   int facing = 1;  // 1 = right, -1 = left
-  std::map<std::string, int> attrs;  // 实例属性（规则读写）
 };
 
 enum class CameraMode {
@@ -143,7 +135,6 @@ class Game {
   void ResolveY(float dy, int obj_index);
   void UpdateAnimation(float dt);
   void UpdateCamera(float dt);
-  void Damage();
   void InitEnemies();
   void InitSceneRuntime();
   void UpdateEnemies(float dt);
@@ -169,7 +160,6 @@ class Game {
   std::vector<ProjectileState> projectiles_;
   std::vector<CheckpointState> checkpoints_;
   std::vector<pgmmv::StatMod> env_mods_;  // 环境修饰器（触发器/装备/Buff 以后往里填）
-  float hp_accum_ = 0.0f;                 // hp_rate 的小数累积
   float dir_hold_ = 0.0f;                 // 方向键按住了多久（秒，长按加速用）
   bool debug_on_ = false;                 // Start 切换调试叠加
   bool globals_seeded_ = false;           // 全局变量是否已播种
@@ -206,7 +196,6 @@ class Game {
   eng::InputState prev_input_{};  // 上一帧输入（key_up 用）
   int key_hold_[eng::kKeyCount] = {};  // 按住帧数（长按用）
   bool finished_ = false;
-  float invuln_ = 0.0f;
   std::string toast_;
   float toast_timer_ = 0.0f;
 };

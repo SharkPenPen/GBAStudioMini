@@ -595,12 +595,6 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
       }
       if (ro.pushable != 0) break;
     }
-    for (const AttrDef& a : o.attrs) {
-      r4::ObjectAttr ra;
-      ra.name = a.name;
-      ra.value = a.value;
-      ro.attrs.push_back(std::move(ra));
-    }
     for (const Rule& rl : o.rules) {
       r4::Rule rr;
       rr.name = rl.name;

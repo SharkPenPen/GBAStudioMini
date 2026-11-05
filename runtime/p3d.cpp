@@ -199,16 +199,6 @@ bool ReadObject(Reader& r, Object* o, std::string* error) {
     if (!ReadAction(r, &o->actions[i], error)) return false;
   }
   o->default_action = r.I32();
-  const uint16_t an = r.U16();
-  if (!r.ok || an > 64) {
-    SetErr(error, "p3d: bad attr count");
-    return false;
-  }
-  o->attrs.resize(an);
-  for (uint16_t i = 0; i < an; ++i) {
-    o->attrs[i].name = r.Str();
-    o->attrs[i].value = r.I32();
-  }
   const uint16_t rn = r.U16();
   if (!r.ok || rn > 64) {
     SetErr(error, "p3d: bad rule count");
@@ -810,11 +800,6 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
       w.U8(a.flip_v ? 1 : 0);
     }
     w.I32(o.default_action);
-    w.U16(static_cast<uint16_t>(o.attrs.size()));
-    for (const ObjectAttr& a : o.attrs) {
-      w.Str(a.name);
-      w.I32(a.value);
-    }
     w.U16(static_cast<uint16_t>(o.rules.size()));
     for (const Rule& rl : o.rules) {
       w.Str(rl.name);

@@ -9,13 +9,12 @@
 
 namespace pgmmv {
 
-// 只留运行时真正会读的 4 个：水平速度、重力、下落上限、HP 变化率
+// 只留运行时真正会读的 3 个：水平速度、重力、下落上限
 // （跳跃/加速/摩擦这些以前是 platformer 硬编码用的，行为搬到规则后没人读了）
 enum class StatId {
   kSpeed = 0,
   kGravity,
   kMaxFall,
-  kHpRate,   // HP/秒（负 = 持续掉血，正 = 回血）
   kCount,
 };
 
@@ -39,7 +38,6 @@ inline const char* StatIdName(StatId id) {
     case StatId::kSpeed: return "speed";
     case StatId::kGravity: return "gravity";
     case StatId::kMaxFall: return "max_fall";
-    case StatId::kHpRate: return "hp_rate";
     default: return "?";
   }
 }
@@ -70,7 +68,6 @@ inline StatBlock DefaultStats() {
   s[StatId::kSpeed] = 110.0f;
   s[StatId::kGravity] = 900.0f;
   s[StatId::kMaxFall] = 600.0f;
-  s[StatId::kHpRate] = 0.0f;
   return s;
 }
 

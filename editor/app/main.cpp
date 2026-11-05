@@ -4919,9 +4919,9 @@ void DrawScenePageRight() {
       pgmmv::StatMod& m = trg.mods[static_cast<size_t>(mi)];
       ImGui::PushID(mi);
       int stat = static_cast<int>(m.id);
-      const char* stat_names[] = {"speed", "gravity", "max_fall", "hp_rate"};
+      const char* stat_names[] = {"speed", "gravity", "max_fall"};
       ImGui::SetNextItemWidth(140.0f);
-      if (ImGui::Combo("##stat", &stat, stat_names, 4)) {
+      if (ImGui::Combo("##stat", &stat, stat_names, 3)) {
         PushUndo();
         m.id = static_cast<pgmmv::StatId>(stat);
         MarkDirty();
@@ -5797,7 +5797,7 @@ void DrawPlaceholder(const char* title) {
 // ------------------------- 规则编辑器（对象页中间） -------------------------
 namespace ruledui {
 
-enum class PKind { kNone, kKey, kAttr, kVarName, kAnim, kOp, kNum, kFlip, kSfx };
+enum class PKind { kNone, kKey, kVarName, kAnim, kOp, kNum, kFlip, kSfx };
 const char* kOpLabels[] = {"<", "<=", "=", ">=", ">"};
 
 struct CondUI { const char* label; pgmmv::RuleCond type; PKind a; PKind b; };
@@ -5811,7 +5811,6 @@ const CondUI kConds[] = {
     {"在地面", pgmmv::RuleCond::kOnGround, PKind::kNone, PKind::kNone},
     {"在空中", pgmmv::RuleCond::kOnGroundNot, PKind::kNone, PKind::kNone},
     {"动画播完", pgmmv::RuleCond::kAnimEnd, PKind::kNone, PKind::kNone},
-    {"属性 <=", pgmmv::RuleCond::kAttrLe, PKind::kAttr, PKind::kNum},
     {"每 N 帧", pgmmv::RuleCond::kTimer, PKind::kNum, PKind::kNone},
     {"长按", pgmmv::RuleCond::kKeyHeld, PKind::kKey, PKind::kNum},
     {"变量比较", pgmmv::RuleCond::kVarCmp, PKind::kVarName, PKind::kOp},
@@ -5826,8 +5825,6 @@ const ActUI kActs[] = {
     {"播动画", pgmmv::RuleAct::kAnim, PKind::kAnim},
     {"朝向", pgmmv::RuleAct::kFlip, PKind::kFlip},
     {"音效", pgmmv::RuleAct::kSfx, PKind::kSfx},
-    {"属性加减", pgmmv::RuleAct::kAttrAdd, PKind::kAttr},
-    {"造成伤害", pgmmv::RuleAct::kDamage, PKind::kNone},
     {"速度叠加", pgmmv::RuleAct::kMoveAdd, PKind::kNone},
     {"按方向键移动", pgmmv::RuleAct::kMoveInput, PKind::kNone},
     {"生成", pgmmv::RuleAct::kSpawn, PKind::kNone},
@@ -5850,20 +5847,6 @@ void KeyCombo(const char* id, std::string* out) {
   int idx = KeyIndex(*out);
   ImGui::SetNextItemWidth(80.0f);
   if (ImGui::Combo(id, &idx, kKeyLabels, 6)) *out = kKeys[idx];
-}
-
-void AttrCombo(const char* id, pgmmv::ObjectDoc* obj, std::string* out) {
-  std::vector<const char*> labels;
-  labels.push_back("(选属性)");
-  for (const pgmmv::AttrDef& a : obj->attrs) labels.push_back(a.name.c_str());
-  int idx = 0;
-  for (size_t i = 0; i < obj->attrs.size(); ++i) {
-    if (obj->attrs[i].name == *out) idx = static_cast<int>(i) + 1;
-  }
-  ImGui::SetNextItemWidth(90.0f);
-  if (ImGui::Combo(id, &idx, labels.data(), static_cast<int>(labels.size()))) {
-    *out = idx == 0 ? std::string() : obj->attrs[static_cast<size_t>(idx - 1)].name;
-  }
 }
 
 void BindObjectAnimation(pgmmv::ObjectDoc* obj, const pgmmv::AnimationDoc& ad) {
@@ -5922,6 +5905,7 @@ void AnimCombo(const char* id, pgmmv::ObjectDoc* obj, std::string* out) {
 }
 
 void DrawCond(pgmmv::ObjectDoc* obj, pgmmv::Cond* c, int uid) {
+  (void)obj;
   ImGui::PushID(uid);
   std::vector<const char*> labels;
   int idx = 0;
@@ -5936,7 +5920,6 @@ void DrawCond(pgmmv::ObjectDoc* obj, pgmmv::Cond* c, int uid) {
   ImGui::SameLine();
   switch (kConds[idx].a) {
     case PKind::kKey: KeyCombo("##k", &c->key); break;
-    case PKind::kAttr: AttrCombo("##a", obj, &c->name); break;
     case PKind::kVarName: {
       char vb[64];
       std::snprintf(vb, sizeof(vb), "%s", c->name.c_str());
@@ -6096,13 +6079,6 @@ void DrawAct(pgmmv::ObjectDoc* obj, pgmmv::Effect* e, int uid) {
       if (ImGui::InputInt("##sy", &e->y)) MarkDirty();
       break;
     }
-    case pgmmv::RuleAct::kAttrAdd: {
-      AttrCombo("##aa", obj, &e->text);
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(70.0f);
-      if (ImGui::InputInt("##ad", &e->y)) MarkDirty();
-      break;
-    }
     case pgmmv::RuleAct::kVarAdd:
     case pgmmv::RuleAct::kVarSet: {
       char vb[64];
@@ -6117,22 +6093,6 @@ void DrawAct(pgmmv::ObjectDoc* obj, pgmmv::Effect* e, int uid) {
       ImGui::SameLine();
       ImGui::SetNextItemWidth(70.0f);
       if (ImGui::InputInt("##varv", &e->y)) MarkDirty();
-      break;
-    }
-    case pgmmv::RuleAct::kDamage: {
-      std::vector<const char*> fl;
-      fl.push_back("(默认)");
-      int fi = 0;
-      int idx = 0;
-      for (const auto& kv : g_project.formulas) {
-        fl.push_back(kv.first.c_str());
-        ++idx;
-        if (kv.first == e->formula) fi = idx;
-      }
-      ImGui::SetNextItemWidth(110.0f);
-      if (ImGui::Combo("##f", &fi, fl.data(), static_cast<int>(fl.size()))) {
-        e->formula = fi == 0 ? std::string() : fl[static_cast<size_t>(fi)];
-      }
       break;
     }
     default: break;
@@ -6244,34 +6204,6 @@ void ApplyPatrolTemplate(pgmmv::ObjectDoc* obj) {
 }
 
 void DrawObjectRules(pgmmv::ObjectDoc* obj) {
-  // ---- 属性表 ----
-  if (ImGui::CollapsingHeader("属性", ImGuiTreeNodeFlags_DefaultOpen)) {
-    int del = -1;
-    for (size_t i = 0; i < obj->attrs.size(); ++i) {
-      ImGui::PushID(static_cast<int>(i) + 1000);
-      char nb[64];
-      std::snprintf(nb, sizeof(nb), "%s", obj->attrs[i].name.c_str());
-      ImGui::SetNextItemWidth(140.0f);
-      if (ImGui::InputText("##name", nb, sizeof(nb))) obj->attrs[i].name = nb;
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(80.0f);
-      if (ImGui::InputInt("##val", &obj->attrs[i].value)) MarkDirty();
-      ImGui::SameLine();
-      if (RightSmallButton("删")) del = static_cast<int>(i);
-      ImGui::PopID();
-    }
-    if (del >= 0) {
-      PushUndo();
-      obj->attrs.erase(obj->attrs.begin() + del);
-      MarkDirty();
-    }
-    if (ImGui::Button("+ 属性", ImVec2(80, 22))) {
-      PushUndo();
-      obj->attrs.push_back(pgmmv::AttrDef{"hp", 100});
-      MarkDirty();
-    }
-  }
-  ImGui::Separator();
   // ---- 规则表：一行一条，条件/动作内联编辑 ----
   if (ImGui::CollapsingHeader("规则", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::TextDisabled("按键驱动：当 [条件] 就 [动作]；点每个标签直接改。");

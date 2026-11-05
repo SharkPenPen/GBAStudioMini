@@ -210,11 +210,6 @@ enum class RuleAct : unsigned char {
   kVarSet,     // 变量 = value（全局变量表）
 };
 
-struct AttrDef {
-  std::string name;
-  int value = 0;
-};
-
 struct Cond {
   RuleCond type = RuleCond::kAlways;
   std::string key;    // 按键语义名
@@ -251,7 +246,6 @@ struct ObjectDoc {
   std::string team;  // player / enemy / neutral；空 = 按 type 推断
   bool pushable = false;  // 实体碰撞时能否被玩家推动
   ObjectPhysics physics;
-  std::vector<AttrDef> attrs;            // 属性表：hp / def / atk …
   std::vector<Rule> rules;               // 规则表
   // 动作不在对象里：对象只引用一个动画资源（animation），动作在 animations/*.json
   std::string animation;

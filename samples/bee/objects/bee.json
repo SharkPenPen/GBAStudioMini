@@ -32,12 +32,6 @@
     "gravity": 0,
     "limit_screen": false
   },
-  "attrs": [
-    {
-      "name": "hp",
-      "value": 1
-    }
-  ],
   "rules": [
     {
       "name": "fly",

@@ -32,12 +32,6 @@
     "gravity": 0,
     "limit_screen": true
   },
-  "attrs": [
-    {
-      "name": "hp",
-      "value": 5
-    }
-  ],
   "rules": [
     {
       "name": "idle",

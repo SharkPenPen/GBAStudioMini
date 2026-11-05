@@ -168,7 +168,7 @@ void TestZoneRule() {
   rule.mode = 0;
   r4::TriggerAction set_rule;
   set_rule.type = 2;
-  set_rule.target = "g:rule";
+  set_rule.target = "rule";
   set_rule.value = 9;
   rule.actions.push_back(set_rule);
   zone.rules.push_back(rule);
@@ -178,7 +178,7 @@ void TestZoneRule() {
   std::string err;
   CHECK(game.Init(p, &err));
   game.Update(1.0f / 60.0f, EmptyInput());
-  CHECK(game.UiValue("g:rule") == 9);
+  CHECK(game.UiValue("rule") == 9);
 }
 
 void TestTitleScreen() {
@@ -219,7 +219,7 @@ void TestSaveLoad() {
   trigger.once = true;
   r4::TriggerAction coins;
   coins.type = 2;  // set_variable
-  coins.target = "g:coins";
+  coins.target = "coins";
   coins.value = 5;
   r4::TriggerRule rule;
   rule.mode = 0;
@@ -231,7 +231,7 @@ void TestSaveLoad() {
   std::string err;
   CHECK(game.Init(p, &err));
   game.Update(1.0f / 60.0f, EmptyInput());
-  CHECK(game.UiValue("g:coins") == 5);
+  CHECK(game.UiValue("coins") == 5);
   const eng::InputState right = RightInput();
   for (int i = 0; i < 30; ++i) game.Update(1.0f / 60.0f, right);
   CHECK(game.player().x > 100.0f);
@@ -249,7 +249,7 @@ void TestSaveLoad() {
   CHECK(loaded.Init(p, &err));
   CHECK(loaded.LoadBytes(bytes));
   CHECK(loaded.scene_id() == "test");
-  CHECK(loaded.UiValue("g:coins") == 5);
+  CHECK(loaded.UiValue("coins") == 5);
   CHECK(std::fabs(loaded.player().x - game.player().x) < 1.0f);
 
   const std::filesystem::path save_path =
@@ -259,7 +259,7 @@ void TestSaveLoad() {
   r4::Game from_file;
   CHECK(from_file.Init(p, &err));
   CHECK(from_file.LoadFromFile(save_path.u8string()));
-  CHECK(from_file.UiValue("g:coins") == 5);
+  CHECK(from_file.UiValue("coins") == 5);
   std::filesystem::remove(save_path);
 }
 
@@ -378,7 +378,7 @@ void TestP3dRoundTrip() {
   rule.mode = 0;
   r4::TriggerAction set_rule;
   set_rule.type = 2;
-  set_rule.target = "g:rule";
+  set_rule.target = "rule";
   set_rule.value = 9;
   rule.actions.push_back(set_rule);
   zone.rules.push_back(rule);

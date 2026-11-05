@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 88;  // 88: 删掉 FlowLink
+constexpr uint32_t kP3dVersion = 89;  // 89: 删掉对象属性表
+                                      // 88: 删掉 FlowLink
                                       // 87: 删掉 Spawner
                                       // 86: 删掉 score / score_ge
                                       // 85: 删掉自动卷轴
@@ -104,11 +105,6 @@ struct Rule {
   std::vector<RuleEffect> effects;
 };
 
-struct ObjectAttr {
-  std::string name;
-  int value = 0;
-};
-
 // v43：一帧一份完整数据（图、停留、中心、碰撞、攻击、受击）。
 // 编辑器里的"沿用上一帧"在导出时已经解析成具体值，运行时不用再往前找。
 // v44：每帧可以带连接点（枪口/手…），坐标相对帧左上。
@@ -170,7 +166,6 @@ struct Object {
   uint8_t limit_screen = 0;  // v61：移动夹在屏幕内
   uint8_t pushable = 0;      // v72：实体碰撞时可被玩家推动
   std::vector<Action> actions;
-  std::vector<ObjectAttr> attrs;   // v45
   std::vector<Rule> rules;         // v45  // v18
   int default_action = 0;
 };

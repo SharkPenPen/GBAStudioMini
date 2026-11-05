@@ -185,19 +185,6 @@ bool ActFromName(const std::string& s, RuleAct* out) {
 
 bool ReadRules(const JsonValue& root, ObjectDoc* o, std::string* error) {
   bool found = false;
-  if (const JsonValue* attrs = root.Find("attrs");
-      attrs != nullptr && attrs->IsArray()) {
-    for (const JsonValue& av : attrs->items) {
-      if (!av.IsObject()) continue;
-      AttrDef a;
-      if (!ReadString(av, "name", &a.name, &found, error)) return false;
-      if (a.name.empty()) continue;
-      int v = 0;
-      if (!ReadInt(av, "value", &v, &found, error)) return false;
-      a.value = v;
-      o->attrs.push_back(std::move(a));
-    }
-  }
   if (const JsonValue* rules = root.Find("rules");
       rules != nullptr && rules->IsArray()) {
     for (const JsonValue& rv : rules->items) {
@@ -254,16 +241,7 @@ bool ReadRules(const JsonValue& root, ObjectDoc* o, std::string* error) {
 }
 
 void WriteRules(const ObjectDoc& o, JsonValue* root) {
-  if (!o.attrs.empty()) {
-    JsonValue arr = JsonValue::Array();
-    for (const AttrDef& a : o.attrs) {
-      JsonValue av = JsonValue::Object();
-      av.Set("name", JsonValue::String(a.name));
-      SetInt(&av, "value", a.value);
-      arr.Push(std::move(av));
-    }
-    root->Set("attrs", std::move(arr));
-  }
+  root->Remove("attrs");
   if (o.rules.empty()) {
     root->Remove("rules");
     return;
@@ -626,12 +604,6 @@ bool ObjectLoad(const std::filesystem::path& path, ObjectDoc* out,
   root.Remove("behavior");
   root.Remove("patrol_range");
   root.Remove("dive_interval");
-  // hp 只是属性表里的一条（没有就补默认值，规则/UI 都按属性读）
-  bool has_hp = false;
-  for (const AttrDef& a : o.attrs) {
-    if (a.name == "hp") has_hp = true;
-  }
-  if (!has_hp) o.attrs.push_back(AttrDef{"hp", 100});
   if (!ReadString(root, "animation", &o.animation, &found, error)) return false;
 
   const JsonValue* flow = root.Find("flow");

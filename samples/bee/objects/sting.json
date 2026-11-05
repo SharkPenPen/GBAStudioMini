@@ -32,20 +32,6 @@
     "gravity": 0,
     "limit_screen": false
   },
-  "attrs": [
-    {
-      "name": "hp",
-      "value": 1
-    },
-    {
-      "name": "bullet_speed",
-      "value": 260
-    },
-    {
-      "name": "atk",
-      "value": 1
-    }
-  ],
   "animation": "sting_anim",
   "flow": {
     "default": "idle"

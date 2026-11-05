@@ -13,19 +13,9 @@
 #include "engine/render/texture.h"
 #include "runtime/ui.h"
 #include "runtime/audio.h"
-#include "runtime/expr.h"
 
 namespace r4 {
 namespace {
-// 对象属性读成整数（没配就用默认值）：分数 / 弹速 / 射击间隔都走属性表
-int ObjIntAttr(const Object& o, const char* name, int def) {
-  for (const ObjectAttr& a : o.attrs) {
-    if (a.name == name) return a.value;
-  }
-  return def;
-}
-
-
 void PutU16(std::string* b, unsigned v) {
   b->push_back(static_cast<char>(v & 0xFF));
   b->push_back(static_cast<char>((v >> 8) & 0xFF));
@@ -280,24 +270,15 @@ void Game::SetScene(int index) {
   player_.anim_time = 0.0f;
   player_.frame = 0;
   player_.anim_end = false;
-  player_.hp = 100;
   player_.action = 0;
   player_.facing = 1;
   finished_ = false;
-  invuln_ = 0.0f;
 
   int player_index = -1;
   const Object* po = FindPlayerObject(*p3d_, s, &player_index);
   if (po != nullptr) {
     player_object_ = player_index;
     player_.action = po->default_action;
-    player_.attrs.clear();
-    for (const ObjectAttr& a : po->attrs) player_.attrs[a.name] = a.value;
-    if (player_.attrs.find("hp") == player_.attrs.end()) {
-      player_.attrs["hp"] = 100;  // 没配就默认 100
-    }
-    player_.hp = player_.attrs["hp"];  // 运行时血量从属性表出发
-
   }
   camera_mode_ = (s.camera_mode == "fixed") ? CameraMode::kFixed
                                                  : CameraMode::kFollow;
@@ -336,10 +317,7 @@ void Game::InitEnemies() {
     e.x = static_cast<float>(so.x);
     e.y = static_cast<float>(so.y);
     e.home_x = e.x;
-    for (const ObjectAttr& a : o.attrs) e.attrs[a.name] = a.value;
-    if (e.attrs.find("hp") == e.attrs.end()) e.attrs["hp"] = 1;
-    e.hp = std::max(1, e.attrs["hp"]);
-    e.attack_timer = static_cast<float>(std::max(1, ObjIntAttr(o, "fire_interval", 120))) / 60.0f;
+    e.attack_timer = 120.0f / 60.0f;
     e.dir = -1;
     e.facing = -1;
     e.action = o.default_action;
@@ -384,10 +362,7 @@ void Game::DrawToast(eng::DrawList& dl, const eng::TextureId* textures,
 int Game::UiValue(const char* name) const {
   if (name == nullptr || name[0] == '\0') return 0;
   auto it = variables_.find(name);
-  if (it != variables_.end()) return it->second;
-  auto at = player_.attrs.find(name);
-  if (at != player_.attrs.end()) return at->second;
-  return 0;
+  return it == variables_.end() ? 0 : it->second;
 }
 
 bool Game::SaveBytes(std::string* out) const {
@@ -711,26 +686,16 @@ void Game::ActivateModalFocus() {
 
 void Game::UpdateEnemies(float dt) {
   if (p3d_ == nullptr || enemies_.empty()) return;
-  const Object& po = p3d_->objects[player_object_];
-  const float px0 = player_.x + static_cast<float>(po.col_x);
-  const float px1 = px0 + static_cast<float>(po.col_w);
-  const float py0 = player_.y + static_cast<float>(po.col_y);
-  const float py1 = py0 + static_cast<float>(po.col_h);
-  const float pbottom = py1;
-
   for (EnemyState& e : enemies_) {
     if (e.dead) continue;
     if (e.object < 0 || e.object >= static_cast<int>(p3d_->objects.size())) continue;
     const Object& eo = p3d_->objects[e.object];
-    if (e.hit_invuln > 0.0f) e.hit_invuln -= dt;
-    if (e.hit_flash > 0.0f) e.hit_flash -= dt;
     if (!e.dying) {
-      if (e.attack_hit_cd > 0.0f) e.attack_hit_cd -= dt;
-      e.attack_timer -= dt;
+        e.attack_timer -= dt;
       if (!e.attacking && e.attack_timer <= 0.0f) {
         e.attacking = true;
         e.attack_hold = 0.35f;
-        e.attack_timer = static_cast<float>(std::max(1, ObjIntAttr(eo, "fire_interval", 120))) / 60.0f;
+        e.attack_timer = 120.0f / 60.0f;
         const int ai = FindActionIndex(eo, "attack");
         if (ai >= 0) {
           e.action = ai;
@@ -790,63 +755,6 @@ void Game::UpdateEnemies(float dt) {
       }
     }
 
-    if (invuln_ > 0.0f) continue;
-    const float ex0 = e.x + static_cast<float>(eo.col_x);
-    const float ex1 = ex0 + static_cast<float>(eo.col_w);
-    const float ey0 = e.y + static_cast<float>(eo.col_y);
-    const float ey1 = ey0 + static_cast<float>(eo.col_h);
-
-    if (e.attacking && e.attack_hit_cd <= 0.0f &&
-        ObjectTeam(eo) != ObjectTeam(po) && ObjIntAttr(eo, "atk", 0) > 0) {
-      AttackBox phb{po.hurt_x, po.hurt_y, po.hurt_w, po.hurt_h};
-      if (phb.w <= 0 || phb.h <= 0) {
-        phb = ColBoxOf(po, player_.action, player_.frame);
-      }
-      if (player_.action >= 0 && player_.action < static_cast<int>(po.actions.size())) {
-        const Action& pa = po.actions[player_.action];
-        if (player_.frame >= 0 && player_.frame < static_cast<int>(pa.frames.size())) {
-          const AttackBox& fb = pa.frames[player_.frame].hurt;
-          if (fb.w > 0 && fb.h > 0) phb = AttackBox{fb.x, fb.y, fb.w, fb.h};
-        }
-      }
-      AttackBox attack{eo.attack_x, eo.attack_y, eo.attack_w, eo.attack_h};
-      if (e.action >= 0 && e.action < static_cast<int>(eo.actions.size())) {
-        const Action& ea = eo.actions[e.action];
-        if (e.frame >= 0 && e.frame < static_cast<int>(ea.frames.size())) {
-          const AttackBox& fb = ea.frames[e.frame].attack;
-          if (fb.w > 0 && fb.h > 0) attack = fb;
-        }
-      }
-      const float hx0 = player_.x + static_cast<float>(phb.x);
-      const float hy0 = player_.y + static_cast<float>(phb.y);
-      const float hx1 = hx0 + static_cast<float>(phb.w);
-      const float hy1 = hy0 + static_cast<float>(phb.h);
-      const float ax0 = e.x + static_cast<float>(attack.x);
-      const float ay0 = e.y + static_cast<float>(attack.y);
-      const float ax1 = ax0 + static_cast<float>(attack.w);
-      const float ay1 = ay0 + static_cast<float>(attack.h);
-      if (ax1 > hx0 && ax0 < hx1 && ay1 > hy0 && ay0 < hy1) {
-        e.attack_hit_cd = static_cast<float>(std::max(1, ObjIntAttr(eo, "atk_cooldown", 60))) / 60.0f;
-        Damage();
-        return;
-      }
-    }
-
-    const bool overlap = px1 > ex0 && px0 < ex1 && py1 > ey0 && py0 < ey1;
-    if (!overlap) continue;
-
-    const bool stomp = player_.vy > 0.0f && pbottom <= ey0 + 12.0f;
-    if (stomp) {
-      e.dying = true;
-      e.anim_time = 0.0f;
-      e.frame = 0;
-      if (e.death_action >= 0) e.action = e.death_action;
-      player_.vy = -220.0f;
-      AudioPlay(Sfx::kCoin);
-    } else {
-      Damage();
-      return;
-    }
   }
 }
 
@@ -1106,19 +1014,9 @@ bool Game::RunTriggerList(const Trigger& trigger,
         }
       }
       if (target < 0) continue;
-      const int hp = player_.hp;
       ++transition_count_;
       SetScene(target);
-      player_.hp = hp;
       return true;
-    }
-    if (action.type == 7) {  // attr_add：改玩家属性（hp 同步）
-      if (!action.target.empty()) {
-        int& v = player_.attrs[action.target];
-        v += action.value;
-        if (action.target == "hp") player_.hp = v;
-      }
-      continue;
     }
     if (action.type == 6) {  // play_sfx
       PlayClipById(action.target);
@@ -1229,11 +1127,9 @@ void Game::SpawnById(const std::string& id, float x, float y, int dir, bool from
     p.object = static_cast<int>(i);
     p.x = x;
     p.y = y;
-    const float sp = static_cast<float>(ObjIntAttr(target, "bullet_speed", 120));
-    p.vx = (dir < 0 ? -1.0f : 1.0f) * sp;
+    p.vx = (dir < 0 ? -1.0f : 1.0f) * 220.0f;
     p.vy = 0.0f;
     p.life = 3.0f;
-    p.damage = ObjIntAttr(target, "atk", 1);
     p.from_player = from_player;
     projectiles_.push_back(p);
     return;
@@ -1242,19 +1138,6 @@ void Game::SpawnById(const std::string& id, float x, float y, int dir, bool from
 
 void Game::UpdateProjectiles(float dt) {
   if (p3d_ == nullptr) return;
-  const Object& po = p3d_->objects[player_object_];
-  auto hurt_box = [](const Object& o, int action, int frame) {
-    AttackBox box{o.hurt_x, o.hurt_y, o.hurt_w, o.hurt_h};
-    if (box.w <= 0 || box.h <= 0) box = ColBoxOf(o, action, frame);
-    if (action >= 0 && action < static_cast<int>(o.actions.size())) {
-      const Action& a = o.actions[action];
-      if (frame >= 0 && frame < static_cast<int>(a.frames.size())) {
-        const AttackBox& fb = a.frames[frame].hurt;
-        if (fb.w > 0 && fb.h > 0) box = AttackBox{fb.x, fb.y, fb.w, fb.h};
-      }
-    }
-    return box;
-  };
   for (size_t i = 0; i < projectiles_.size();) {
     ProjectileState& p = projectiles_[i];
     p.x += p.vx * dt;
@@ -1277,42 +1160,25 @@ void Game::UpdateProjectiles(float dt) {
       const Object& target = p3d_->objects[p.object];
       if (p.from_player) {
         for (EnemyState& e : enemies_) {
-          if (e.dying || e.dead || e.hit_invuln > 0.0f) continue;
+          if (e.dying || e.dead) continue;
           const Object& eo = p3d_->objects[e.object];
           if (ObjectTeam(eo) == ObjectTeam(target)) continue;
-          const AttackBox hb = hurt_box(eo, e.action, e.frame);
+          const AttackBox hb = ColBoxOf(eo, e.action, e.frame);
           const float ex0 = e.x + static_cast<float>(hb.x);
           const float ey0 = e.y + static_cast<float>(hb.y);
           const float ex1 = ex0 + static_cast<float>(hb.w);
           const float ey1 = ey0 + static_cast<float>(hb.h);
           if (p.x <= ex0 || p.x >= ex1 || p.y <= ey0 || p.y >= ey1) continue;
-          e.hp -= p.damage;
-          e.hit_invuln = static_cast<float>(std::max(0, ObjIntAttr(eo, "invuln", 0))) / 60.0f;
-          e.hit_flash = 0.15f;
-          if (e.hp <= 0) {
-            e.dying = true;
-            e.anim_time = 0.0f;
-            e.frame = 0;
-            if (e.death_action >= 0) e.action = e.death_action;
-          }
+          e.dying = true;
+          e.anim_time = 0.0f;
+          e.frame = 0;
+          if (e.death_action >= 0) e.action = e.death_action;
           if (p.destroy_on_hit) {
             remove = true;
           } else {
             p.hit_cd = 0.2f;
           }
           break;
-        }
-      } else {
-        const AttackBox hb = hurt_box(po, player_.action, player_.frame);
-        const float px0 = player_.x + static_cast<float>(hb.x);
-        const float py0 = player_.y + static_cast<float>(hb.y);
-        const float px1 = px0 + static_cast<float>(hb.w);
-        const float py1 = py0 + static_cast<float>(hb.h);
-        if (ObjectTeam(po) != ObjectTeam(target) &&
-            p.x > px0 && p.x < px1 && p.y > py0 && p.y < py1) {
-          Damage();
-          // Damage 会 SetScene（清空 projectiles_），这里的引用已经悬空，直接收工
-          return;
         }
       }
     }
@@ -1353,32 +1219,6 @@ void Game::RenderProjectiles(eng::DrawList& dl, const eng::TextureId* textures,
                  textures[o.image], p.from_player ? 0xFFFFFFFFu : 0xFF80A0FFu,
                  eng::TexRegion::Make(tc * fw, tr * fh, fw, fh));
   }
-}
-
-void Game::Damage() {
-  if (invuln_ > 0.0f) return;
-  if (player_.hp > 0) --player_.hp;
-  const int hp = player_.hp;
-  const float respawn_x = respawn_x_;
-  const float respawn_y = respawn_y_;
-  const bool has_respawn = has_respawn_;
-  AudioPlay(Sfx::kHurt);
-  SetScene(scene_index_);
-  if (has_respawn) {
-    player_.x = respawn_x;
-    player_.y = respawn_y;
-    respawn_x_ = respawn_x;
-    respawn_y_ = respawn_y;
-    has_respawn_ = true;
-  }
-  if (hp <= 0) {
-    player_.hp = player_.attrs.count("hp") ? player_.attrs.at("hp") : 100;
-  } else {
-    player_.hp = hp;
-    toast_ = "OUCH";
-    toast_timer_ = 1.2f;
-  }
-  invuln_ = 1.5f;
 }
 
 void Game::UpdateCamera(float dt) {
@@ -1533,10 +1373,6 @@ void Game::RunPlayerRules(const Object& o, const eng::InputState& input, float d
             return KeyUpOf(c.key.c_str(), prev_input_, input);
           case 4: return player_.on_ground;
           case 5: return !player_.on_ground;
-          case 7: {
-            auto it = player_.attrs.find(c.name);
-            return it != player_.attrs.end() && it->second <= c.value;
-          }
           case 6: {  // anim_end：最后一个画面且停留时间已过
             if (player_.action < 0 ||
                 player_.action >= static_cast<int>(o.actions.size())) {
@@ -1549,9 +1385,9 @@ void Game::RunPlayerRules(const Object& o, const eng::InputState& input, float d
             return player_.anim_time >=
                    static_cast<float>(P3dActionHold(a, last)) / 60.0f;
           }
-          case 8: {  // 属性比较（op: 0< 1<= 2= 3>= 4>）
-            auto it = player_.attrs.find(c.name);
-            const int v = it == player_.attrs.end() ? 0 : it->second;
+          case 8: {  // 变量比较（op: 0< 1<= 2= 3>= 4>）
+            auto it = variables_.find(c.name);
+            const int v = it == variables_.end() ? 0 : it->second;
             switch (c.op) {
               case 0: return v < c.value;
               case 2: return v == c.value;
@@ -1636,55 +1472,6 @@ void Game::RunPlayerRules(const Object& o, const eng::InputState& input, float d
           SpawnById(e.text, player_.x + static_cast<float>(e.x),
                     player_.y + static_cast<float>(e.y), player_.facing, true);
           break;
-        case 8:  // attr_add
-        case 9: {  // attr_set
-          const int delta = e.type == 8 ? e.y : 0;
-          const int val = e.type == 9 ? e.y : 0;
-          if (!e.text.empty()) {
-            int& v = player_.attrs[e.text];
-            v = e.type == 8 ? v + delta : val;
-            if (e.text == "hp") player_.hp = v;
-          }
-          break;
-        }
-        case 10: {  // damage：攻击盒内的敌人按公式扣血
-          if (player_.action < 0 ||
-              player_.action >= static_cast<int>(o.actions.size())) {
-            break;
-          }
-          const Action& pa = o.actions[static_cast<size_t>(player_.action)];
-          if (player_.frame < 0 ||
-              player_.frame >= static_cast<int>(pa.frames.size())) {
-            break;
-          }
-          const AttackBox ab = pa.frames[static_cast<size_t>(player_.frame)].attack;
-          if (ab.w <= 0 || ab.h <= 0) break;
-          const float ax0 = player_.x + static_cast<float>(ab.x);
-          const float ay0 = player_.y + static_cast<float>(ab.y);
-          const float ax1 = ax0 + static_cast<float>(ab.w);
-          const float ay1 = ay0 + static_cast<float>(ab.h);
-          std::string expr = e.formula;
-          if (expr.empty()) expr = "damage";
-          const auto fit = p3d_->formulas.find(expr);
-          const std::string src = fit != p3d_->formulas.end() ? fit->second
-                                                              : "max(1,{atk}-{target.def})";
-          for (EnemyState& en : enemies_) {
-            if (en.dead || en.dying) continue;
-            const Object& eo = p3d_->objects[static_cast<size_t>(en.object)];
-            const AttackBox hb = ColBoxOf(eo, en.action, en.frame);
-            const float hx0 = en.x + static_cast<float>(hb.x);
-            const float hy0 = en.y + static_cast<float>(hb.y);
-            const float hx1 = hx0 + static_cast<float>(hb.w);
-            const float hy1 = hy0 + static_cast<float>(hb.h);
-            if (ax1 <= hx0 || ax0 >= hx1 || ay1 <= hy0 || ay0 >= hy1) continue;
-            const int dmg = r4::EvalExpr(src, player_.attrs, &en.attrs);
-            en.hp -= dmg;
-            en.attrs["hp"] = en.hp;
-            en.hit_flash = 0.12f;
-            if (en.hp <= 0) en.dying = true;
-          }
-          break;
-        }
         default: break;
       }
     }
@@ -1715,13 +1502,9 @@ void Game::RunEnemyRules(const Object& o, EnemyState& e, float dt) {
           case 0: return true;
           case 4: return false;   // 敌人没有地面判定
           case 5: return true;
-          case 7: {
-            auto it = e.attrs.find(c.name);
-            return it != e.attrs.end() && it->second <= c.value;
-          }
           case 8: {
-            auto it = e.attrs.find(c.name);
-            const int v = it == e.attrs.end() ? 0 : it->second;
+            auto it = variables_.find(c.name);
+            const int v = it == variables_.end() ? 0 : it->second;
             switch (c.op) {
               case 0: return v < c.value;
               case 2: return v == c.value;
@@ -1778,15 +1561,6 @@ void Game::RunEnemyRules(const Object& o, EnemyState& e, float dt) {
           SpawnById(ef.text, e.x + static_cast<float>(ef.x),
                     e.y + static_cast<float>(ef.y), e.facing, false);
           break;
-        case 8:  // attr_add
-        case 9: {  // attr_set
-          if (!ef.text.empty()) {
-            int& v = e.attrs[ef.text];
-            v = ef.type == 8 ? v + ef.y : ef.y;
-            if (ef.text == "hp") e.hp = v;
-          }
-          break;
-        }
         case 13:  // var_add
           if (!ef.text.empty()) variables_[ef.text] += ef.y;
           break;
@@ -1815,7 +1589,6 @@ void Game::RunEnemyRules(const Object& o, EnemyState& e, float dt) {
 
 void Game::UpdateSimulation(float dt, const eng::InputState& input) {
   if (p3d_ == nullptr || player_object_ < 0) return;
-  if (invuln_ > 0.0f) invuln_ -= dt;
   if (toast_timer_ > 0.0f) toast_timer_ -= dt;
   if (player_attack_active_ > 0.0f) player_attack_active_ -= dt;
   if (player_attack_cooldown_ > 0.0f) player_attack_cooldown_ -= dt;
@@ -1844,13 +1617,6 @@ void Game::UpdateSimulation(float dt, const eng::InputState& input) {
   st[pgmmv::StatId::kSpeed] = static_cast<float>(o.speed);
   st[pgmmv::StatId::kGravity] = static_cast<float>(o.gravity);
   st = pgmmv::ComposeStats(st, env_mods_);
-  // 持续伤害/回血：hp_rate 是「每秒」，这里按 dt 累积成整数扣加
-  if (st[pgmmv::StatId::kHpRate] != 0.0f && player_.hp > 0) {
-    hp_accum_ += st[pgmmv::StatId::kHpRate] * dt;
-    while (hp_accum_ >= 1.0f) { player_.hp += 1; hp_accum_ -= 1.0f; }
-    while (hp_accum_ <= -1.0f) { player_.hp -= 1; hp_accum_ += 1.0f; }
-    if (player_.hp < 0) player_.hp = 0;
-  }
   const float stat_gravity = st[pgmmv::StatId::kGravity];
   const float stat_maxfall = st[pgmmv::StatId::kMaxFall];
   player_.vy += stat_gravity * dt;  // 重力是常量，不需要写规则
@@ -1898,8 +1664,7 @@ void Game::UpdateSimulation(float dt, const eng::InputState& input) {
   // 玩家攻击由规则里的 damage 动作处理（用当帧的攻击盒），这里不再硬编码 B 键
 
   if (player_.y > 10000.0f) {
-    invuln_ = 0.0f;
-    Damage();
+    SetScene(scene_index_);
     return;
   }
 
@@ -1907,10 +1672,6 @@ void Game::UpdateSimulation(float dt, const eng::InputState& input) {
   UpdateEnemies(dt);
   UpdateProjectiles(dt);
   UpdateTriggers();
-  // 属性表里的 hp 和玩家真实血量保持同步（属性表是数据源）
-  if (player_.attrs.find("hp") != player_.attrs.end()) {
-    player_.attrs["hp"] = player_.hp;
-  }
   UpdateCamera(dt);
 }
 
