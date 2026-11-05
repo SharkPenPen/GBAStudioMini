@@ -350,6 +350,9 @@ void ProjectSyncRaw(Project* p) {
   settings.Set("tile_size", JsonValue::Number(static_cast<double>(p->settings.tile_size)));
   settings.Set("initial_scene", JsonValue::String(p->settings.initial_scene));
 
+  // 不再兼容旧工程：视口固定 480×272。
+  p->settings.top_width = kScreenWidth;
+  p->settings.top_height = kScreenHeight;
   JsonValue screen = JsonValue::Object();
   JsonValue top = JsonValue::Array();
   top.Push(JsonValue::Number(static_cast<double>(p->settings.top_width)));
@@ -547,6 +550,10 @@ bool ProjectLoad(const std::filesystem::path& project_json_path, Project* out,
       p.settings.top_height = kScreenHeight;
     }
   }
+
+  // 不再兼容旧工程：视口固定 480×272。
+  p.settings.top_width = kScreenWidth;
+  p.settings.top_height = kScreenHeight;
 
   const JsonValue* assets = root.Find("assets");
   if (assets != nullptr) {

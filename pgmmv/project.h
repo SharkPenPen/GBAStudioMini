@@ -51,7 +51,7 @@ struct Asset {
   JsonValue raw;    // 该资源对象的原始 JSON，保留未知字段
 };
 
-// 新工程默认 480×272；旧工程保留自己保存的视口（240×160 等）。
+// 视口固定 480×272；不考虑旧工程。
 constexpr int kScreenWidth = 480;
 constexpr int kScreenHeight = 272;
 
