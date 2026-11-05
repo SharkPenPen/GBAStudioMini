@@ -264,6 +264,7 @@ std::filesystem::path g_cli_r4_tiles;
 std::filesystem::path g_cli_r4_player;
 std::filesystem::path g_cli_r4_p3d;
 std::string g_r4_report_path;
+HANDLE g_player_process = nullptr;
 
 // ---- 基础路径 --------------------------------------------------------------
 
@@ -1395,7 +1396,22 @@ void DoExportP3d() {
   SetStatus("已导出：" + PathText(out));
 }
 
+bool PlayerStillRunning() {
+  if (g_player_process == nullptr) return false;
+  DWORD code = 0;
+  if (GetExitCodeProcess(g_player_process, &code) && code == STILL_ACTIVE) {
+    return true;
+  }
+  CloseHandle(g_player_process);
+  g_player_process = nullptr;
+  return false;
+}
+
 void DoPlay() {
+  if (PlayerStillRunning()) {
+    SetStatus("播放器已在运行，先关掉旧窗口");
+    return;
+  }
   std::filesystem::path p3d;
   std::string err;
   if (!ExportCurrentP3d(&p3d, &err)) {
@@ -1415,7 +1431,7 @@ void DoPlay() {
     return;
   }
   std::wstring cmd = L"\"" + player.wstring() + L"\" --p3d \"" +
-                     p3d.wstring() + L"\" --scale 2";
+                     p3d.wstring() + L"\"";
   STARTUPINFOW si = {};
   si.cb = sizeof(si);
   PROCESS_INFORMATION pi = {};
@@ -1426,7 +1442,7 @@ void DoPlay() {
     return;
   }
   CloseHandle(pi.hThread);
-  CloseHandle(pi.hProcess);
+  g_player_process = pi.hProcess;
   SetStatus("试玩：" + PathText(p3d));
 }
 
@@ -4041,8 +4057,23 @@ void DrawScenePageCenter() {
     const pgmmv::ObjectDoc* od = g_project.FindObject(o.object);
     const float fw = od != nullptr ? static_cast<float>(std::max(1, od->frame.w)) : 20.0f;
     const float fh = od != nullptr ? static_cast<float>(std::max(1, od->frame.h)) : 20.0f;
-    *a = ImVec2(world_left(static_cast<float>(o.x)),
-                world_top(static_cast<float>(o.y), fh));
+    int ox = static_cast<int>(fw * 0.5f);
+    int oy = static_cast<int>(fh);
+    if (od != nullptr) {
+      const pgmmv::ActionDef* act =
+          pgmmv::FindObjectAction(g_project, *od, od->default_action);
+      if (act == nullptr) {
+        const std::vector<pgmmv::ActionDef>* acts =
+            pgmmv::ObjectActions(g_project, *od);
+        if (acts != nullptr && !acts->empty()) act = &acts->front();
+      }
+      if (act != nullptr && !act->frames.empty()) {
+        pgmmv::ResolveFrameOrigin(*act, 0, &ox, &oy);
+      }
+    }
+    // 场景 y 向上；实例坐标是“脚底原点”，不是帧左上。
+    *a = ImVec2(world_left(static_cast<float>(o.x - ox)),
+                world_top(static_cast<float>(o.y + oy - static_cast<int>(fh)), fh));
     *b = ImVec2(a->x + fw * zoom, a->y + fh * zoom);
   };
   for (size_t i = 0; i < s->objects.size(); ++i) {
