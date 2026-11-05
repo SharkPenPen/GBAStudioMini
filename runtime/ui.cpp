@@ -330,6 +330,43 @@ void DrawElement(const UiElement& e, UiRect parent, const UiDrawContext& ctx,
       }
       break;
     }
+    case UiKind::kList: {
+      if (e.texture != 0) {
+        DrawPanel(e, r, ctx);
+      } else {
+        ctx.dl->DrawRect(R(r.x, r.y, r.w, r.h), 0xFF202030u);
+      }
+      if (ctx.focus == index) {
+        const eng::u32 c = 0xFFFFD060u;
+        ctx.dl->DrawRect(R(r.x - 2, r.y - 2, r.w + 4, 2), c);
+        ctx.dl->DrawRect(R(r.x - 2, r.y + r.h, r.w + 4, 2), c);
+        ctx.dl->DrawRect(R(r.x - 2, r.y, 2, r.h), c);
+        ctx.dl->DrawRect(R(r.x + r.w, r.y, 2, r.h), c);
+      }
+      if (!e.items.empty()) {
+        const int row_h = FaceLineHeight(e.font_size);
+        const int rows = std::max(1, r.h / row_h);
+        int sel = (ctx.focus == index) ? ctx.list_selected : 0;
+        sel = std::max(0, std::min(static_cast<int>(e.items.size()) - 1, sel));
+        const int first = std::max(0, sel - rows + 1);
+        for (int row = 0; row < rows && first + row < static_cast<int>(e.items.size());
+             ++row) {
+          const int idx2 = first + row;
+          const UiRect rr{r.x + 2, r.y + row * row_h, r.w - 4, row_h};
+          const bool chosen = (idx2 == sel);
+          if (chosen) {
+            ctx.dl->DrawRect(R(rr.x, rr.y, rr.w, rr.h), 0xFF505070u);
+          }
+          UiElement text = e;
+          text.kind = UiKind::kText;
+          text.align = 0;
+          text.w = rr.w;
+          text.h = rr.h;
+          DrawText(e.items[static_cast<size_t>(idx2)], rr, text, ctx);
+        }
+      }
+      break;
+    }
     case UiKind::kButton: {
       if (e.texture != 0) {
         DrawPanel(e, r, ctx);
@@ -494,6 +531,7 @@ UiElement UiElementFromData(const UiElementData& d, const eng::TextureId* textur
   e.action = d.action;
   e.action_target = d.action_target;
   e.action_value = d.action_value;
+  e.items = d.items;
   for (const UiElementData& child : d.children) {
     e.children.push_back(UiElementFromData(child, textures, texture_count));
   }
@@ -509,6 +547,7 @@ UiScreen UiScreenFromData(const UiScreenData& d, const eng::TextureId* textures,
   s.layout = static_cast<UiLayout>(d.layout);
   s.dismiss = d.dismiss;
   s.dismiss_frames = d.dismiss_frames;
+  s.fade_frames = d.fade_frames;
   for (const UiElementData& e : d.elements) {
     s.elements.push_back(UiElementFromData(e, textures, texture_count));
   }

@@ -371,6 +371,7 @@ r4::UiElementData ConvertUiElement(const UiElementDoc& u,
   else if (u.kind == "value_image") e.kind = 3;
   else if (u.kind == "value_bar") e.kind = 4;
   else if (u.kind == "button") e.kind = 7;
+  else if (u.kind == "list") e.kind = 6;
   else e.kind = 0;
   e.anchor = AnchorFromName(u.anchor);
   e.x = u.x;
@@ -433,6 +434,7 @@ r4::UiElementData ConvertUiElement(const UiElementDoc& u,
   e.action = u.action;
   e.action_target = u.action_target;
   e.action_value = u.action_value;
+  e.items = u.items;
   for (const UiElementDoc& child : u.children) {
     e.children.push_back(ConvertUiElement(child, project, image_cache, ui_images, p, error));
   }
@@ -462,6 +464,7 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
     screen.layout = (us.layout == "safe") ? 1 : 0;
     screen.dismiss = us.dismiss;
     screen.dismiss_frames = us.dismiss_frames;
+    screen.fade_frames = us.fade_frames;
     for (const UiElementDoc& ue : us.elements) {
       screen.elements.push_back(ConvertUiElement(
           ue, project, &image_cache, &ui_image_index, &p, error));

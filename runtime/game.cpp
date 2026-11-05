@@ -712,8 +712,18 @@ void Game::DrawUiScreens(eng::DrawList& dl, const eng::TextureId* textures,
       const UiScreen screen =
           UiScreenFromData(p3d_->ui_screens[static_cast<size_t>(idx)], textures,
                            texture_count);
-      ctx.focus = (mi + 1 == modal_stack_.size()) ? modal_focus_ : -1;
+      const bool top = (mi + 1 == modal_stack_.size());
+      ctx.focus = top ? modal_focus_ : -1;
+      ctx.list_selected = top ? modal_list_index_ : 0;
       UiDrawScreen(screen, ctx);
+    }
+    if (modal_fade_ > 0 && modal_fade_total_ > 0) {
+      int a = modal_fade_ * 255 / modal_fade_total_;
+      a = std::max(0, std::min(255, a));
+      dl.DrawRect(eng::Rect2{eng::Vec2{0.0f, 0.0f},
+                             eng::Vec2{static_cast<float>(view_w_),
+                                       static_cast<float>(view_h_)}},
+                  static_cast<eng::u32>(a) << 24);
     }
   }
 }
@@ -733,13 +743,17 @@ void Game::OpenUiById(const std::string& id) {
       modal_stack_.push_back(i);
       modal_focus_ = -1;
       const UiScreenData& screen = p3d_->ui_screens[static_cast<size_t>(i)];
+      modal_list_index_ = 0;
       for (int k = 0; k < static_cast<int>(screen.elements.size()); ++k) {
-        if (screen.elements[static_cast<size_t>(k)].kind == 7) {
+        const int kind = screen.elements[static_cast<size_t>(k)].kind;
+        if (kind == 7 || kind == 6) {
           modal_focus_ = k;
           break;
         }
       }
       modal_timer_ = screen.dismiss_frames;
+      modal_fade_total_ = screen.fade_frames;
+      modal_fade_ = modal_fade_total_;
       return;
     }
   }
@@ -748,7 +762,10 @@ void Game::OpenUiById(const std::string& id) {
 void Game::CloseUi() {
   if (!modal_stack_.empty()) modal_stack_.pop_back();
   modal_focus_ = -1;
+  modal_list_index_ = 0;
   modal_timer_ = 0;
+  modal_fade_ = 0;
+  modal_fade_total_ = 0;
   if (modal_stack_.empty() && has_pending_ui_) {
     has_pending_ui_ = false;
     const Trigger trigger = pending_trigger_;
@@ -758,23 +775,35 @@ void Game::CloseUi() {
   }
 }
 
-void Game::MoveModalFocus(int dir) {
+void Game::MoveModalFocus(int dir, bool allow_list) {
   if (p3d_ == nullptr || modal_stack_.empty()) return;
   const int idx = modal_stack_.back();
   if (idx < 0 || idx >= static_cast<int>(p3d_->ui_screens.size())) return;
   const UiScreenData& screen = p3d_->ui_screens[static_cast<size_t>(idx)];
-  std::vector<int> buttons;
+  if (allow_list && modal_focus_ >= 0 &&
+      modal_focus_ < static_cast<int>(screen.elements.size())) {
+    const UiElementData& e = screen.elements[static_cast<size_t>(modal_focus_)];
+    if (e.kind == 6 && !e.items.empty()) {
+      modal_list_index_ = std::max(
+          0, std::min(static_cast<int>(e.items.size()) - 1,
+                      modal_list_index_ + dir));
+      return;
+    }
+  }
+  std::vector<int> focusables;
   for (int i = 0; i < static_cast<int>(screen.elements.size()); ++i) {
-    if (screen.elements[static_cast<size_t>(i)].kind == 7) buttons.push_back(i);
+    const int kind = screen.elements[static_cast<size_t>(i)].kind;
+    if (kind == 7 || kind == 6) focusables.push_back(i);
   }
-  if (buttons.empty()) return;
+  if (focusables.empty()) return;
   int pos = 0;
-  for (int i = 0; i < static_cast<int>(buttons.size()); ++i) {
-    if (buttons[static_cast<size_t>(i)] == modal_focus_) pos = i;
+  for (int i = 0; i < static_cast<int>(focusables.size()); ++i) {
+    if (focusables[static_cast<size_t>(i)] == modal_focus_) pos = i;
   }
-  pos = (pos + dir + static_cast<int>(buttons.size())) %
-        static_cast<int>(buttons.size());
-  modal_focus_ = buttons[static_cast<size_t>(pos)];
+  pos = (pos + dir + static_cast<int>(focusables.size())) %
+        static_cast<int>(focusables.size());
+  modal_focus_ = focusables[static_cast<size_t>(pos)];
+  modal_list_index_ = 0;
 }
 
 void Game::ActivateModalFocus() {
@@ -787,6 +816,34 @@ void Game::ActivateModalFocus() {
     return;
   }
   const UiElementData& e = screen.elements[static_cast<size_t>(modal_focus_)];
+  if (e.kind == 6) {
+    if (e.items.empty()) return;
+    const int sel = std::max(
+        0, std::min(static_cast<int>(e.items.size()) - 1, modal_list_index_));
+    const std::string& item = e.items[static_cast<size_t>(sel)];
+    if (e.action.empty() || e.action == "close") {
+      CloseUi();
+      return;
+    }
+    if (e.action == "scene") {
+      for (int i = 0; i < static_cast<int>(p3d_->scenes.size()); ++i) {
+        if (p3d_->scenes[static_cast<size_t>(i)].id == item) {
+          SetScene(i);
+          return;
+        }
+      }
+      return;
+    }
+    if (e.action == "open_ui") {
+      OpenUiById(item);
+      return;
+    }
+    if (e.action == "set_var") {
+      variables_[e.action_target] = sel;
+      return;
+    }
+    return;
+  }
   if (e.kind != 7) return;
   if (e.action.empty() || e.action == "close") {
     CloseUi();
@@ -2621,13 +2678,18 @@ void Game::Update(float dt, const eng::InputState& input) {
           return;
         }
       }
-      if (input.pressed[static_cast<int>(eng::Key::kUp)] ||
-          input.pressed[static_cast<int>(eng::Key::kLeft)]) {
-        MoveModalFocus(-1);
+      if (modal_fade_ > 0) --modal_fade_;
+      if (input.pressed[static_cast<int>(eng::Key::kUp)]) {
+        MoveModalFocus(-1, true);
       }
-      if (input.pressed[static_cast<int>(eng::Key::kDown)] ||
-          input.pressed[static_cast<int>(eng::Key::kRight)]) {
-        MoveModalFocus(1);
+      if (input.pressed[static_cast<int>(eng::Key::kDown)]) {
+        MoveModalFocus(1, true);
+      }
+      if (input.pressed[static_cast<int>(eng::Key::kLeft)]) {
+        MoveModalFocus(-1, false);
+      }
+      if (input.pressed[static_cast<int>(eng::Key::kRight)]) {
+        MoveModalFocus(1, false);
       }
       if (input.pressed[static_cast<int>(eng::Key::kA)]) {
         if (modal_focus_ >= 0) {

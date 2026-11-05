@@ -51,6 +51,7 @@ struct UiElementDoc {
   std::string action;         // button: close / open_ui / set_var / scene
   std::string action_target;
   int action_value = 0;
+  std::vector<std::string> items;  // list
   std::vector<UiElementDoc> children;
 
   JsonValue raw;
@@ -63,6 +64,7 @@ struct UiScreenDoc {
   std::string layout = "screen";  // screen / safe
   int dismiss = 0;  // 0 confirm / 1 cancel / 2 timer / 3 none
   int dismiss_frames = 0;
+  int fade_frames = 0;
   std::vector<UiElementDoc> elements;
   JsonValue raw;
 };

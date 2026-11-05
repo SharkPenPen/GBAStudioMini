@@ -6597,7 +6597,7 @@ std::string UniqueUiElementId(const pgmmv::UiScreenDoc& s, const char* prefix) {
   return std::string(prefix) + "x";
 }
 
-const char* kUiKinds[] = {"panel", "text", "image", "value_image", "value_bar", "button"};
+const char* kUiKinds[] = {"panel", "text", "image", "value_image", "value_bar", "button", "list"};
 const char* kUiAnchors[] = {"top_left",  "top_center",  "top_right",
                             "mid_left",  "center",      "mid_right",
                             "bottom_left", "bottom_center", "bottom_right"};
@@ -6609,6 +6609,10 @@ ImVec2 UiElementSize(const pgmmv::UiElementDoc& e) {
     const ImVec2 ts = ImGui::CalcTextSize(e.text.c_str());
     if (e.w <= 0) w = ts.x;
     if (e.h <= 0) h = ts.y;
+  }
+  if (e.kind == "list") {
+    if (e.w <= 0) w = 160.0f;
+    if (e.h <= 0) h = 80.0f;
   }
   return ImVec2(w, h);
 }
@@ -6830,6 +6834,15 @@ void DrawUiPageCenter() {
     if (e.kind == "text") {
       dl->AddText(ImGui::GetFont(), static_cast<float>(e.font_size),
                   ImVec2(p.x, p.y), col, e.text.c_str());
+    } else if (e.kind == "list") {
+      const int row_h = e.font_size + 4;
+      for (int r = 0; r < static_cast<int>(e.items.size()); ++r) {
+        const float ty = p.y + 2.0f + static_cast<float>(r * row_h) * scale;
+        if (ty + static_cast<float>(row_h) * scale > p.y + sz.y) break;
+        dl->AddText(ImGui::GetFont(), static_cast<float>(e.font_size) * scale,
+                    ImVec2(p.x + 2.0f, ty), col,
+                    e.items[static_cast<size_t>(r)].c_str());
+      }
     }
     if (g_selected_ui_element == i) {
       const ImVec2 h(p.x + sz.x - 5.0f, p.y + sz.y - 5.0f);
@@ -6911,6 +6924,7 @@ void DrawUiPageRight() {
     if (s->dismiss == 2) {
       if (UndoIntField("多少帧后关", &s->dismiss_frames, 1)) MarkDirty();
     }
+    if (UndoIntField("淡入帧数", &s->fade_frames, 0)) MarkDirty();
     ImGui::Separator();
     ImGui::TextUnformatted("挂载");
     bool persistent = (g_project.persistent_ui == s->id);
@@ -6937,8 +6951,8 @@ void DrawUiPageRight() {
     MarkDirty();
   }
   int kind = 0;
-  for (int i = 0; i < 6; ++i) if (e->kind == kUiKinds[i]) kind = i;
-  if (ImGui::Combo("类型", &kind, kUiKinds, 6)) {
+  for (int i = 0; i < 7; ++i) if (e->kind == kUiKinds[i]) kind = i;
+  if (ImGui::Combo("类型", &kind, kUiKinds, 7)) {
     e->kind = kUiKinds[kind];
     MarkDirty();
   }
@@ -7041,6 +7055,50 @@ void DrawUiPageRight() {
       if (e->action == "set_var") {
         if (UndoIntField("变量值", &e->action_value, -10000)) MarkDirty();
       }
+    }
+  }
+  if (e->kind == "list") {
+    std::string joined;
+    for (const std::string& item : e->items) {
+      if (!joined.empty()) joined += '\n';
+      joined += item;
+    }
+    char items_buf[1024];
+    std::snprintf(items_buf, sizeof(items_buf), "%s", joined.c_str());
+    if (ImGui::InputTextMultiline("列表项（每行一个）", items_buf,
+                                  sizeof(items_buf), ImVec2(-1, 100))) {
+      e->items.clear();
+      std::string cur;
+      for (const char* p = items_buf; *p != '\0'; ++p) {
+        if (*p == '\n') {
+          if (!cur.empty()) e->items.push_back(cur);
+          cur.clear();
+        } else if (*p != '\r') {
+          cur += *p;
+        }
+      }
+      if (!cur.empty()) e->items.push_back(cur);
+      MarkDirty();
+    }
+    const char* actions[] = {"close", "open_ui", "set_var", "scene"};
+    const char* labels[] = {"关闭界面", "打开界面", "设变量", "切场景"};
+    int ai = 0;
+    for (int i = 0; i < 4; ++i) if (e->action == actions[i]) ai = i;
+    if (ImGui::Combo("列表动作", &ai, labels, 4)) {
+      e->action = actions[ai];
+      MarkDirty();
+    }
+    if (e->action == "set_var") {
+      char target_buf[96];
+      std::snprintf(target_buf, sizeof(target_buf), "%s", e->action_target.c_str());
+      if (ImGui::InputText("变量名", target_buf, sizeof(target_buf))) {
+        e->action_target = target_buf;
+        MarkDirty();
+      }
+    } else if (e->action == "open_ui" || e->action == "scene") {
+      ImGui::TextDisabled("用选中行的文字作为目标 id");
+    } else {
+      ImGui::TextDisabled("(确认后关闭当前界面)");
     }
   }
   if (e->kind == "value_bar" || e->kind == "value_image") {

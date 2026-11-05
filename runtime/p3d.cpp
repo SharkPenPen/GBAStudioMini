@@ -553,6 +553,10 @@ bool ReadUiElement(Reader& r, UiElementData* e) {
   e->action = r.Str();
   e->action_target = r.Str();
   e->action_value = r.I32();
+  const uint16_t item_n = r.U16();
+  if (!r.ok || item_n > 1024) return false;
+  e->items.resize(item_n);
+  for (uint16_t i = 0; i < item_n; ++i) e->items[i] = r.Str();
   const uint16_t cn = r.U16();
   if (!r.ok || cn > 4096) return false;
   e->children.resize(cn);
@@ -569,6 +573,7 @@ bool ReadUiScreen(Reader& r, UiScreenData* s) {
   s->layout = r.U8();
   s->dismiss = r.U8();
   s->dismiss_frames = r.I32();
+  s->fade_frames = r.I32();
   const uint16_t n = r.U16();
   if (!r.ok || n > 4096) return false;
   s->elements.resize(n);
@@ -615,6 +620,8 @@ void WriteUiElement(Writer& w, const UiElementData& e) {
   w.Str(e.action);
   w.Str(e.action_target);
   w.I32(e.action_value);
+  w.U16(static_cast<uint16_t>(std::min<size_t>(1024, e.items.size())));
+  for (const std::string& item : e.items) w.Str(item);
   w.U16(static_cast<uint16_t>(std::min<size_t>(4096, e.children.size())));
   for (const UiElementData& c : e.children) WriteUiElement(w, c);
 }
@@ -626,6 +633,7 @@ void WriteUiScreen(Writer& w, const UiScreenData& s) {
   w.U8(static_cast<uint8_t>(s.layout));
   w.U8(static_cast<uint8_t>(s.dismiss));
   w.I32(s.dismiss_frames);
+  w.I32(s.fade_frames);
   w.U16(static_cast<uint16_t>(std::min<size_t>(4096, s.elements.size())));
   for (const UiElementData& e : s.elements) WriteUiElement(w, e);
 }

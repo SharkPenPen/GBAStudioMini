@@ -152,6 +152,56 @@ void TestModalStack() {
   CHECK(game.UiValue("done") == 1);
 }
 
+void TestModalList() {
+  r4::P3d p = BaseP3d();
+  r4::UiScreenData menu;
+  menu.id = "menu";
+  menu.name = "Menu";
+  menu.modal = true;
+  menu.dismiss = 0;
+  menu.fade_frames = 2;
+  r4::UiElementData list;
+  list.kind = 6;
+  list.items = {"a", "b", "c"};
+  list.action = "set_var";
+  list.action_target = "choice";
+  list.w = 120;
+  list.h = 60;
+  menu.elements.push_back(list);
+  p.ui_screens.push_back(menu);
+  r4::Trigger trigger;
+  trigger.x = 80;
+  trigger.y = 80;
+  trigger.w = 80;
+  trigger.h = 80;
+  trigger.once = true;
+  r4::TriggerAction open;
+  open.type = 9;
+  open.target = "menu";
+  trigger.actions.push_back(open);
+  p.scenes[0].triggers.push_back(trigger);
+
+  r4::Game game;
+  std::string err;
+  CHECK(game.Init(p, &err));
+  game.Update(1.0f / 60.0f, EmptyInput());
+  CHECK(game.UiModalActive());
+
+  eng::InputState down;
+  down.pressed[static_cast<int>(eng::Key::kDown)] = true;
+  game.Update(1.0f / 60.0f, down);
+  eng::InputState confirm;
+  confirm.pressed[static_cast<int>(eng::Key::kA)] = true;
+  game.Update(1.0f / 60.0f, confirm);
+  CHECK(game.UiValue("choice") == 1);
+  CHECK(game.UiModalActive());
+
+  eng::InputState cancel;
+  cancel.pressed[static_cast<int>(eng::Key::kB)] = true;
+  game.Update(1.0f / 60.0f, cancel);
+  CHECK(!game.UiModalActive());
+}
+
 void TestCollisionBlock() {
   r4::P3d p = BaseP3d();
   r4::SceneCollisionChunk chunk;
@@ -220,6 +270,10 @@ void TestP3dRoundTrip() {
   label.x = 10;
   label.y = 10;
   hud.elements.push_back(label);
+  hud.fade_frames = 3;
+  label.items.push_back("a");
+  label.items.push_back("b");
+  hud.elements[0] = label;
   p.ui_screens.push_back(hud);
   p.scenes[0].hud_ui = 0;
   const std::filesystem::path path =
@@ -237,8 +291,10 @@ void TestP3dRoundTrip() {
   if (!q.scenes.empty()) CHECK(q.scenes[0].id == "test");
   CHECK(q.ui_screens.size() == 1);
   CHECK(q.scenes[0].hud_ui == 0);
+  CHECK(q.ui_screens[0].fade_frames == 3);
   if (!q.ui_screens.empty()) {
     CHECK(q.ui_screens[0].elements.size() == 1);
+    CHECK(q.ui_screens[0].elements[0].items.size() == 2);
     if (!q.ui_screens[0].elements.empty()) {
       CHECK(q.ui_screens[0].elements[0].text == "hp");
     }
@@ -398,6 +454,7 @@ int main() {
   std::printf("collision...\n"); TestCollisionBlock();
   std::printf("trigger...\n"); TestTriggerWin();
   std::printf("modal...\n"); TestModalStack();
+  std::printf("modal list...\n"); TestModalList();
   std::printf("camera...\n"); TestFixedCameraCenters();
   std::printf("p3d roundtrip...\n"); TestP3dRoundTrip();
   std::printf("mirror...\n"); TestMirrorY();
