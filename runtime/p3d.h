@@ -12,7 +12,9 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 89;  // 89: 删掉对象属性表
+constexpr uint32_t kP3dVersion = 91;  // 91: 删掉公式库
+                                      // 90: 删掉 attr/damage 条件与动作
+                                      // 89: 删掉对象属性表
                                       // 88: 删掉 FlowLink
                                       // 87: 删掉 Spawner
                                       // 86: 删掉 score / score_ge
@@ -80,8 +82,8 @@ struct AttachPoint {
 // 规则（v45）。type 的取值和编辑器里的枚举一一对应，见 pgmmv/object.h。
 struct RuleCond {
   uint8_t type = 0;   // 0 always,1 key_down,2 key_pressed,3 key_up,4 on_ground,
-                      // 5 on_ground_not,6 anim_end,7 attr_le,8 var_cmp,9 timer,
-                      // 10 player_dist_lt,11 key_held
+                      // 5 on_ground_not,6 anim_end,7 var_cmp,8 timer,
+                      // 9 player_dist_lt,10 key_held
   std::string key;
   std::string name;
   int op = 1;
@@ -90,12 +92,10 @@ struct RuleCond {
 
 struct RuleEffect {
   uint8_t type = 0;   // 0 move,1 move_px,2 anim,3 flip,4 gravity,5 sfx,6 spawn,
-                      // 7 destroy,8 attr_add,9 attr_set,10 damage,11 move_add,
-                      // 12 move_input,13 var_add,14 var_set
+                      // 7 destroy,8 move_add,9 move_input,10 var_add,11 var_set
   int x = 0;
   int y = 0;
   std::string text;
-  std::string formula;
 };
 
 struct Rule {
@@ -217,8 +217,9 @@ struct SceneCollisionChunk {
 };
 
 struct TriggerAction {
-  int type = 0;  // 0 change_scene, 1 set_respawn, 2 set_variable, 3 win, 4 lose,
-                 // 5 dialogue, 6 play_sfx, 7 attr_add, 8 spawn
+  int type = 0;  // 0 change_scene, 1 set_respawn, 2 set_variable,
+                 // 5 dialogue, 6 play_sfx, 8 spawn, 9 open_ui,
+                 // 10 close_ui, 11 save, 12 load, 13 add_variable
   std::string target;
   int value = 0;
 };
@@ -361,8 +362,6 @@ struct UiScreenData {
 };
 
 struct P3d {
-  // v45：项目级公式库（名字 → 表达式）
-  std::map<std::string, std::string> formulas;
   int initial_scene = 0;
   int view_w = 480;  // v73: 项目逻辑视口宽
   int view_h = 272;  // v73: 项目逻辑视口高

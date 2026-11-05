@@ -49,9 +49,6 @@ struct EnemyState {
   int action = 0;
   int frame = 0;
   float anim_time = 0.0f;
-  float attack_timer = 0.0f;
-  float attack_hold = 0.0f;
-  bool attacking = false;
   bool dying = false;
   bool dead = false;
   int death_action = -1;

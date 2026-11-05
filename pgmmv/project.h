@@ -69,8 +69,6 @@ struct Project {
   std::vector<Asset> assets;
   std::vector<ObjectDoc> objects;
   std::vector<AnimationDoc> animations;
-  // 项目级公式库：damage = "max(1,{atk}+{weapon}-{target.def})"
-  std::map<std::string, std::string> formulas;
   std::vector<TilesetDoc> tilesets;
   std::vector<SceneDoc> scenes;
   std::vector<UiScreenDoc> ui_screens;

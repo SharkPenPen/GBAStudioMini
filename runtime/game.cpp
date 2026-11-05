@@ -83,12 +83,6 @@ AttackBox ColBoxOf(const Object& o, int action, int frame) {
   return AttackBox{o.col_x, o.col_y, o.col_w, o.col_h};
 }
 
-int FindActionIndex(const Object& o, const char* name) {
-  for (int i = 0; i < static_cast<int>(o.actions.size()); ++i) {
-    if (o.actions[i].name == name) return i;
-  }
-  return -1;
-}
 }
 
 
@@ -317,7 +311,6 @@ void Game::InitEnemies() {
     e.x = static_cast<float>(so.x);
     e.y = static_cast<float>(so.y);
     e.home_x = e.x;
-    e.attack_timer = 120.0f / 60.0f;
     e.dir = -1;
     e.facing = -1;
     e.action = o.default_action;
@@ -690,30 +683,6 @@ void Game::UpdateEnemies(float dt) {
     if (e.dead) continue;
     if (e.object < 0 || e.object >= static_cast<int>(p3d_->objects.size())) continue;
     const Object& eo = p3d_->objects[e.object];
-    if (!e.dying) {
-        e.attack_timer -= dt;
-      if (!e.attacking && e.attack_timer <= 0.0f) {
-        e.attacking = true;
-        e.attack_hold = 0.35f;
-        e.attack_timer = 120.0f / 60.0f;
-        const int ai = FindActionIndex(eo, "attack");
-        if (ai >= 0) {
-          e.action = ai;
-          e.anim_time = 0.0f;
-          e.frame = 0;
-        }
-      }
-      if (e.attacking) {
-        e.attack_hold -= dt;
-        if (e.attack_hold <= 0.0f) {
-          e.attacking = false;
-          e.action = eo.default_action;
-          e.anim_time = 0.0f;
-          e.frame = 0;
-        }
-      }
-    }
-
     if (e.dying) {
       if (e.death_action < 0) {
         e.dead = true;
@@ -1127,7 +1096,8 @@ void Game::SpawnById(const std::string& id, float x, float y, int dir, bool from
     p.object = static_cast<int>(i);
     p.x = x;
     p.y = y;
-    p.vx = (dir < 0 ? -1.0f : 1.0f) * 220.0f;
+    const float speed = target.speed > 0 ? static_cast<float>(target.speed) : 220.0f;
+    p.vx = (dir < 0 ? -1.0f : 1.0f) * speed;
     p.vy = 0.0f;
     p.life = 3.0f;
     p.from_player = from_player;
@@ -1385,7 +1355,7 @@ void Game::RunPlayerRules(const Object& o, const eng::InputState& input, float d
             return player_.anim_time >=
                    static_cast<float>(P3dActionHold(a, last)) / 60.0f;
           }
-          case 8: {  // 变量比较（op: 0< 1<= 2= 3>= 4>）
+          case 7: {  // 变量比较（op: 0< 1<= 2= 3>= 4>）
             auto it = variables_.find(c.name);
             const int v = it == variables_.end() ? 0 : it->second;
             switch (c.op) {
@@ -1396,9 +1366,9 @@ void Game::RunPlayerRules(const Object& o, const eng::InputState& input, float d
               default: return v <= c.value;
             }
           }
-          case 9: return c.value > 0 && (tick_ % static_cast<uint32_t>(c.value)) == 0;
-          case 10: return false;  // 玩家自己，没有“离玩家”的概念
-          case 11: {  // key_held：按住超过 N 帧
+          case 8: return c.value > 0 && (tick_ % static_cast<uint32_t>(c.value)) == 0;
+          case 9: return false;  // 玩家自己，没有“离玩家”的概念
+          case 10: {  // key_held：按住超过 N 帧
             const int k = KeyEnum(c.key.c_str());
             return k >= 0 && key_hold_[k] >= c.value;
           }
@@ -1420,12 +1390,12 @@ void Game::RunPlayerRules(const Object& o, const eng::InputState& input, float d
             moved = true;
           }
           break;
-        case 11:  // move_add：叠加到当前速度（惯性/击退）
+        case 8:  // move_add：叠加到当前速度（惯性/击退）
           player_.vx += static_cast<float>(e.x);
           player_.vy += static_cast<float>(e.y);
           moved = true;
           break;
-        case 12: {  // move_input：按方向键移动（8 向自动归一化）
+        case 9: {  // move_input：按方向键移动（8 向自动归一化）
           int ix = 0;
           int iy = 0;
           if (eng::KeyDown(input, eng::Key::kLeft)) --ix;
@@ -1446,10 +1416,10 @@ void Game::RunPlayerRules(const Object& o, const eng::InputState& input, float d
           }
           break;
         }
-        case 13:  // var_add（全局变量）
+        case 10:  // var_add（全局变量）
           if (!e.text.empty()) variables_[e.text] += e.y;
           break;
-        case 14:  // var_set（全局变量）
+        case 11:  // var_set（全局变量）
           if (!e.text.empty()) variables_[e.text] = e.y;
           break;
         case 1:  // move_px
@@ -1502,7 +1472,7 @@ void Game::RunEnemyRules(const Object& o, EnemyState& e, float dt) {
           case 0: return true;
           case 4: return false;   // 敌人没有地面判定
           case 5: return true;
-          case 8: {
+          case 7: {
             auto it = variables_.find(c.name);
             const int v = it == variables_.end() ? 0 : it->second;
             switch (c.op) {
@@ -1513,8 +1483,8 @@ void Game::RunEnemyRules(const Object& o, EnemyState& e, float dt) {
               default: return v <= c.value;
             }
           }
-          case 9: return c.value > 0 && (e.tick % static_cast<uint32_t>(c.value)) == 0;
-          case 10: {  // 离玩家 < N 像素
+          case 8: return c.value > 0 && (e.tick % static_cast<uint32_t>(c.value)) == 0;
+          case 9: {  // 离玩家 < N 像素
             const float dx = e.x - player_.x;
             const float dy = e.y - player_.y;
             return dx * dx + dy * dy <=
@@ -1536,7 +1506,7 @@ void Game::RunEnemyRules(const Object& o, EnemyState& e, float dt) {
           e.vy = static_cast<float>(ef.y);
           moved = true;
           break;
-        case 11:  // move_add
+        case 8:  // move_add
           e.vx += static_cast<float>(ef.x);
           e.vy += static_cast<float>(ef.y);
           moved = true;
@@ -1561,10 +1531,10 @@ void Game::RunEnemyRules(const Object& o, EnemyState& e, float dt) {
           SpawnById(ef.text, e.x + static_cast<float>(ef.x),
                     e.y + static_cast<float>(ef.y), e.facing, false);
           break;
-        case 13:  // var_add
+        case 10:  // var_add
           if (!ef.text.empty()) variables_[ef.text] += ef.y;
           break;
-        case 14:  // var_set
+        case 11:  // var_set
           if (!ef.text.empty()) variables_[ef.text] = ef.y;
           break;
         case 7:  // destroy
@@ -1661,8 +1631,6 @@ void Game::UpdateSimulation(float dt, const eng::InputState& input) {
       AudioPlay(Sfx::kCoin);
     }
   }
-  // 玩家攻击由规则里的 damage 动作处理（用当帧的攻击盒），这里不再硬编码 B 键
-
   if (player_.y > 10000.0f) {
     SetScene(scene_index_);
     return;

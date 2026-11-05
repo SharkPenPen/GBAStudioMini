@@ -23,8 +23,7 @@
 
 namespace pgmmv {
 void ExportTriggerActionType(const std::string& type, int* out) {
-  if (type == "attr_add") *out = 7;
-  else if (type == "spawn") *out = 8;
+  if (type == "spawn") *out = 8;
   else if (type == "dialogue") *out = 5;
   else if (type == "play_sfx") *out = 6;
   else if (type == "set_respawn") *out = 1;
@@ -443,7 +442,6 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
   }
 
   r4::P3d p;
-  p.formulas = project.formulas;
   for (const auto& kv : project.variables) p.global_vars.emplace_back(kv.first, kv.second);
   std::map<std::string, LoadedImage> image_cache;
   std::map<std::string, int> ui_image_index;
@@ -614,8 +612,7 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
         re.x = ef.x;
         re.y = ef.y;
         re.text = ef.text;
-        re.formula = ef.formula;
-        rr.effects.push_back(std::move(re));
+          rr.effects.push_back(std::move(re));
       }
       ro.rules.push_back(std::move(rr));
     }

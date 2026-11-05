@@ -116,7 +116,6 @@ const char* CondName(RuleCond t) {
     case RuleCond::kOnGround: return "on_ground";
     case RuleCond::kOnGroundNot: return "on_ground_not";
     case RuleCond::kAnimEnd: return "anim_end";
-    case RuleCond::kAttrLe: return "attr_le";
     case RuleCond::kVarCmp: return "var_cmp";
     case RuleCond::kTimer: return "timer";
     case RuleCond::kPlayerDistLt: return "player_dist_lt";
@@ -134,7 +133,6 @@ bool CondFromName(const std::string& s, RuleCond* out) {
   if (s == "on_ground") { *out = RuleCond::kOnGround; return true; }
   if (s == "on_ground_not") { *out = RuleCond::kOnGroundNot; return true; }
   if (s == "anim_end") { *out = RuleCond::kAnimEnd; return true; }
-  if (s == "attr_le") { *out = RuleCond::kAttrLe; return true; }
   if (s == "var_cmp") { *out = RuleCond::kVarCmp; return true; }
   if (s == "timer") { *out = RuleCond::kTimer; return true; }
   if (s == "player_dist_lt") { *out = RuleCond::kPlayerDistLt; return true; }
@@ -153,9 +151,6 @@ const char* ActName(RuleAct t) {
     case RuleAct::kSfx: return "sfx";
     case RuleAct::kSpawn: return "spawn";
     case RuleAct::kDestroy: return "destroy";
-    case RuleAct::kAttrAdd: return "attr_add";
-    case RuleAct::kAttrSet: return "attr_set";
-    case RuleAct::kDamage: return "damage";
     case RuleAct::kMoveAdd: return "move_add";
     case RuleAct::kMoveInput: return "move_input";
     case RuleAct::kVarAdd: return "var_add";
@@ -173,9 +168,6 @@ bool ActFromName(const std::string& s, RuleAct* out) {
   if (s == "sfx") { *out = RuleAct::kSfx; return true; }
   if (s == "spawn") { *out = RuleAct::kSpawn; return true; }
   if (s == "destroy") { *out = RuleAct::kDestroy; return true; }
-  if (s == "attr_add") { *out = RuleAct::kAttrAdd; return true; }
-  if (s == "attr_set") { *out = RuleAct::kAttrSet; return true; }
-  if (s == "damage") { *out = RuleAct::kDamage; return true; }
   if (s == "move_add") { *out = RuleAct::kMoveAdd; return true; }
   if (s == "move_input") { *out = RuleAct::kMoveInput; return true; }
   if (s == "var_add") { *out = RuleAct::kVarAdd; return true; }
@@ -230,8 +222,7 @@ bool ReadRules(const JsonValue& root, ObjectDoc* o, std::string* error) {
           if (!ReadInt(ev, "y", &v, &found, error)) return false;
           if (found) e.y = v;
           if (!ReadString(ev, "text", &e.text, &found, error)) return false;
-          if (!ReadString(ev, "formula", &e.formula, &found, error)) return false;
-          r.effects.push_back(std::move(e));
+                r.effects.push_back(std::move(e));
         }
       }
       o->rules.push_back(std::move(r));
@@ -269,8 +260,7 @@ void WriteRules(const ObjectDoc& o, JsonValue* root) {
       SetInt(&ev, "x", e.x);
       SetInt(&ev, "y", e.y);
       if (!e.text.empty()) ev.Set("text", JsonValue::String(e.text));
-      if (!e.formula.empty()) ev.Set("formula", JsonValue::String(e.formula));
-      eff.Push(std::move(ev));
+        eff.Push(std::move(ev));
     }
     rv.Set("do", std::move(eff));
     arr.Push(std::move(rv));

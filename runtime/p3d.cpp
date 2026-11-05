@@ -226,7 +226,6 @@ bool ReadObject(Reader& r, Object* o, std::string* error) {
       re.x = r.I32();
       re.y = r.I32();
       re.text = r.Str();
-      re.formula = r.Str();
       rl.effects.push_back(std::move(re));
     }
   }
@@ -586,16 +585,6 @@ bool P3dLoad(const unsigned char* data, size_t size, P3d* out,
     p.view_w = 480;
     p.view_h = 272;
   }
-  const uint16_t nform = r.U16();
-  if (!r.ok || nform > 512) {
-    SetErr(error, "p3d: bad formula count");
-    return false;
-  }
-  for (uint16_t i = 0; i < nform; ++i) {
-    const std::string name = r.Str();
-    p.formulas[name] = r.Str();
-  }
-
   uint32_t count = 0;
   if (!ReadCount(r, &count, 64, error, "images")) return false;
   p.images.resize(count);
@@ -722,12 +711,6 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
   w.I32(p.initial_scene);
   w.I32(p.view_w);
   w.I32(p.view_h);
-  w.U16(static_cast<uint16_t>(std::min<size_t>(512, p.formulas.size())));
-  for (const auto& kv : p.formulas) {
-    w.Str(kv.first);
-    w.Str(kv.second);
-  }
-
   w.U32(static_cast<uint32_t>(p.images.size()));
   for (const Image& img : p.images) {
     w.Str(img.id);
@@ -818,7 +801,6 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
         w.I32(re.x);
         w.I32(re.y);
         w.Str(re.text);
-        w.Str(re.formula);
       }
     }
     w.U8(o.limit_screen);

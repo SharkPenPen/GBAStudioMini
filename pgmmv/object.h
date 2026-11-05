@@ -184,7 +184,6 @@ enum class RuleCond : unsigned char {
   kOnGround,
   kOnGroundNot,
   kAnimEnd,
-  kAttrLe,
   kVarCmp,
   kTimer,
   kPlayerDistLt,
@@ -201,9 +200,6 @@ enum class RuleAct : unsigned char {
   kSfx,        // 音效
   kSpawn,      // 生成对象
   kDestroy,    // 销毁自己
-  kAttrAdd,    // 属性加减
-  kAttrSet,    // 属性赋值
-  kDamage,     // 造成伤害（公式）
   kMoveAdd,    // 速度叠加（惯性/击退；不会被覆盖）
   kMoveInput,  // 按方向键移动（俯视角用：自动归一化，斜向不加速）
   kVarAdd,     // 变量 += value（全局变量表）
@@ -223,7 +219,6 @@ struct Effect {
   int x = 0;
   int y = 0;
   std::string text;     // 动画名 / 音效名 / 属性名 / 对象 id
-  std::string formula;  // 伤害公式名
 };
 
 struct Rule {

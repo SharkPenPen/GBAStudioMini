@@ -688,24 +688,6 @@ bool ProjectLoad(const std::filesystem::path& project_json_path, Project* out,
       return false;
     }
   }
-  // ---- formulas.json（可选）----
-  {
-    const std::filesystem::path fp = p.root_dir / "formulas.json";
-    std::error_code fe;
-    if (std::filesystem::exists(fp, fe)) {
-      std::ifstream f(fp, std::ios::binary);
-      std::stringstream ss;
-      ss << f.rdbuf();
-      JsonValue fv;
-      std::string ferr;
-      if (JsonParse(ss.str(), &fv, &ferr) && fv.IsObject()) {
-        for (const auto& kv : fv.fields) {
-          if (kv.second.IsString()) p.formulas[kv.first] = kv.second.text;
-        }
-      }
-    }
-  }
-
   // 动画由用户在对象页显式选择；这里不再偷偷补 <对象id>_anim。
   // 引用已经不存在的动画时清空，避免对象页下拉看起来“有引用但读不到”。
   for (ObjectDoc& o : p.objects) {
@@ -785,16 +767,6 @@ bool ProjectSave(Project* p, std::string* error) {
       *error = "cannot create ui directory: " + ec.message();
     }
     return false;
-  }
-
-  // 项目级公式库
-  {
-    JsonValue fv = JsonValue::Object();
-    for (const auto& kv : p->formulas) {
-      fv.Set(kv.first, JsonValue::String(kv.second));
-    }
-    std::ofstream f(p->root_dir / "formulas.json", std::ios::binary);
-    if (f) f << JsonSerialize(fv, true) << "\n";
   }
 
   // 对象/图块/场景先落盘；project.json 里不重复存它们。

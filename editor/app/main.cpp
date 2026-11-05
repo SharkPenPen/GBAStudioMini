@@ -4785,16 +4785,16 @@ void DrawScenePageRight() {
       for (size_t i = first; i < list->size(); ++i) {
         pgmmv::TriggerAction& a = (*list)[i];
         ImGui::PushID(static_cast<int>(i) + 5000);
-        const char* types[] = {"change_scene", "attr_add", "play_sfx", "set_variable",
+        const char* types[] = {"change_scene", "play_sfx", "set_variable",
                                "add_variable", "open_ui", "close_ui", "save", "load"};
-        const char* labels[] = {"切场景", "改属性", "音效", "设变量",
+        const char* labels[] = {"切场景", "音效", "设变量",
                                 "加变量", "打开界面", "关闭界面", "存档", "读档"};
         int ti = 0;
-        for (int k = 0; k < 9; ++k) {
+        for (int k = 0; k < 8; ++k) {
           if (a.type == types[k]) ti = k;
         }
         ImGui::SetNextItemWidth(90.0f);
-        if (ImGui::Combo("##t", &ti, labels, 9)) {
+        if (ImGui::Combo("##t", &ti, labels, 8)) {
           a.type = types[ti];
           MarkDirty();
         }
@@ -4839,7 +4839,7 @@ void DrawScenePageRight() {
       if (InlineButton("+ 动作", 64)) {
         PushUndo();
         pgmmv::TriggerAction a;
-        a.type = "attr_add";
+        a.type = "set_variable";
         list->push_back(a);
         MarkDirty();
       }
@@ -6343,52 +6343,8 @@ void DrawObjectPageCenter() {
   ImGui::EndChild();
 }
 
-// 全局公式库：改一处，所有引用它的对象生效
-void DrawFormulaLibrary() {
-  if (!ImGui::CollapsingHeader("公式库（项目级）", ImGuiTreeNodeFlags_DefaultOpen)) {
-    return;
-  }
-  std::string del;
-  for (auto& kv : g_project.formulas) {
-    ImGui::PushID(kv.first.c_str());
-    ImGui::TextUnformatted(kv.first.c_str());
-    ImGui::SameLine();
-    char buf[256];
-    std::snprintf(buf, sizeof(buf), "%s", kv.second.c_str());
-    ImGui::SetNextItemWidth(-32.0f);
-    if (ImGui::InputText("##expr", buf, sizeof(buf))) kv.second = buf;
-    ImGui::SameLine();
-    if (RightSmallButton("x")) del = kv.first;
-    ImGui::PopID();
-  }
-  if (!del.empty()) {
-    PushUndo();
-    g_project.formulas.erase(del);
-    MarkDirty();
-  }
-  static char new_name[48] = "";
-  ImGui::SetNextItemWidth(140.0f);
-  ImGui::InputTextWithHint("##new_formula", "新公式名", new_name, sizeof(new_name));
-  ImGui::SameLine();
-  if (ImGui::Button("+ 公式", ImVec2(70, 22)) && new_name[0] != '\0') {
-    PushUndo();
-    g_project.formulas[new_name] = "max(1,{atk}-{target.def})";
-    new_name[0] = '\0';
-    MarkDirty();
-  }
-  if (g_project.formulas.empty()) {
-    ImGui::TextDisabled("还没有公式；规则里的「造成伤害」会用它");
-  }
-}
-
 void DrawObjectPageRight() {
-  pgmmv::ObjectDoc* obj = CurrentObject();
-  if (obj == nullptr) {
-    ImGui::TextDisabled("未选择对象");
-    return;
-  }
-  // ★ 右栏 = 全局库：只看项目级的东西（所有对象共用）★
-  DrawFormulaLibrary();
+  ImGui::TextDisabled("对象不再有属性表；状态请用全局变量和规则表达");
 }
 
 // ------------------------- 界面页 -------------------------
