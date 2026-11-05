@@ -5459,9 +5459,9 @@ void DrawFlowPageRight() {
       ImGui::PushID(static_cast<int>(i));
       ImGui::TextUnformatted(tr.to.c_str());
       ImGui::SameLine();
-      const char* types[3] = {"出口", "分数", "开关"};
+      const char* types[2] = {"出口", "开关"};
       static bool cond_btn_logged = false;
-      for (int k = 0; k < 3; ++k) {
+      for (int k = 0; k < 2; ++k) {
         if (k > 0) ImGui::SameLine();
         const bool sel = (static_cast<int>(tr.type) == k);
         if (sel) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.184f, 0.502f, 0.929f, 1.0f));

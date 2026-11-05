@@ -366,7 +366,6 @@ bool SceneDoc::ContentBounds(int* min_col, int* min_row, int* max_col,
 const char* TransitionTypeName(TransitionType t) {
   switch (t) {
     case TransitionType::kExit: return "exit";
-    case TransitionType::kScore: return "score";
     case TransitionType::kSwitch: return "switch";
   }
   return "exit";
@@ -374,7 +373,6 @@ const char* TransitionTypeName(TransitionType t) {
 
 bool TransitionTypeFromName(const std::string& name, TransitionType* out) {
   if (name == "exit") { *out = TransitionType::kExit; return true; }
-  if (name == "score") { *out = TransitionType::kScore; return true; }
   if (name == "switch") { *out = TransitionType::kSwitch; return true; }
   return false;
 }
@@ -999,14 +997,7 @@ bool TransitionsLoad(const std::filesystem::path& path,
       if (error != nullptr) *error = "unsupported transition condition: " + cond;
       return false;
     }
-    if (t.type == TransitionType::kScore) {
-      int v = 0;
-      if (!ReadInt(tv, "value", &v, &found, error) || !found) {
-        if (error != nullptr) *error = "transition score value missing";
-        return false;
-      }
-      t.value_int = v;
-    } else if (t.type == TransitionType::kSwitch) {
+    if (t.type == TransitionType::kSwitch) {
       if (!ReadString(tv, "value", &t.value_string, &found, error) || !found) {
         if (error != nullptr) *error = "transition switch value missing";
         return false;
@@ -1031,9 +1022,7 @@ bool TransitionsSave(const std::filesystem::path& path,
     tv.Set("from", JsonValue::String(t.from));
     tv.Set("to", JsonValue::String(t.to));
     tv.Set("condition", JsonValue::String(TransitionTypeName(t.type)));
-    if (t.type == TransitionType::kScore) {
-      tv.Set("value", JsonValue::Number(static_cast<double>(t.value_int)));
-    } else if (t.type == TransitionType::kSwitch) {
+    if (t.type == TransitionType::kSwitch) {
       tv.Set("value", JsonValue::String(t.value_string));
     }
     if (!t.set_variable.empty()) {

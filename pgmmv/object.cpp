@@ -489,9 +489,6 @@ JsonValue ConditionToJson(const FlowCondition& c) {
     case ConditionType::kTimer:
       o.Set("timer", JsonValue::Number(static_cast<double>(c.value)));
       break;
-    case ConditionType::kScoreGe:
-      o.Set("score_ge", JsonValue::Number(static_cast<double>(c.value)));
-      break;
     case ConditionType::kVariable:
       o.Set("variable", JsonValue::String(c.key));
       o.Set("value", JsonValue::Number(static_cast<double>(c.value)));
@@ -548,12 +545,6 @@ bool ParseCondition(const JsonValue& v, FlowCondition* out, std::string* error) 
     out->value = static_cast<int>(tm->number);
     return true;
   }
-  const JsonValue* sg = v.Find("score_ge");
-  if (sg != nullptr && sg->IsNumber()) {
-    out->type = ConditionType::kScoreGe;
-    out->value = static_cast<int>(sg->number);
-    return true;
-  }
   const JsonValue* var = v.Find("variable");
   if (var != nullptr && var->IsString()) {
     const JsonValue* val = v.Find("value");
@@ -578,7 +569,6 @@ const char* ConditionTypeName(ConditionType t) {
     case ConditionType::kHpLeZero: return "hp_le_zero";
     case ConditionType::kAlways: return "always";
     case ConditionType::kTimer: return "timer";
-    case ConditionType::kScoreGe: return "score_ge";
     case ConditionType::kVariable: return "variable";
   }
   return "key";
@@ -593,7 +583,6 @@ bool ConditionTypeFromName(const std::string& name, ConditionType* out) {
   if (name == "hp_le_zero") { *out = ConditionType::kHpLeZero; return true; }
   if (name == "always") { *out = ConditionType::kAlways; return true; }
   if (name == "timer") { *out = ConditionType::kTimer; return true; }
-  if (name == "score_ge") { *out = ConditionType::kScoreGe; return true; }
   if (name == "variable") { *out = ConditionType::kVariable; return true; }
   return false;
 }
@@ -916,7 +905,6 @@ void ObjectSyncRaw(ObjectDoc* o) {
 
   root.Remove("hp");  // hp 现在只是属性表里的一条
   root.Remove("fire_interval");  // 射击参数都进属性表了
-  root.Remove("score");
   root.Remove("bullet_speed");
   WriteRules(*o, &root);
 

@@ -146,7 +146,7 @@ struct SceneDoc {
                      int* max_row) const;
 };
 
-enum class TransitionType { kExit = 0, kScore, kSwitch };
+enum class TransitionType { kExit = 0, kSwitch = 1 };
 const char* TransitionTypeName(TransitionType t);
 bool TransitionTypeFromName(const std::string& name, TransitionType* out);
 

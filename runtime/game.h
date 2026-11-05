@@ -108,7 +108,6 @@ class Game {
   int view_h() const { return view_h_; }
   int transition_count() const { return transition_count_; }
   int frame_count() const { return frame_count_; }
-  int score() const { return score_; }
   float camera_x() const { return camera_x_; }
   float camera_y() const { return camera_y_; }
   const std::string& toast() const { return toast_; }
@@ -209,7 +208,6 @@ class Game {
   eng::InputState prev_input_{};  // 上一帧输入（key_up 用）
   int key_hold_[eng::kKeyCount] = {};  // 按住帧数（长按用）
   bool finished_ = false;
-  int score_ = 0;
   float invuln_ = 0.0f;
   std::string toast_;
   float toast_timer_ = 0.0f;

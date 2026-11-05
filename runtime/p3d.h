@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 85;  // 85: 删掉自动卷轴
+constexpr uint32_t kP3dVersion = 86;  // 86: 删掉 score / score_ge
+                                      // 85: 删掉自动卷轴
                                       // 84: 删掉 lives / Game Over
                                       // 83: 删掉 win/lose 与 win_score
                                       // 82: 删掉旧触发器动作列表

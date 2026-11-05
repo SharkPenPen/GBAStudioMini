@@ -176,7 +176,6 @@ bool Game::Init(const P3d& p3d, std::string* error) {
     scene_index_ = 0;
   }
   player_object_ = -1;
-  score_ = 0;
   toast_.clear();
   toast_timer_ = 0.0f;
   SetScene(scene_index_);
@@ -389,7 +388,6 @@ void Game::DrawToast(eng::DrawList& dl, const eng::TextureId* textures,
 
 int Game::UiValue(const char* name) const {
   if (name == nullptr || name[0] == '\0') return 0;
-  if (std::strcmp(name, "score") == 0) return score_;
   auto it = variables_.find(name);
   if (it != variables_.end()) return it->second;
   auto at = player_.attrs.find(name);
@@ -428,7 +426,6 @@ void Game::StartNewGame() {
   if (p3d_ == nullptr) return;
   variables_.clear();
   globals_seeded_ = false;
-  score_ = 0;
   CloseUi();
   SetScene(p3d_->initial_scene);
 }
@@ -862,7 +859,6 @@ void Game::UpdateEnemies(float dt) {
       e.frame = 0;
       if (e.death_action >= 0) e.action = e.death_action;
       player_.vy = -220.0f;
-      score_ += 50;
       AudioPlay(Sfx::kCoin);
     } else {
       Damage();
@@ -1083,8 +1079,7 @@ bool Game::CheckCondition(const Condition& c, const eng::InputState& input) cons
     case 6: return true;  // always
     case 7:  // timer ticks
       return player_.anim_time * 60.0f >= static_cast<float>(c.value);
-    case 8: return score_ >= c.value;
-    case 9: {
+    case 8: {
       auto it = variables_.find(c.key);
       return (it == variables_.end() ? 0 : it->second) == c.value;
     }
@@ -1192,11 +1187,9 @@ bool Game::RunTriggerList(const Trigger& trigger,
       }
       if (target < 0) continue;
       const int hp = player_.hp;
-      const int score = score_;
       ++transition_count_;
       SetScene(target);
       player_.hp = hp;
-      score_ = score;
       return true;
     }
     if (action.type == 7) {  // attr_add：改玩家属性（hp 同步）
@@ -1411,7 +1404,6 @@ void Game::UpdateProjectiles(float dt) {
             e.anim_time = 0.0f;
             e.frame = 0;
             if (e.death_action >= 0) e.action = e.death_action;
-            score_ += ObjIntAttr(eo, "score", 100);
           }
           if (p.destroy_on_hit) {
             remove = true;
@@ -1477,7 +1469,6 @@ void Game::Damage() {
   if (invuln_ > 0.0f) return;
   if (player_.hp > 0) --player_.hp;
   const int hp = player_.hp;
-  const int score = score_;
   const float respawn_x = respawn_x_;
   const float respawn_y = respawn_y_;
   const bool has_respawn = has_respawn_;
@@ -1491,11 +1482,9 @@ void Game::Damage() {
     has_respawn_ = true;
   }
   if (hp <= 0) {
-    score_ = 0;
     player_.hp = player_.attrs.count("hp") ? player_.attrs.at("hp") : 100;
   } else {
     player_.hp = hp;
-    score_ = score;
     toast_ = "OUCH";
     toast_timer_ = 1.2f;
   }

@@ -27,7 +27,6 @@ void WriteReport(const std::string& path, const r4::Game& game, int frames,
   std::fprintf(f, "frames=%d\n", frames);
   std::fprintf(f, "scene=%s\n", game.scene_id().c_str());
   std::fprintf(f, "transitions=%d\n", game.transition_count());
-  std::fprintf(f, "score=%d\n", game.score());
   std::fprintf(f, "hp=%d\n", game.player().hp);
   std::fprintf(f, "audio=%s\n", r4::AudioBackend());
   std::fprintf(f, "x=%.1f\n", static_cast<double>(game.player().x));
