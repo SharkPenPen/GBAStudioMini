@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   std::string report_path;
   int frames_limit = 0;
   bool auto_run = false;
-  int scale = 2;
+  int scale = 3;
 
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--p3d") == 0 && i + 1 < argc) {
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
   cfg.title = "PocketLoom Player";
   cfg.width = p3d.view_w;
   cfg.height = p3d.view_h;
-  cfg.window_scale = scale > 0 ? scale : 2;
+  cfg.window_scale = scale > 0 ? scale : 3;
   if (!eng::Platform().init(cfg)) {
     std::fprintf(stderr, "game_pc: platform init failed\n");
     return 4;
