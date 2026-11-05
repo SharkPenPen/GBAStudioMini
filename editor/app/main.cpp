@@ -6932,6 +6932,11 @@ void DrawUiPageRight() {
     if (UndoIntField("淡出帧数", &s->fade_out_frames, 0)) MarkDirty();
     ImGui::Separator();
     ImGui::TextUnformatted("挂载");
+    bool is_title = (g_project.title_ui == s->id);
+    if (ImGui::Checkbox("标题界面", &is_title)) {
+      g_project.title_ui = is_title ? s->id : "";
+      MarkDirty();
+    }
     bool persistent = (g_project.persistent_ui == s->id);
     if (ImGui::Checkbox("工程常驻", &persistent)) {
       g_project.persistent_ui = persistent ? s->id : "";
@@ -7026,12 +7031,17 @@ void DrawUiPageRight() {
                static_cast<unsigned>(col[3] * 255.0f + 0.5f);
     MarkDirty();
   }
+  if (e->kind == "button" || e->kind == "list") {
+    if (ImGui::Checkbox("有存档才显示", &e->only_if_save)) MarkDirty();
+  }
   if (e->kind == "button") {
-    const char* actions[] = {"close", "open_ui", "set_var", "scene"};
-    const char* action_labels[] = {"关闭界面", "打开界面", "设变量", "切场景"};
+    const char* actions[] = {"close", "open_ui", "set_var", "scene", "new_game",
+                             "load"};
+    const char* action_labels[] = {"关闭界面", "打开界面", "设变量", "切场景",
+                                   "新游戏", "读档"};
     int ai = 0;
-    for (int i = 0; i < 4; ++i) if (e->action == actions[i]) ai = i;
-    if (ImGui::Combo("按钮动作", &ai, action_labels, 4)) {
+    for (int i = 0; i < 6; ++i) if (e->action == actions[i]) ai = i;
+    if (ImGui::Combo("按钮动作", &ai, action_labels, 6)) {
       e->action = actions[ai];
       MarkDirty();
     }
@@ -7047,8 +7057,10 @@ void DrawUiPageRight() {
         }
         ImGui::EndCombo();
       }
-    } else if (e->action == "close") {
-      ImGui::TextDisabled("(确认后关闭当前界面)");
+    } else if (e->action == "close" || e->action == "new_game" ||
+               e->action == "load") {
+      ImGui::TextDisabled(e->action == "load" ? "(读取 save0.dat)"
+                                                : "(无需目标)");
     } else {
       char target_buf[96];
       std::snprintf(target_buf, sizeof(target_buf), "%s", e->action_target.c_str());

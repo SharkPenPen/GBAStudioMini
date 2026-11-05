@@ -436,6 +436,7 @@ r4::UiElementData ConvertUiElement(const UiElementDoc& u,
   e.action = u.action;
   e.action_target = u.action_target;
   e.action_value = u.action_value;
+  e.only_if_save = u.only_if_save;
   e.items = u.items;
   for (const UiElementDoc& child : u.children) {
     e.children.push_back(ConvertUiElement(child, project, image_cache, ui_images, p, error));
@@ -462,7 +463,7 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
     r4::UiScreenData screen;
     screen.id = us.id;
     screen.name = us.name;
-    screen.modal = us.modal;
+    screen.modal = us.modal || (us.id == project.title_ui);
     screen.layout = (us.layout == "safe") ? 1 : 0;
     screen.dismiss = us.dismiss;
     screen.dismiss_frames = us.dismiss_frames;
@@ -478,6 +479,8 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
   {
     auto it = ui_index.find(project.persistent_ui);
     p.persistent_ui = it == ui_index.end() ? -1 : it->second;
+    auto title = ui_index.find(project.title_ui);
+    p.title_ui = title == ui_index.end() ? -1 : title->second;
   }
 
   // 1) 图块：按 (tile_w, tile_h) 分组，组内只填场景实际用到的块，按页切开。

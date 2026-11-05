@@ -75,6 +75,7 @@ struct Project {
   std::vector<SceneDoc> scenes;
   std::vector<UiScreenDoc> ui_screens;
   std::string persistent_ui;
+  std::string title_ui;
   std::vector<Transition> transitions;
   std::map<std::string, int> variables;  // 全局变量（跨场景、可存档）
 

@@ -349,6 +349,8 @@ void ProjectSyncRaw(Project* p) {
           : JsonValue::Object();
   settings.Set("initial_scene", JsonValue::String(p->settings.initial_scene));
   root.Set("settings", std::move(settings));
+  root.Set("persistent_ui", JsonValue::String(p->persistent_ui));
+  root.Set("title_ui", JsonValue::String(p->title_ui));
 
   JsonValue assets = JsonValue::Array();
   for (const Asset& a : p->assets) {
@@ -509,6 +511,12 @@ bool ProjectLoad(const std::filesystem::path& project_json_path, Project* out,
     if (!ReadOptionalString(*settings, "initial_scene", &p.settings.initial_scene, &found, error)) {
       return false;
     }
+  }
+  if (!ReadOptionalString(root, "persistent_ui", &p.persistent_ui, &found, error)) {
+    return false;
+  }
+  if (!ReadOptionalString(root, "title_ui", &p.title_ui, &found, error)) {
+    return false;
   }
 
   const JsonValue* assets = root.Find("assets");

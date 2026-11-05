@@ -152,6 +152,34 @@ void TestModalStack() {
   CHECK(game.UiValue("done") == 1);
 }
 
+void TestTitleScreen() {
+  r4::P3d p = BaseP3d();
+  r4::UiScreenData title;
+  title.id = "title";
+  title.name = "Title";
+  title.modal = true;
+  r4::UiElementData start;
+  start.kind = 7;
+  start.text = "New Game";
+  start.action = "new_game";
+  start.w = 120;
+  start.h = 28;
+  title.elements.push_back(start);
+  p.ui_screens.push_back(title);
+  p.title_ui = 0;
+
+  r4::Game game;
+  std::string err;
+  CHECK(game.Init(p, &err));
+  CHECK(game.UiModalActive());
+
+  eng::InputState confirm;
+  confirm.pressed[static_cast<int>(eng::Key::kA)] = true;
+  game.Update(1.0f / 60.0f, confirm);
+  CHECK(!game.UiModalActive());
+  CHECK(game.scene_id() == "test");
+}
+
 void TestSaveLoad() {
   r4::P3d p = BaseP3d();
   r4::Trigger trigger;
@@ -324,6 +352,7 @@ void TestP3dRoundTrip() {
   label.x = 10;
   label.y = 10;
   hud.elements.push_back(label);
+  p.title_ui = 0;
   hud.fade_frames = 3;
   hud.fade_out_frames = 4;
   label.items.push_back("a");
@@ -347,6 +376,7 @@ void TestP3dRoundTrip() {
   CHECK(q.ui_screens.size() == 1);
   CHECK(q.scenes[0].hud_ui == 0);
   CHECK(q.ui_screens[0].fade_frames == 3);
+  CHECK(q.title_ui == 0);
   CHECK(q.ui_screens[0].fade_out_frames == 4);
   if (!q.ui_screens.empty()) {
     CHECK(q.ui_screens[0].elements.size() == 1);
@@ -511,6 +541,7 @@ int main() {
   std::printf("trigger...\n"); TestTriggerWin();
   std::printf("modal...\n"); TestModalStack();
   std::printf("save/load...\n"); TestSaveLoad();
+  std::printf("title...\n"); TestTitleScreen();
   std::printf("modal list...\n"); TestModalList();
   std::printf("camera...\n"); TestFixedCameraCenters();
   std::printf("p3d roundtrip...\n"); TestP3dRoundTrip();

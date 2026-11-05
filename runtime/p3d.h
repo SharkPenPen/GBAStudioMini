@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 79;  // 79: UI 淡出帧数
+constexpr uint32_t kP3dVersion = 80;  // 80: 标题界面 / 按钮仅存档可见
+                                      // 79: UI 淡出帧数
                                       // 78: UI 列表项 / 淡入帧数
                                       // 77: UI 按钮 / 关闭方式
                                       // 76: 删掉旧 Scene::UiText
@@ -367,6 +368,7 @@ struct UiElementData {
   std::string action;         // button: close / open_ui / set_var / scene
   std::string action_target;  // screen id / variable / scene id
   int action_value = 0;
+  bool only_if_save = false;
   std::vector<std::string> items;  // list
   std::vector<UiElementData> children;
 };
@@ -398,6 +400,7 @@ struct P3d {
   // 全局变量：暂不写进 p3d（序列化下一步单独做，避免格式错位）
   std::vector<std::pair<std::string, int>> global_vars;
   int persistent_ui = -1;  // v75: 常驻界面下标
+  int title_ui = -1;       // v80: 标题界面下标
   std::vector<UiScreenData> ui_screens;  // v75
 };
 

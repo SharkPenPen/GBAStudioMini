@@ -553,6 +553,7 @@ bool ReadUiElement(Reader& r, UiElementData* e) {
   e->action = r.Str();
   e->action_target = r.Str();
   e->action_value = r.I32();
+  e->only_if_save = r.U8() != 0;
   const uint16_t item_n = r.U16();
   if (!r.ok || item_n > 1024) return false;
   e->items.resize(item_n);
@@ -621,6 +622,7 @@ void WriteUiElement(Writer& w, const UiElementData& e) {
   w.Str(e.action);
   w.Str(e.action_target);
   w.I32(e.action_value);
+  w.U8(e.only_if_save ? 1 : 0);
   w.U16(static_cast<uint16_t>(std::min<size_t>(1024, e.items.size())));
   for (const std::string& item : e.items) w.Str(item);
   w.U16(static_cast<uint16_t>(std::min<size_t>(4096, e.children.size())));
@@ -753,6 +755,7 @@ bool P3dLoad(const unsigned char* data, size_t size, P3d* out,
   }
   if (version >= 75) {
     p.persistent_ui = r.I32();
+    p.title_ui = r.I32();
     const uint16_t sn = r.U16();
     if (!r.ok || sn > 256) {
       SetErr(error, "p3d: bad ui screen count");
@@ -1085,6 +1088,7 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
     w.I32(kv.second);
   }
   w.I32(p.persistent_ui);
+  w.I32(p.title_ui);
   w.U16(static_cast<uint16_t>(std::min<size_t>(256, p.ui_screens.size())));
   for (const UiScreenData& s : p.ui_screens) WriteUiScreen(w, s);
   if (!w.ok) {

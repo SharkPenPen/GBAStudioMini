@@ -279,6 +279,7 @@ void DrawValueImage(const UiElement& e, UiRect r, const UiDrawContext& ctx) {
 
 void DrawElement(const UiElement& e, UiRect parent, const UiDrawContext& ctx,
                   int index) {
+  if (e.only_if_save && !ctx.save_exists) return;
   if (!e.visible_var.empty() && ctx.value != nullptr) {
     if (ctx.value(ctx.user, e.visible_var.c_str()) != e.visible_value) return;
   }
@@ -541,6 +542,7 @@ UiElement UiElementFromData(const UiElementData& d, const eng::TextureId* textur
   e.action = d.action;
   e.action_target = d.action_target;
   e.action_value = d.action_value;
+  e.only_if_save = d.only_if_save;
   e.items = d.items;
   for (const UiElementData& child : d.children) {
     e.children.push_back(UiElementFromData(child, textures, texture_count));

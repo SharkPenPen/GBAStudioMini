@@ -67,6 +67,7 @@ void ReadElement(const JsonValue& v, UiElementDoc* e) {
   ReadStr(v, "action", &e->action);
   ReadStr(v, "action_target", &e->action_target);
   ReadInt(v, "action_value", &e->action_value);
+  ReadBool(v, "only_if_save", &e->only_if_save);
   const JsonValue* items = v.Find("items");
   if (items != nullptr && items->IsArray()) {
     for (const JsonValue& iv : items->items) {
@@ -121,6 +122,7 @@ JsonValue WriteElement(const UiElementDoc& e) {
   o.Set("action", JsonValue::String(e.action));
   o.Set("action_target", JsonValue::String(e.action_target));
   o.Set("action_value", JsonValue::Number(e.action_value));
+  o.Set("only_if_save", JsonValue::Bool(e.only_if_save));
   JsonValue items = JsonValue::Array();
   for (const std::string& item : e.items) items.Push(JsonValue::String(item));
   o.Set("items", std::move(items));

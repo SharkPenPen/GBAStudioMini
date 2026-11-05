@@ -180,6 +180,10 @@ bool Game::Init(const P3d& p3d, std::string* error) {
   toast_.clear();
   toast_timer_ = 0.0f;
   SetScene(scene_index_);
+  if (p3d.title_ui >= 0 &&
+      p3d.title_ui < static_cast<int>(p3d.ui_screens.size())) {
+    OpenUiById(p3d.ui_screens[static_cast<size_t>(p3d.title_ui)].id);
+  }
   return true;
 }
 
@@ -749,6 +753,20 @@ bool Game::SaveBytes(std::string* out) const {
   return true;
 }
 
+bool Game::SaveExists() const {
+  std::error_code ec;
+  return std::filesystem::exists(save_path_, ec);
+}
+
+void Game::StartNewGame() {
+  if (p3d_ == nullptr) return;
+  variables_.clear();
+  globals_seeded_ = false;
+  score_ = 0;
+  CloseUi();
+  SetScene(p3d_->initial_scene);
+}
+
 bool Game::LoadBytes(const std::string& data) {
   if (p3d_ == nullptr || data.size() < 6) return false;
   if (data.compare(0, 4, "PLSV") != 0) return false;
@@ -818,6 +836,7 @@ void Game::DrawUiScreens(eng::DrawList& dl, const eng::TextureId* textures,
                          int texture_count) const {
   if (p3d_ == nullptr || p3d_->scenes.empty()) return;
   UiDrawContext ctx;
+  ctx.save_exists = SaveExists();
   ctx.dl = &dl;
   ctx.view_w = view_w_;
   ctx.view_h = view_h_;
@@ -888,8 +907,9 @@ void Game::OpenUiById(const std::string& id) {
       const UiScreenData& screen = p3d_->ui_screens[static_cast<size_t>(i)];
       modal_list_index_ = 0;
       for (int k = 0; k < static_cast<int>(screen.elements.size()); ++k) {
-        const int kind = screen.elements[static_cast<size_t>(k)].kind;
-        if (kind == 7 || kind == 6) {
+        const UiElementData& el = screen.elements[static_cast<size_t>(k)];
+        if (el.only_if_save && !SaveExists()) continue;
+        if (el.kind == 7 || el.kind == 6) {
           modal_focus_ = k;
           break;
         }
@@ -958,8 +978,9 @@ void Game::MoveModalFocus(int dir, bool allow_list) {
   }
   std::vector<int> focusables;
   for (int i = 0; i < static_cast<int>(screen.elements.size()); ++i) {
-    const int kind = screen.elements[static_cast<size_t>(i)].kind;
-    if (kind == 7 || kind == 6) focusables.push_back(i);
+    const UiElementData& el = screen.elements[static_cast<size_t>(i)];
+    if (el.only_if_save && !SaveExists()) continue;
+    if (el.kind == 7 || el.kind == 6) focusables.push_back(i);
   }
   if (focusables.empty()) return;
   int pos = 0;
@@ -1011,6 +1032,14 @@ void Game::ActivateModalFocus() {
     return;
   }
   if (e.kind != 7) return;
+  if (e.action == "new_game") {
+    StartNewGame();
+    return;
+  }
+  if (e.action == "load") {
+    if (LoadFromFile(save_path_)) CloseUi();
+    return;
+  }
   if (e.action.empty() || e.action == "close") {
     RequestCloseUi();
     return;

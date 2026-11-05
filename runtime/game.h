@@ -135,6 +135,8 @@ class Game {
   int scene_index() const { return scene_index_; }
   int UiValue(const char* name) const;
   bool SaveBytes(std::string* out) const;
+  bool SaveExists() const;
+  void StartNewGame();
   bool LoadBytes(const std::string& data);
   bool SaveToFile(const std::string& path) const;
   bool LoadFromFile(const std::string& path);

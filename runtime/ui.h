@@ -89,6 +89,7 @@ struct UiElement {
   std::string action;
   std::string action_target;
   int action_value = 0;
+  bool only_if_save = false;
   std::vector<std::string> items;
   int selected = 0;  // runtime list cursor
   std::vector<UiElement> children;  // 只做一层容器
@@ -114,6 +115,7 @@ struct UiDrawContext {
   void* user = nullptr;
   int focus = -1;        // 顶层按钮/列表焦点
   int list_selected = 0; // 当前列表的选中行
+  bool save_exists = false;
 };
 
 UiRect UiLayoutRect(UiLayout layout, int view_w, int view_h);

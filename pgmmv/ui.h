@@ -51,6 +51,7 @@ struct UiElementDoc {
   std::string action;         // button: close / open_ui / set_var / scene
   std::string action_target;
   int action_value = 0;
+  bool only_if_save = false;
   std::vector<std::string> items;  // list
   std::vector<UiElementDoc> children;
 
