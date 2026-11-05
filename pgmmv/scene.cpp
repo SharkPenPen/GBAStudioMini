@@ -720,9 +720,6 @@ bool SceneLoad(const std::filesystem::path& path, SceneDoc* out,
         }
         return true;
       };
-      if (!read_actions(tv.Find("actions"), &t.actions)) return false;
-      if (!read_actions(tv.Find("exit_actions"), &t.exit_actions)) return false;
-      if (!read_actions(tv.Find("inside_actions"), &t.inside_actions)) return false;
       int inside_n = 0;
       if (!ReadInt(tv, "inside_interval", &inside_n, &found, error)) return false;
       if (found) t.inside_interval = std::max(1, inside_n);
@@ -942,15 +939,8 @@ void SceneSyncRaw(SceneDoc* s) {
       }
       return arr;
     };
-    tv.Set("actions", write_actions(t.actions));
-    if (!t.exit_actions.empty()) {
-      tv.Set("exit_actions", write_actions(t.exit_actions));
-    }
-    if (!t.inside_actions.empty()) {
-      tv.Set("inside_actions", write_actions(t.inside_actions));
-      tv.Set("inside_interval",
-             JsonValue::Number(static_cast<double>(t.inside_interval)));
-    }
+    tv.Set("inside_interval",
+           JsonValue::Number(static_cast<double>(t.inside_interval)));
     if (!t.rules.empty()) {
       JsonValue rules = JsonValue::Array();
       for (const TriggerRuleDef& rule : t.rules) {

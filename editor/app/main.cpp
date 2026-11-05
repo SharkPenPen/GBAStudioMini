@@ -4722,47 +4722,6 @@ void DrawScenePageRight() {
       }
       ImGui::TextDisabled("选中哪个对象，就检测它的实例进入本触发器");
     }
-    {
-      bool has_win = false;
-      for (const pgmmv::TriggerAction& a : trg.actions) {
-        if (a.type == "win") has_win = true;
-      }
-      if (ImGui::Checkbox("进入时触发胜利", &has_win)) {
-        PushUndo();
-        if (has_win) {
-          pgmmv::TriggerAction a;
-          a.type = "win";
-          a.value = 1;
-          trg.actions.push_back(a);
-        } else {
-          trg.actions.erase(
-              std::remove_if(trg.actions.begin(), trg.actions.end(),
-                             [](const pgmmv::TriggerAction& a) { return a.type == "win"; }),
-              trg.actions.end());
-        }
-        MarkDirty();
-      }
-    }
-    // 目标场景（change_scene）
-    {
-      const char* cur_target =
-          trg.actions.empty() ? "(无)" : trg.actions[0].target.c_str();
-      ImGui::TextUnformatted("目标场景（change_scene）");
-      ImGui::SetNextItemWidth(-1.0f);
-      if (ImGui::BeginCombo("##trig_target", cur_target)) {
-        for (const pgmmv::SceneDoc& sc : g_project.scenes) {
-          const bool sel = !trg.actions.empty() && trg.actions[0].target == sc.id;
-          if (ImGui::Selectable(sc.id.c_str(), sel)) {
-            PushUndo();
-            if (trg.actions.empty()) trg.actions.push_back(pgmmv::TriggerAction{});
-            trg.actions[0].type = "change_scene";
-            trg.actions[0].target = sc.id;
-            MarkDirty();
-          }
-        }
-        ImGui::EndCombo();
-      }
-    }
     // 进入 / 离开 的效果列表（第一条进入动作留给上面的场景下拉）
     auto draw_actions = [&](const char* label, std::vector<pgmmv::TriggerAction>* list,
                             size_t first) {
@@ -4833,18 +4792,13 @@ void DrawScenePageRight() {
         MarkDirty();
       }
     };
-    draw_actions("进入时（附加动作）", &trg.actions, trg.actions.empty() ? 0 : 1);
-    draw_actions("离开时", &trg.exit_actions, 0);
-    draw_actions("在里面时（每 N 帧）", &trg.inside_actions, 0);
-    if (!trg.inside_actions.empty()) {
-      ImGui::SetNextItemWidth(80.0f);
-      if (ImGui::InputInt("##inside_n", &trg.inside_interval, 1, 10)) {
-        trg.inside_interval = std::max(1, trg.inside_interval);
-        MarkDirty();
-      }
-      ImGui::SameLine();
-      ImGui::TextDisabled("帧间隔");
+    ImGui::SetNextItemWidth(80.0f);
+    if (ImGui::InputInt("##inside_n", &trg.inside_interval, 1, 10)) {
+      trg.inside_interval = std::max(1, trg.inside_interval);
+      MarkDirty();
     }
+    ImGui::SameLine();
+    ImGui::TextDisabled("停留规则帧间隔");
     ImGui::SeparatorText("区域规则");
     int del_rule = -1;
     for (int ri = 0; ri < static_cast<int>(trg.rules.size()); ++ri) {

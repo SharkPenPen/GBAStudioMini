@@ -206,9 +206,6 @@ class Game {
   void RenderProjectiles(eng::DrawList& dl, const eng::TextureId* textures,
                          int texture_count) const;
   void UpdateTriggers();
-  bool RunTriggerActions(const Trigger& trigger);
-  bool RunTriggerExitActions(const Trigger& trigger);
-  bool RunTriggerInsideActions(const Trigger& trigger);
   bool RunTriggerList(const Trigger& trigger,
                       const std::vector<TriggerAction>& list);
   void ShooterHitPlayer();

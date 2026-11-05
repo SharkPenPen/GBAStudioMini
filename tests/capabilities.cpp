@@ -130,12 +130,15 @@ void TestModalStack() {
   r4::TriggerAction action;
   action.type = 9;  // open_ui
   action.target = "pause";
-  trigger.actions.push_back(action);
+  r4::TriggerRule rule;
+  rule.mode = 0;
+  rule.actions.push_back(action);
   r4::TriggerAction after;
   after.type = 2;  // set_variable
   after.target = "done";
   after.value = 1;
-  trigger.actions.push_back(after);
+  rule.actions.push_back(after);
+  trigger.rules.push_back(rule);
   p.scenes[0].triggers.push_back(trigger);
 
   r4::Game game;
@@ -218,7 +221,10 @@ void TestSaveLoad() {
   coins.type = 2;  // set_variable
   coins.target = "g:coins";
   coins.value = 5;
-  trigger.actions.push_back(coins);
+  r4::TriggerRule rule;
+  rule.mode = 0;
+  rule.actions.push_back(coins);
+  trigger.rules.push_back(rule);
   p.scenes[0].triggers.push_back(trigger);
 
   r4::Game game;
@@ -284,7 +290,10 @@ void TestModalList() {
   r4::TriggerAction open;
   open.type = 9;
   open.target = "menu";
-  trigger.actions.push_back(open);
+  r4::TriggerRule rule;
+  rule.mode = 0;
+  rule.actions.push_back(open);
+  trigger.rules.push_back(rule);
   p.scenes[0].triggers.push_back(trigger);
 
   r4::Game game;
@@ -338,7 +347,10 @@ void TestTriggerWin() {
   trigger.once = true;
   r4::TriggerAction action;
   action.type = 3;  // win
-  trigger.actions.push_back(action);
+  r4::TriggerRule rule;
+  rule.mode = 0;
+  rule.actions.push_back(action);
+  trigger.rules.push_back(rule);
   p.scenes[0].triggers.push_back(trigger);
 
   r4::Game game;

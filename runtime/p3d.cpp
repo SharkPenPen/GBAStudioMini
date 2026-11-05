@@ -396,42 +396,6 @@ bool ReadScene(Reader& r, Scene* s, std::string* error) {
         t.interaction.actions.push_back(std::move(a));
       }
     }
-    const uint16_t an = r.U16();
-    if (!r.ok || an > 16) {
-      SetErr(error, "p3d: bad trigger action count");
-      return false;
-    }
-    for (uint16_t a = 0; a < an; ++a) {
-      TriggerAction action;
-      action.type = r.U8();
-      action.target = r.Str();
-      action.value = r.I32();
-      t.actions.push_back(std::move(action));
-    }
-    const uint16_t en = r.U16();
-    if (!r.ok || en > 16) {
-      SetErr(error, "p3d: bad trigger exit action count");
-      return false;
-    }
-    for (uint16_t a = 0; a < en; ++a) {
-      TriggerAction action;
-      action.type = r.U8();
-      action.target = r.Str();
-      action.value = r.I32();
-      t.exit_actions.push_back(std::move(action));
-    }
-    const uint16_t in = r.U16();
-    if (!r.ok || in > 16) {
-      SetErr(error, "p3d: bad trigger inside action count");
-      return false;
-    }
-    for (uint16_t a = 0; a < in; ++a) {
-      TriggerAction action;
-      action.type = r.U8();
-      action.target = r.Str();
-      action.value = r.I32();
-      t.inside_actions.push_back(std::move(action));
-    }
     t.inside_interval = r.I32();
     if (t.inside_interval < 1) t.inside_interval = 1;
     const uint16_t rn = r.U16();
@@ -1027,24 +991,6 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
           w.Str(a.target);
           w.I32(a.value);
         }
-      }
-      w.U16(static_cast<uint16_t>(t.actions.size()));
-      for (const TriggerAction& a : t.actions) {
-        w.U8(static_cast<uint8_t>(a.type));
-        w.Str(a.target);
-        w.I32(a.value);
-      }
-      w.U16(static_cast<uint16_t>(t.exit_actions.size()));
-      for (const TriggerAction& a : t.exit_actions) {
-        w.U8(static_cast<uint8_t>(a.type));
-        w.Str(a.target);
-        w.I32(a.value);
-      }
-      w.U16(static_cast<uint16_t>(t.inside_actions.size()));
-      for (const TriggerAction& a : t.inside_actions) {
-        w.U8(static_cast<uint8_t>(a.type));
-        w.Str(a.target);
-        w.I32(a.value);
       }
       w.I32(t.inside_interval);
       w.U16(static_cast<uint16_t>(std::min<size_t>(64, t.rules.size())));

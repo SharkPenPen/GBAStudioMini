@@ -1950,19 +1950,6 @@ bool Game::RunTriggerList(const Trigger& trigger,
   return false;
 }
 
-bool Game::RunTriggerActions(const Trigger& trigger) {
-  return RunTriggerList(trigger, trigger.actions);
-}
-
-bool Game::RunTriggerExitActions(const Trigger& trigger) {
-  RunTriggerList(trigger, trigger.exit_actions);
-  return false;
-}
-
-bool Game::RunTriggerInsideActions(const Trigger& trigger) {
-  return RunTriggerList(trigger, trigger.inside_actions);
-}
-
 void Game::UpdateTriggers() {
   if (p3d_ == nullptr || player_object_ < 0 || won_) return;
   const Scene& s = p3d_->scenes[scene_index_];
@@ -2029,7 +2016,6 @@ void Game::UpdateTriggers() {
       if (t.inside_interval > 0 &&
           (trigger_tick_[i] % static_cast<unsigned>(t.inside_interval)) == 0) {
         if (run_rules(2)) return;
-        if (!t.inside_actions.empty() && RunTriggerInsideActions(t)) return;
       }
     } else {
       trigger_tick_[i] = 0;
@@ -2037,7 +2023,6 @@ void Game::UpdateTriggers() {
     // 离开：跑 exit rules / exit_actions（不判断 once）
     if (!overlap && was_inside) {
       if (run_rules(1)) return;
-      if (!t.exit_actions.empty() && RunTriggerExitActions(t)) return;
     }
     if (!overlap) continue;
     if (t.once && trigger_done_[i] != 0) continue;
@@ -2049,7 +2034,6 @@ void Game::UpdateTriggers() {
     if (was_inside && t.once) continue;
     trigger_done_[i] = 1;
     if (run_rules(0)) return;
-    if (RunTriggerActions(t)) return;
   }
 }
 

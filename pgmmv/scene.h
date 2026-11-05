@@ -74,10 +74,7 @@ struct TriggerDef {
   std::string target_object;  // 进入检测的对象 id；空 = 旧行为（玩家）
   std::string require_variable;
   int require_value = 0;
-  std::vector<TriggerAction> actions;       // 进入时
-  std::vector<TriggerAction> exit_actions;  // 离开时
-  std::vector<TriggerAction> inside_actions;  // 在里面时（每 inside_interval 帧）
-  int inside_interval = 30;                   // tick
+  int inside_interval = 30;                   // 停留规则每 N 帧
   std::vector<TriggerRuleDef> rules;          // 区域规则
 };
 

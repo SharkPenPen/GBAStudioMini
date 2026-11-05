@@ -937,27 +937,6 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
       }
       rt.require_variable = t.require_variable;
       rt.require_value = t.require_value;
-      for (const TriggerAction& a : t.actions) {
-        r4::TriggerAction ra;
-        ExportTriggerActionType(a.type, &ra.type);
-        ra.target = a.target;
-        ra.value = a.value;
-        rt.actions.push_back(std::move(ra));
-      }
-      for (const TriggerAction& a : t.exit_actions) {
-        r4::TriggerAction ra;
-        ExportTriggerActionType(a.type, &ra.type);
-        ra.target = a.target;
-        ra.value = a.value;
-        rt.exit_actions.push_back(std::move(ra));
-      }
-      for (const TriggerAction& a : t.inside_actions) {
-        r4::TriggerAction ra;
-        ExportTriggerActionType(a.type, &ra.type);
-        ra.target = a.target;
-        ra.value = a.value;
-        rt.inside_actions.push_back(std::move(ra));
-      }
       rt.inside_interval = t.inside_interval;
       for (const TriggerRuleDef& rule : t.rules) {
         r4::TriggerRule rr;
@@ -1020,9 +999,9 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
             if (a.type == "play_sfx" && !a.target.empty()) audio_ids.insert(a.target);
           }
         };
-        add_trigger_audio(t.actions);
-        add_trigger_audio(t.exit_actions);
-        add_trigger_audio(t.inside_actions);
+        for (const TriggerRuleDef& rule : t.rules) {
+          add_trigger_audio(rule.actions);
+        }
         add_trigger_audio(t.interaction.actions);
       }
     }

@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 81;  // 81: 区域规则
+constexpr uint32_t kP3dVersion = 82;  // 82: 删掉旧触发器动作列表
+                                      // 81: 区域规则
                                       // 80: 标题界面 / 按钮仅存档可见
                                       // 79: UI 淡出帧数
                                       // 78: UI 列表项 / 淡入帧数
@@ -287,10 +288,7 @@ struct Trigger {
   int target_object = -1;                     // v71：进入检测的对象索引；-1 = 玩家
   std::string require_variable;
   int require_value = 0;
-  std::vector<TriggerAction> actions;         // v46：进入时
-  std::vector<TriggerAction> exit_actions;    // v46：离开时
-  std::vector<TriggerAction> inside_actions;  // v47：在里面时
-  int inside_interval = 30;                   // v47：每 N 帧
+  int inside_interval = 30;                   // 停留规则每 N 帧
   std::vector<TriggerRule> rules;             // v81
 };
 
