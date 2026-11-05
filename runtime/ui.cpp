@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "engine/render/font.h"
+#include "engine/render/font_cjk12.h"
 #include "runtime/p3d.h"
 
 namespace r4 {
@@ -17,7 +18,20 @@ eng::Rect2 R(int x, int y, int w, int h) {
                     eng::Vec2{static_cast<float>(w), static_cast<float>(h)}};
 }
 
+const eng::CjkGlyph* FindCjk(eng::u32 code) {
+  int lo = 0;
+  int hi = eng::kCjkCount - 1;
+  while (lo <= hi) {
+    const int mid = (lo + hi) / 2;
+    if (eng::kCjk12[mid].code == code) return &eng::kCjk12[mid];
+    if (eng::kCjk12[mid].code < code) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return nullptr;
+}
+
 int GlyphAdvance(eng::u32 cp, int spacing) {
+  if (FindCjk(cp) != nullptr) return eng::kCjkW + 1;
   eng::GlyphView g;
   eng::FontGlyph(cp, &g);
   return g.advance + spacing;
@@ -139,6 +153,30 @@ void DrawText(const std::string& text, UiRect r, const UiElement& e,
       eng::u32 cp = 0;
       const int adv = eng::Utf8Decode(line.c_str() + i, &cp);
       if (adv <= 0) break;
+      if (cp >= 0x80) {
+        const eng::CjkGlyph* cg = FindCjk(cp);
+        if (cg != nullptr) {
+          for (int ry = 0; ry < eng::kCjkH; ++ry) {
+            const unsigned bits = cg->rows[ry];
+            int rx = 0;
+            while (rx < eng::kCjkW) {
+              if ((bits & (1u << rx)) == 0) {
+                ++rx;
+                continue;
+              }
+              int run = 1;
+              while (rx + run < eng::kCjkW && (bits & (1u << (rx + run))) != 0) {
+                ++run;
+              }
+              ctx.dl->DrawRect(R(x + rx, y + ry, run, 1), e.color);
+              rx += run;
+            }
+          }
+          x += eng::kCjkW + 1;
+          i += static_cast<size_t>(adv);
+          continue;
+        }
+      }
       eng::GlyphView g;
       eng::FontGlyph(cp, &g);
       if (g.valid && g.w > 0 && g.h > 0) {
@@ -325,6 +363,20 @@ void UiDrawScreen(const UiScreen& screen, const UiDrawContext& ctx) {
   const UiRect layout = UiLayoutRect(screen.layout, ctx.view_w, ctx.view_h);
   for (const UiElement& e : screen.elements) DrawElement(e, layout, ctx);
 }
+void UiDrawTextLine(eng::DrawList& dl, int x, int y, const std::string& text,
+                    eng::u32 color, int align, int max_w) {
+  UiElement e;
+  e.kind = UiKind::kText;
+  e.text = text;
+  e.color = color;
+  e.align = align;
+  e.font_size = 10;
+  UiRect r{x, y, max_w > 0 ? max_w : 10000, eng::FontLineHeight()};
+  UiDrawContext ctx;
+  ctx.dl = &dl;
+  DrawText(text, r, e, ctx);
+}
+
 UiElement UiElementFromData(const UiElementData& d, const eng::TextureId* textures,
                             int texture_count) {
   UiElement e;

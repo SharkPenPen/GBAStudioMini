@@ -8,7 +8,6 @@
 #include <map>
 
 #include "engine/platform/platform.h"
-#include "engine/render/pixel_font.h"
 #include "engine/render/draw_list.h"
 #include "pgmmv/stats.h"
 #include "runtime/p3d.h"

@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 75;  // 75: UI 屏幕 / 元素
+constexpr uint32_t kP3dVersion = 76;  // 76: 删掉旧 Scene::UiText
+                                      // 75: UI 屏幕 / 元素
                                       // 74: 删掉 SceneLayer.tileset
                                       // 73: 项目视口 view_w/view_h
                                       // 72: 对象可推动标记
@@ -39,7 +40,7 @@ constexpr uint32_t kP3dVersion = 75;  // 75: UI 屏幕 / 元素
                                       // 43: 动作改成每帧一份（图/停留/中心/碰撞/攻击/受击）
                                       // 42: 删掉 tileset.tiles（wall/gimmick/require_*/value 全是死字段）
                                       // 41: 场景图集页表 scene.tilesets + 格子 (槽位,索引) 编码
-                                      // 38: UI 文本（scene.ui_texts）  // 33: 对象加按键→动画映射（anim_left/right/jump/fall/idle）  // 32: 触发器加 name/color/mods（修饰器）
+                                      // 33: 对象加按键→动画映射（anim_left/right/jump/fall/idle）  // 32: 触发器加 name/color/mods（修饰器）
                                       // 31: chunk 改 16x16（旧 32x32 的 p3d 不兼容）
 constexpr int kP3dChunkCells = 16;    // 必须与 pgmmv::kSceneChunkCells 一致
 
@@ -302,24 +303,6 @@ struct Scene {
   std::string scroll_next;
   int win_score = 0;      // v67: score target for shooter levels
   std::map<std::string, int> variables;  // v12: scene initial variables
-  struct UiText {
-    std::string id;
-    std::string text;
-    int x = 8;
-    int y = 8;
-    int scale = 1;
-    std::string visible_variable;
-    int visible_value = 1;
-    // v48：类型（text / bar）+ 血条参数
-    std::string type = "text";
-    int w = 80;
-    int h = 8;
-    std::string value_attr;
-    std::string max_attr;
-    std::string object;  // v49：用对象动画做血条（前 N 帧）
-    int frame = 0;                       // v51：图片元素显示第几帧
-  };
-  std::vector<UiText> ui_texts;  // v38
   std::vector<Trigger> triggers;  // v14
   int controlled = -1;  // v27: scene.objects 下标；-1 = 无
   int hud_ui = -1;      // v75: p3d.ui_screens 下标；-1 = 无

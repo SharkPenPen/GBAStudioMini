@@ -213,7 +213,7 @@ bool g_brush_dragging = false;
 int g_scene_layer = 0;  // 0 tile, 1 object
 
 // ★ 场景页当前选中的节点 —— 右栏属性栏按它分发 ★
-enum class SceneSelKind { kScene = 0, kLayer, kTrigger, kObject, kCamera, kUi };
+enum class SceneSelKind { kScene = 0, kLayer, kTrigger, kObject, kCamera };
 SceneSelKind g_scene_sel_kind = SceneSelKind::kScene;
 bool g_scene_place_mode = false;
 bool g_scene_place_trigger = false;  // 放置触发器：左键点关卡建一个 64x64
@@ -3576,14 +3576,6 @@ void DrawScenePageLeft() {
         if (ImGui::Selectable("相机", g_scene_sel_kind == SceneSelKind::kCamera)) {
           g_scene_sel_kind = SceneSelKind::kCamera;
         }
-        {
-          char ubuf[64];
-          std::snprintf(ubuf, sizeof(ubuf), "UI 层 (%d)",
-                        static_cast<int>(sc.ui_texts.size()));
-          if (ImGui::Selectable(ubuf, g_scene_sel_kind == SceneSelKind::kUi)) {
-            g_scene_sel_kind = SceneSelKind::kUi;
-          }
-        }
         std::snprintf(buf, sizeof(buf), "触发器 (%d)",
                       static_cast<int>(sc.triggers.size()));
         if (ImGui::TreeNodeEx(buf, ImGuiTreeNodeFlags_SpanAvailWidth |
@@ -4284,44 +4276,6 @@ void DrawScenePageCenter() {
       dl->AddLine(ImVec2(o.x, o.y - 7), ImVec2(o.x, o.y + 7), c, 2.0f);
       dl->AddText(ImVec2(o.x + 9, o.y + 3), IM_COL32(150, 230, 170, 220), "0,0");
     }
-    // ★ UI 层预览：屏幕坐标叠在相机框里 ★
-    //   元素在运行时按屏幕像素画，这里用同样的映射画个占位，
-    //   免得摆 UI 全靠猜坐标。
-    for (const pgmmv::UiTextDef& u : s->ui_texts) {
-      if (u.type == "image") {
-        const float ix = world_left(frame_x + static_cast<float>(u.x));
-        const float iy = world_top(frame_y + th_px - static_cast<float>(u.y) - 32.0f, 0.0f);
-        dl->AddRect(ImVec2(ix, iy), ImVec2(ix + 32, iy + 32),
-                    IM_COL32(120, 220, 160, 200), 0.0f, 0, 1.5f);
-        dl->AddText(ImVec2(ix + 2, iy + 2), IM_COL32(150, 240, 190, 220),
-                    u.object.empty() ? "(图片)" : u.object.c_str());
-        continue;
-      }
-      if (u.type == "bar") {
-        const float bx = world_left(frame_x + static_cast<float>(u.x));
-        const float by = world_top(frame_y + th_px - static_cast<float>(u.y) -
-                                       static_cast<float>(std::max(1, u.h)), 0.0f);
-        const float bw = static_cast<float>(std::max(1, u.w)) * zoom;
-        const float bh = static_cast<float>(std::max(1, u.h)) * zoom;
-        dl->AddRectFilled(ImVec2(bx, by), ImVec2(bx + bw, by + bh), IM_COL32(64, 16, 16, 200));
-        dl->AddRectFilled(ImVec2(bx, by), ImVec2(bx + bw * 0.7f, by + bh), IM_COL32(224, 64, 64, 220));
-        dl->AddRect(ImVec2(bx, by), ImVec2(bx + bw, by + bh), IM_COL32(255, 210, 90, 160));
-        continue;
-      }
-      const float ux = world_left(frame_x + static_cast<float>(u.x));
-      // UI 的 y 是屏幕坐标（从上往下），画布是世界坐标（从下往上），要翻一下
-      const float uy = world_top(frame_y + th_px - static_cast<float>(u.y) - 8.0f, 0.0f);
-      const float sz = ImGui::GetFontSize() * static_cast<float>(std::max(1, u.scale));
-      const ImVec2 ts = ImGui::CalcTextSize(u.text.c_str());
-      const float w = ts.x * static_cast<float>(std::max(1, u.scale));
-      const float h = sz;
-      dl->AddRectFilled(ImVec2(ux - 2, uy - 1), ImVec2(ux + w + 2, uy + h + 1),
-                        IM_COL32(255, 210, 90, 36));
-      dl->AddRect(ImVec2(ux - 2, uy - 1), ImVec2(ux + w + 2, uy + h + 1),
-                  IM_COL32(255, 210, 90, 160), 0.0f, 0, 1.0f);
-      dl->AddText(ImGui::GetFont(), sz, ImVec2(ux, uy),
-                  IM_COL32(255, 235, 170, 230), u.text.c_str());
-    }
     // 起点（start_x / start_y）：橙色圆点 + START，和原点区分开
     {
       const ImVec2 sp(world_left(static_cast<float>(SceneSpawnX(s))),
@@ -4460,7 +4414,6 @@ void DrawScenePageRight() {
   const bool show_trigger = (g_scene_sel_kind == SceneSelKind::kTrigger);
   const bool show_object = (g_scene_sel_kind == SceneSelKind::kObject);
   const bool show_camera = (g_scene_sel_kind == SceneSelKind::kCamera);
-  const bool show_ui = (g_scene_sel_kind == SceneSelKind::kUi);
 
   char sel_title[192];
   if (show_trigger) {
@@ -4475,8 +4428,6 @@ void DrawScenePageRight() {
                   od != nullptr ? od->name.c_str() : o.id.c_str());
   } else if (show_camera) {
     std::snprintf(sel_title, sizeof(sel_title), "相机");
-  } else if (show_ui) {
-    std::snprintf(sel_title, sizeof(sel_title), "UI 层");
   } else if (show_layer) {
     std::snprintf(sel_title, sizeof(sel_title), "图层 · %s",
                   layer.name.empty() ? "(未命名)" : layer.name.c_str());
@@ -4602,122 +4553,6 @@ void DrawScenePageRight() {
     ImGui::TextDisabled("1.00 跟随世界 / 0.10 慢速视差 / 0 固定屏幕");
   }
   }  // show_layer
-  // ★ UI 层：屏幕坐标的元素（文字先做）★
-  if (show_ui) {
-    ImGui::TextDisabled("UI 层：坐标是屏幕像素，不随相机滚动");
-    ImGui::Separator();
-    int remove_ui = -1;
-    for (int i = 0; i < static_cast<int>(s->ui_texts.size()); ++i) {
-      pgmmv::UiTextDef& u = s->ui_texts[static_cast<size_t>(i)];
-      ImGui::PushID(3000 + i);
-      {
-        const char* kinds[] = {"文字", "血条", "图片"};
-        int k = u.type == "bar" ? 1 : (u.type == "image" ? 2 : 0);
-        ImGui::SetNextItemWidth(80.0f);
-        if (ImGui::Combo("##uit", &k, kinds, 3)) {
-          u.type = k == 1 ? "bar" : (k == 2 ? "image" : "text");
-          MarkDirty();
-        }
-        ImGui::SameLine();
-        if (ImGui::SmallButton("x")) remove_ui = i;
-      }
-      char tbuf[128];
-      std::snprintf(tbuf, sizeof(tbuf), "%s", u.text.c_str());
-      if (u.type == "image") {
-        std::vector<const char*> il;
-        il.push_back("(选对象)");
-        int ii = 0;
-        for (const pgmmv::ObjectDoc& od : g_project.objects) {
-          il.push_back(od.id.c_str());
-          if (od.id == u.object) ii = static_cast<int>(il.size()) - 1;
-        }
-        ImGui::SetNextItemWidth(140.0f);
-        if (ImGui::Combo("##imgobj", &ii, il.data(), static_cast<int>(il.size()))) {
-          u.object = ii == 0 ? std::string() : il[static_cast<size_t>(ii)];
-          MarkDirty();
-        }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(70.0f);
-        if (ImGui::InputInt("帧", &u.frame)) MarkDirty();
-        ImGui::Separator();
-        ImGui::PopID();
-        continue;
-      }
-      if (u.type == "bar") {
-        ImGui::SetNextItemWidth(80.0f);
-        if (ImGui::InputInt("W", &u.w, 1, 8)) MarkDirty();
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(80.0f);
-        if (ImGui::InputInt("H", &u.h, 1, 4)) MarkDirty();
-        ImGui::SetNextItemWidth(110.0f);
-        char vb[48];
-        std::snprintf(vb, sizeof(vb), "%s", u.value_attr.c_str());
-        if (ImGui::InputTextWithHint("##vat", "当前属性(hp)", vb, sizeof(vb))) {
-          u.value_attr = vb;
-          MarkDirty();
-        }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(110.0f);
-        char mb[48];
-        std::snprintf(mb, sizeof(mb), "%s", u.max_attr.c_str());
-        if (ImGui::InputTextWithHint("##mat", "上限属性(hp_max)", mb, sizeof(mb))) {
-          u.max_attr = mb;
-          MarkDirty();
-        }
-        // 用对象动画做血条（前 N 帧）
-        ImGui::TextDisabled("或用对象动画：当前值 = 显示几帧");
-        std::vector<const char*> ol;
-        ol.push_back("(不用对象)");
-        int oi = 0;
-        for (const pgmmv::ObjectDoc& od : g_project.objects) {
-          ol.push_back(od.id.c_str());
-          if (od.id == u.object) oi = static_cast<int>(ol.size()) - 1;
-        }
-        ImGui::SetNextItemWidth(-1.0f);
-        if (ImGui::Combo("##barobj", &oi, ol.data(), static_cast<int>(ol.size()))) {
-          u.object = oi == 0 ? std::string() : ol[static_cast<size_t>(oi)];
-          MarkDirty();
-        }
-        ImGui::Separator();
-        ImGui::PopID();
-        continue;
-      }
-      ImGui::SetNextItemWidth(-30.0f);
-      if (ImGui::InputTextWithHint("##txt", "文字", tbuf, sizeof(tbuf))) {
-        u.text = tbuf;
-        MarkDirty();
-      }
-      ImGui::SetNextItemWidth(64.0f);
-      if (ImGui::InputInt("X", &u.x, 0, 0)) MarkDirty();
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(64.0f);
-      if (ImGui::InputInt("Y", &u.y, 0, 0)) MarkDirty();
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(56.0f);
-      if (ImGui::InputInt("倍", &u.scale, 1, 1)) {
-        u.scale = std::max(1, std::min(6, u.scale));
-        MarkDirty();
-      }
-      ImGui::Separator();
-      ImGui::PopID();
-    }
-    if (remove_ui >= 0) {
-      PushUndo();
-      s->ui_texts.erase(s->ui_texts.begin() + remove_ui);
-      MarkDirty();
-    }
-    if (ImGui::Button("+ 添加文本", ImVec2(-1.0f, 22.0f))) {
-      PushUndo();
-      pgmmv::UiTextDef t;
-      t.id = "ui_" + std::to_string(s->ui_texts.size() + 1);
-      t.text = "TEXT";
-      t.x = 16;
-      t.y = 16;
-      s->ui_texts.push_back(t);
-      MarkDirty();
-    }
-  }
-
   // ★ 放置工具：这些不是场景数据，是编辑器当前的选择 ★
   if (show_scene) {
   ImGui::SeparatorText("放置");
@@ -5053,27 +4888,6 @@ void DrawScenePageRight() {
       if (trg.interaction.enabled) {
         char pbuf[128];
         std::snprintf(pbuf, sizeof(pbuf), "%s", trg.interaction.prompt.c_str());
-        // 提示来源：优先用场景里的 UI 文本（位置/大小由 UI 元素决定）
-        ImGui::TextUnformatted("提示 UI");
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-1.0f);
-        {
-          const char* cur = trg.interaction.ui_id.empty() ? "(用下面的内嵌文字)"
-                                                          : trg.interaction.ui_id.c_str();
-          if (ImGui::BeginCombo("##it_ui", cur)) {
-            if (ImGui::Selectable("(用下面的内嵌文字)", trg.interaction.ui_id.empty())) {
-              trg.interaction.ui_id.clear();
-              MarkDirty();
-            }
-            for (const pgmmv::UiTextDef& u : s->ui_texts) {
-              if (ImGui::Selectable(u.id.c_str(), trg.interaction.ui_id == u.id)) {
-                trg.interaction.ui_id = u.id;
-                MarkDirty();
-              }
-            }
-            ImGui::EndCombo();
-          }
-        }
         if (trg.interaction.ui_id.empty()) {
           ImGui::SetNextItemWidth(-1.0f);
           if (ImGui::InputTextWithHint("##it_prompt", "内嵌提示文字", pbuf, sizeof(pbuf))) {
@@ -5273,12 +5087,6 @@ void DrawScenePageRight() {
               s->variables.find(a.target) == s->variables.end()) {
             s->variables[a.target] = a.value;
           }
-        }
-      }
-      for (const pgmmv::UiTextDef& u : s->ui_texts) {
-        if (!u.visible_variable.empty() &&
-            s->variables.find(u.visible_variable) == s->variables.end()) {
-          s->variables[u.visible_variable] = u.visible_value;
         }
       }
       MarkDirty();

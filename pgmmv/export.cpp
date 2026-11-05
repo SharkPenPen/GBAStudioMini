@@ -882,24 +882,6 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
     rs.scroll_next = s.scroll_next;
     rs.win_score = s.win_score;
     rs.variables = s.variables;
-    for (const UiTextDef& ut : s.ui_texts) {
-      r4::Scene::UiText ru;
-      ru.id = ut.id;
-      ru.type = ut.type;
-      ru.w = ut.w;
-      ru.h = ut.h;
-      ru.value_attr = ut.value_attr;
-      ru.max_attr = ut.max_attr;
-      ru.object = ut.object;
-      ru.frame = ut.frame;
-      ru.text = ut.text;
-      ru.x = ut.x;
-      ru.y = ut.y;
-      ru.scale = ut.scale;
-      ru.visible_variable = ut.visible_variable;
-      ru.visible_value = ut.visible_value;
-      rs.ui_texts.push_back(std::move(ru));
-    }
     for (const TriggerDef& t : s.triggers) {
       r4::Trigger rt;
       rt.name = t.name;
@@ -965,34 +947,6 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
     if (!s.hud_ui.empty()) {
       auto it = ui_index.find(s.hud_ui);
       rs.hud_ui = it == ui_index.end() ? -1 : it->second;
-    } else if (!s.ui_texts.empty()) {
-      r4::UiScreenData hud;
-      hud.id = s.id + ":hud";
-      hud.name = "HUD";
-      hud.layout = 0;
-      for (const UiTextDef& u : s.ui_texts) {
-        r4::UiElementData e;
-        e.id = u.id;
-        e.anchor = 0;
-        e.x = u.x;
-        e.y = u.y;
-        e.visible_var = u.visible_variable;
-        e.visible_value = u.visible_value;
-        if (u.type == "bar") {
-          e.kind = 4;  // value_bar
-          e.w = u.w;
-          e.h = u.h;
-          e.binding.name = u.value_attr.empty() ? "hp" : u.value_attr;
-          e.binding.out_max = 100;
-        } else {
-          e.kind = 1;  // text
-          e.text = u.text;
-          e.font_size = std::max(8, std::min(16, 10 * std::max(1, u.scale)));
-        }
-        hud.elements.push_back(std::move(e));
-      }
-      rs.hud_ui = static_cast<int>(p.ui_screens.size());
-      p.ui_screens.push_back(std::move(hud));
     }
     p.scenes.push_back(std::move(rs));
   }

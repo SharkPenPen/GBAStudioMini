@@ -105,24 +105,6 @@ struct SceneCollision {
   void SetMaskAt(int col, int row, int mask);
 };
 
-// UI 文本元素（屏幕坐标；visible 条件为空表示一直显示）
-struct UiTextDef {
-  std::string id;
-  std::string type = "text";  // text / bar
-  std::string text;
-  int x = 8;
-  int y = 8;
-  int scale = 1;
-  int w = 80;   // bar 用
-  int h = 8;    // bar 用
-  std::string value_attr;  // bar：当前值取哪个属性（空 = hp）
-  std::string max_attr;    // bar：上限取哪个属性（空 = hp_max）
-  std::string object;      // 用对象做血条：显示它的动画前 N 帧（N = 当前值）
-  int frame = 0;                       // 图片：显示对象的第几帧
-  std::string visible_variable;
-  int visible_value = 1;
-};
-
 struct SceneDoc {
   int format_version = kSceneFormatVersion;
   std::string id;
@@ -146,8 +128,7 @@ struct SceneDoc {
   int win_score = 0;        // 分数达到就通关（0 = 不判定；射击类关卡用）
   bool objects_locked = false;  // 编辑器只读：对象层锁定
   std::map<std::string, int> variables;  // 场景初始变量
-  std::vector<UiTextDef> ui_texts;  // 旧 UI（保留给旧工程）
-  std::string hud_ui;  // v7: 引用工程里的 UiScreenDoc id；空 = 用旧 ui_texts
+  std::string hud_ui;  // 引用工程里的 UiScreenDoc id；空 = 无 HUD
   std::vector<TriggerDef> triggers;
   std::vector<std::string> controlled;  // 受控实例 id；v1 只用第一个
   JsonValue raw;

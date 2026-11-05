@@ -645,29 +645,6 @@ bool SceneLoad(const std::filesystem::path& path, SceneDoc* out,
   if (!ReadInt(root, "win_score", &win_score, &found, error)) return false;
   if (found) s.win_score = win_score;
   if (!ReadBool(root, "objects_locked", &s.objects_locked, &found, error)) return false;
-  const JsonValue* uit = root.Find("ui_texts");
-  if (uit != nullptr && uit->IsArray()) {
-    for (const JsonValue& uv : uit->items) {
-      if (!uv.IsObject()) continue;
-      UiTextDef t;
-      if (!ReadString(uv, "id", &t.id, &found, error)) return false;
-      if (!ReadString(uv, "text", &t.text, &found, error)) return false;
-      if (!ReadInt(uv, "x", &t.x, &found, error)) return false;
-      if (!ReadInt(uv, "y", &t.y, &found, error)) return false;
-      if (!ReadInt(uv, "scale", &t.scale, &found, error)) return false;
-      if (!ReadString(uv, "type", &t.type, &found, error)) return false;
-      if (!ReadInt(uv, "w", &t.w, &found, error)) return false;
-      if (!ReadInt(uv, "h", &t.h, &found, error)) return false;
-      if (!ReadString(uv, "value_attr", &t.value_attr, &found, error)) return false;
-      if (!ReadString(uv, "max_attr", &t.max_attr, &found, error)) return false;
-      if (!ReadString(uv, "object", &t.object, &found, error)) return false;
-      if (!ReadInt(uv, "frame", &t.frame, &found, error)) return false;
-      if (!ReadString(uv, "visible_variable", &t.visible_variable, &found, error)) return false;
-      if (!ReadInt(uv, "visible_value", &t.visible_value, &found, error)) return false;
-      if (t.scale < 1) t.scale = 1;
-      s.ui_texts.push_back(std::move(t));
-    }
-  }
   const JsonValue* triggers = root.Find("triggers");
   if (triggers != nullptr && triggers->IsArray()) {
     for (const JsonValue& tv : triggers->items) {
@@ -884,38 +861,6 @@ void SceneSyncRaw(SceneDoc* s) {
     variables.Set(entry.first, JsonValue::Number(static_cast<double>(entry.second)));
   }
   root.Set("variables", std::move(variables));
-  {
-    JsonValue ui = JsonValue::Array();
-    for (const UiTextDef& t : s->ui_texts) {
-      JsonValue uv = JsonValue::Object();
-      uv.Set("id", JsonValue::String(t.id));
-      uv.Set("type", JsonValue::String(t.type));
-      uv.Set("text", JsonValue::String(t.text));
-      uv.Set("x", JsonValue::Number(static_cast<double>(t.x)));
-      uv.Set("y", JsonValue::Number(static_cast<double>(t.y)));
-      uv.Set("scale", JsonValue::Number(static_cast<double>(t.scale)));
-      if (t.type == "bar") {
-        uv.Set("w", JsonValue::Number(static_cast<double>(t.w)));
-        uv.Set("h", JsonValue::Number(static_cast<double>(t.h)));
-      }
-      if (t.type == "bar") {
-        uv.Set("value_attr", JsonValue::String(t.value_attr));
-        uv.Set("max_attr", JsonValue::String(t.max_attr));
-      }
-      if ((t.type == "bar" || t.type == "image") && !t.object.empty()) {
-        uv.Set("object", JsonValue::String(t.object));
-      }
-      if (t.type == "image") {
-        uv.Set("frame", JsonValue::Number(static_cast<double>(t.frame)));
-      }
-      if (!t.visible_variable.empty()) {
-        uv.Set("visible_variable", JsonValue::String(t.visible_variable));
-        uv.Set("visible_value", JsonValue::Number(static_cast<double>(t.visible_value)));
-      }
-      ui.Push(std::move(uv));
-    }
-    root.Set("ui_texts", std::move(ui));
-  }
   JsonValue triggers = JsonValue::Array();
   for (const TriggerDef& t : s->triggers) {
     JsonValue tv = JsonValue::Object();

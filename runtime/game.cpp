@@ -91,36 +91,6 @@ int ActionFrameAt(const Action& a, float time, bool* ended) {
   return idx;
 }
 
-void DrawHudText(eng::DrawList& dl, const char* text, float x, float y, float scale,
-                 eng::u32 color) {
-  const eng::TextureId tex = eng::FontTexture();
-  if (tex == 0 || text == nullptr) return;
-  float pen = x;
-  const char* p = text;
-  while (*p != '\0') {
-    eng::u32 cp = 0;
-    const int n = eng::Utf8Decode(p, &cp);
-    if (n <= 0) break;
-    p += n;
-    if (cp == ' ') {
-      pen += 4.0f * scale;
-      continue;
-    }
-    eng::GlyphView g;
-    eng::FontGlyph(cp, &g);
-    if (g.w > 0 && g.h > 0) {
-      dl.DrawImage(eng::Rect2{eng::Vec2{pen + g.dx * scale, y + g.dy * scale},
-                              eng::Vec2{g.w * scale, g.h * scale}},
-                   tex, color, eng::TexRegion::Make(g.x, g.y, g.w, g.h));
-    }
-    pen += static_cast<float>(g.advance) * scale;
-  }
-}
-
-int HudTextWidth(const char* text, float scale) {
-  return static_cast<int>(static_cast<float>(eng::FontMeasure(text, 0)) * scale);
-}
-
 const Object* FindPlayerObject(const P3d& p, const Scene& s, int* out_index) {
   *out_index = -1;
   int idx = s.controlled;
@@ -672,7 +642,7 @@ void Game::DrawToast(eng::DrawList& dl, const eng::TextureId* textures,
     char buf[128];
     std::snprintf(buf, sizeof(buf), "X %.0f Y %.0f ACT %d", player_.x, player_.y,
                   active_interaction_);
-    eng::DrawPixelText(dl, 4.0f, 4.0f, buf, 0xFF00FF00u, 1);
+    UiDrawTextLine(dl, 4, 4, buf, 0xFF00FF00u, 0, 0);
     for (size_t i = 0; i < sc.triggers.size(); ++i) {
       const Trigger& t = sc.triggers[i];
       if (!t.interaction.enabled && t.mods.empty()) continue;
@@ -682,174 +652,13 @@ void Game::DrawToast(eng::DrawList& dl, const eng::TextureId* textures,
                              eng::Vec2{static_cast<float>(t.w), static_cast<float>(t.h)}},
                   0xFF00FFFFu);
       std::snprintf(buf, sizeof(buf), "%d", static_cast<int>(i));
-      eng::DrawPixelText(dl, x0 + 2.0f, y0 + 2.0f, buf, 0xFF00FFFFu, 1);
-    }
-  }
-  // 场景 UI 文本（屏幕坐标，visible_variable 为空 = 一直显示）
-  if (p3d_ != nullptr && !p3d_->scenes.empty()) {
-    const Scene& sc = p3d_->scenes[scene_index_];
-    if (sc.hud_ui < 0) {
-    for (const Scene::UiText& u : sc.ui_texts) {
-      // ★ 血条：直接用属性算比例，不用写规则 ★
-      // ★ 图片元素：画对象动画的某一帧（图标、头像、心形…）★
-      if (u.type == "image" && !u.object.empty() && textures != nullptr) {
-        const Object* img_obj = nullptr;
-        for (const Object& o : p3d_->objects) {
-          if (o.id == u.object) img_obj = &o;
-        }
-        if (img_obj != nullptr && img_obj->image >= 0 &&
-            img_obj->image < texture_count && !img_obj->actions.empty()) {
-          const Action& act = img_obj->actions[0];
-          if (!act.frames.empty()) {
-            const size_t fi = static_cast<size_t>(
-                std::max(0, std::min(u.frame,
-                                     static_cast<int>(act.frames.size()) - 1)));
-            const int fw = std::max(1, img_obj->frame_w);
-            const int fh = std::max(1, img_obj->frame_h);
-            const int tex_w = p3d_->images[static_cast<size_t>(img_obj->image)].width;
-            const int cols = std::max(1, tex_w / fw);
-            const int frame_no = act.frames[fi].image;
-            const int tc = frame_no % cols;
-            const int tr = frame_no / cols;
-            dl.DrawImage(eng::Rect2{eng::Vec2{static_cast<float>(u.x),
-                                             static_cast<float>(u.y)},
-                                    eng::Vec2{static_cast<float>(fw),
-                                              static_cast<float>(fh)}},
-                         textures[img_obj->image], 0xFFFFFFFFu,
-                         eng::TexRegion::Make(tc * fw, tr * fh, fw, fh));
-          }
-        }
-        continue;
-      }
-      if (u.type == "bar") {
-        // ★ 用对象动画做血条：显示前 N 帧，N = 当前值（PGMMV 那种）★
-        if (!u.object.empty() && textures != nullptr) {
-          const Object* barobj = nullptr;
-          for (const Object& o : p3d_->objects) {
-            if (o.id == u.object) barobj = &o;
-          }
-          if (barobj != nullptr && barobj->image >= 0 &&
-              barobj->image < texture_count && barobj->actions.size() > 0) {
-            const Action& act = barobj->actions[0];
-            const std::string vn = u.value_attr.empty() ? "hp" : u.value_attr;
-            int cur = 0;
-            auto it = player_.attrs.find(vn);
-            if (it != player_.attrs.end()) {
-              cur = it->second;
-            } else if (vn == "hp") {
-              cur = player_.hp;
-            }
-            const int fw = std::max(1, barobj->frame_w);
-            const int fh = std::max(1, barobj->frame_h);
-            const int tex_w = p3d_->images[static_cast<size_t>(barobj->image)].width;
-            const int cols = std::max(1, tex_w / fw);
-            const int count = std::min(cur, static_cast<int>(act.frames.size()));
-            for (int k = 0; k < count; ++k) {
-              const int fi = act.frames[static_cast<size_t>(k)].image;
-              const int tc = fi % cols;
-              const int tr = fi / cols;
-              const float x = static_cast<float>(u.x) + static_cast<float>(k) * fw;
-              dl.DrawImage(eng::Rect2{eng::Vec2{x, static_cast<float>(u.y)},
-                                      eng::Vec2{static_cast<float>(fw),
-                                                static_cast<float>(fh)}},
-                           textures[barobj->image], 0xFFFFFFFFu,
-                           eng::TexRegion::Make(tc * fw, tr * fh, fw, fh));
-            }
-            continue;
-          }
-        }
-        const std::string vname = u.value_attr.empty() ? "hp" : u.value_attr;
-        const std::string mname = u.max_attr.empty() ? "hp_max" : u.max_attr;
-        // 属性表是唯一数据源；只有"没配属性"的老对象才退回 player_.hp
-        int cur = 0;
-        int mx = 0;
-        auto vit = player_.attrs.find(vname);
-        if (vit != player_.attrs.end()) {
-          cur = vit->second;
-        } else if (vname == "hp") {
-          cur = player_.hp;
-        }
-        auto mit = player_.attrs.find(mname);
-        if (mit != player_.attrs.end()) mx = mit->second;
-        if (mx <= 0) mx = player_.hp > 0 ? player_.hp : 100;
-        float ratio = static_cast<float>(cur) / static_cast<float>(mx);
-        ratio = ratio < 0.0f ? 0.0f : (ratio > 1.0f ? 1.0f : ratio);
-        const float w = static_cast<float>(std::max(1, u.w));
-        const float h = static_cast<float>(std::max(1, u.h));
-        const float x = static_cast<float>(u.x);
-        const float y = static_cast<float>(u.y);
-        dl.DrawRect(eng::Rect2{eng::Vec2{x - 1.0f, y - 1.0f},
-                               eng::Vec2{w + 2.0f, h + 2.0f}},
-                    0xFF202020u);
-        dl.DrawRect(eng::Rect2{eng::Vec2{x, y}, eng::Vec2{w, h}}, 0xFF401010u);
-        if (ratio > 0.0f) {
-          dl.DrawRect(eng::Rect2{eng::Vec2{x, y}, eng::Vec2{w * ratio, h}},
-                      0xFFE04040u);
-        }
-        continue;
-      }
-      if (u.text.empty()) continue;
-      // 被当前交互点引用 → 无条件显示（是否显示由"玩家在不在区域内"决定）
-      bool forced = false;
-      if (active_interaction_ >= 0 &&
-          sc.triggers.size() > static_cast<size_t>(active_interaction_)) {
-        forced = (sc.triggers[static_cast<size_t>(active_interaction_)].interaction.ui_id == u.id);
-      }
-      if (!forced && !u.visible_variable.empty()) {
-        auto it = variables_.find(u.visible_variable);
-        const int v = it == variables_.end() ? 0 : it->second;
-        if (v != u.visible_value) continue;
-      }
-      // ★ 文字绑定：{hp} {score} {lives} {var:名字} {attr:名字} ★
-      std::string shown = u.text;
-      {
-        std::string out;
-        for (size_t i = 0; i < shown.size();) {
-          if (shown[i] != '{') {
-            out.push_back(shown[i++]);
-            continue;
-          }
-          const size_t e = shown.find('}', i);
-          if (e == std::string::npos) {
-            out.append(shown.substr(i));
-            break;
-          }
-          const std::string key = shown.substr(i + 1, e - i - 1);
-          int value = 0;
-          bool ok = true;
-          if (key == "hp") {
-            value = player_.hp;
-          } else if (key == "score") {
-            value = score_;
-          } else if (key == "lives") {
-            value = lives_;
-          } else if (key.rfind("var:", 0) == 0) {
-            auto it = variables_.find(key.substr(4));
-            value = it == variables_.end() ? 0 : it->second;
-          } else if (key.rfind("attr:", 0) == 0) {
-            auto it = player_.attrs.find(key.substr(5));
-            value = it == player_.attrs.end() ? 0 : it->second;
-          } else {
-            ok = false;
-          }
-          if (ok) {
-            out += std::to_string(value);
-          } else {
-            out.append(shown, i, e - i + 1);  // 不认识的占位符原样保留
-          }
-          i = e + 1;
-        }
-        shown = out;
-      }
-      eng::DrawPixelText(dl, static_cast<float>(u.x), static_cast<float>(u.y),
-                         shown.c_str(), 0xFFFFFFFFu, std::max(1, u.scale));
-    }
+      UiDrawTextLine(dl, static_cast<int>(x0 + 2), static_cast<int>(y0 + 2), buf,
+                 0xFF00FFFFu, 0, 0);
     }
   }
   DrawUiScreens(dl, textures, texture_count);
   if (toast_timer_ <= 0.0f || toast_.empty()) return;
-  const float w = eng::PixelTextWidth(toast_, 2);
-  eng::DrawPixelText(dl, (view_w_ - w) * 0.5f, 12.0f, toast_, 0xFFFFFFFFu, 2);
+  UiDrawTextLine(dl, 0, 12, toast_, 0xFFFFFFFFu, 1, view_w_);
 }
 
 int Game::UiValue(const char* name) const {
@@ -972,7 +781,7 @@ void Game::RenderHShooter(eng::DrawList& dl, const eng::TextureId* textures,
     }
   }
   if (eng::FontTexture() != 0 && game_over_) {
-    DrawHudText(dl, "GAME OVER", 140.0f, 150.0f, 2.0f, 0xFFFF5050u);
+    UiDrawTextLine(dl, 0, 150, "GAME OVER", 0xFFFF5050u, 1, view_w_);
   }
 }
 
@@ -2772,7 +2581,7 @@ void Game::RenderShooter(eng::DrawList& dl, const eng::TextureId* textures,
   }
 
   if (game_over_ && eng::FontTexture() != 0) {
-    DrawHudText(dl, "GAME OVER", 135.0f, 150.0f, 3.0f, 0xFFFF5050u);
+    UiDrawTextLine(dl, 0, 150, "GAME OVER", 0xFFFF5050u, 1, view_w_);
   }
 }
 
@@ -2951,14 +2760,8 @@ void Game::RenderPlatformer(eng::DrawList& dl, const eng::TextureId* textures,
 
   draw_layers(true);
 
-  const eng::TextureId font = eng::FontTexture();
-  if (font != 0) {
-    if (won_) {
-      const char* clear = "CLEAR!";
-      DrawHudText(dl, clear,
-                  view_w_ * 0.5f - static_cast<float>(HudTextWidth(clear, 2.0f)) * 0.5f,
-                  92.0f, 2.0f, 0xFFFFFFFFu);
-    }
+  if (won_) {
+    UiDrawTextLine(dl, 0, 92, "CLEAR!", 0xFFFFFFFFu, 1, view_w_);
   }
 
 }

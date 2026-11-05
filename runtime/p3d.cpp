@@ -349,29 +349,6 @@ bool ReadScene(Reader& r, Scene* s, std::string* error) {
     const std::string key = r.Str();
     s->variables[key] = r.I32();
   }
-  const uint16_t un = r.U16();
-  if (!r.ok || un > 256) {
-    SetErr(error, "p3d: bad ui text count");
-    return false;
-  }
-  for (uint16_t i = 0; i < un; ++i) {
-    Scene::UiText u;
-    u.id = r.Str();
-    u.text = r.Str();
-    u.x = r.I32();
-    u.y = r.I32();
-    u.scale = r.I32();
-    u.visible_variable = r.Str();
-    u.visible_value = r.I32();
-    u.type = r.Str();
-    u.w = r.I32();
-    u.h = r.I32();
-    u.value_attr = r.Str();
-    u.max_attr = r.Str();
-    u.object = r.Str();
-    u.frame = r.I32();
-    s->ui_texts.push_back(std::move(u));
-  }
   const uint16_t tn = r.U16();
   if (!r.ok || tn > 512) {
     SetErr(error, "p3d: bad trigger count");
@@ -968,23 +945,6 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
     for (const auto& entry : s.variables) {
       w.Str(entry.first);
       w.I32(entry.second);
-    }
-    w.U16(static_cast<uint16_t>(s.ui_texts.size()));
-    for (const Scene::UiText& u : s.ui_texts) {
-      w.Str(u.id);
-      w.Str(u.text);
-      w.I32(u.x);
-      w.I32(u.y);
-      w.I32(u.scale);
-      w.Str(u.visible_variable);
-      w.I32(u.visible_value);
-      w.Str(u.type);
-      w.I32(u.w);
-      w.I32(u.h);
-      w.Str(u.value_attr);
-      w.Str(u.max_attr);
-      w.Str(u.object);
-      w.I32(u.frame);
     }
     w.U16(static_cast<uint16_t>(s.triggers.size()));
     for (const Trigger& t : s.triggers) {

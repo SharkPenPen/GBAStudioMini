@@ -120,6 +120,10 @@ std::vector<std::string> UiWrapText(const std::string& text, int max_w,
 // 画一个界面（含一层子元素）。
 void UiDrawScreen(const UiScreen& screen, const UiDrawContext& ctx);
 
+// 单行文字（HUD / toast 用）；max_w > 0 时自动换行。
+void UiDrawTextLine(eng::DrawList& dl, int x, int y, const std::string& text,
+                    eng::u32 color, int align, int max_w);
+
 // p3d 数据 → 运行时元素；image 下标通过 textures 解析。
 UiElement UiElementFromData(const UiElementData& d, const eng::TextureId* textures,
                             int texture_count);
