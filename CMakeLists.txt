@@ -37,7 +37,9 @@ add_custom_target(check-include-deps
   COMMENT "check-include-deps: engine must not include editor"
   VERBATIM)
 
+enable_testing()
 add_subdirectory(engine)
 add_subdirectory(runtime)
 add_subdirectory(pgmmv)
 add_subdirectory(editor)
+add_subdirectory(tests)
