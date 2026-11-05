@@ -12,7 +12,8 @@
 namespace r4 {
 
 constexpr uint32_t kP3dMagic = 0x31443350u;  // "P3D1" little-endian
-constexpr uint32_t kP3dVersion = 80;  // 80: 标题界面 / 按钮仅存档可见
+constexpr uint32_t kP3dVersion = 81;  // 81: 区域规则
+                                      // 80: 标题界面 / 按钮仅存档可见
                                       // 79: UI 淡出帧数
                                       // 78: UI 列表项 / 淡入帧数
                                       // 77: UI 按钮 / 关闭方式
@@ -265,6 +266,14 @@ struct TriggerInteraction {
   std::vector<TriggerAction> actions;
 };
 
+struct TriggerRule {
+  bool enabled = true;
+  int mode = 0;  // 0 enter / 1 exit / 2 inside
+  std::string require_variable;
+  int require_value = 0;
+  std::vector<TriggerAction> actions;
+};
+
 struct Trigger {
   TriggerInteraction interaction;  // v37
   std::string name;            // v32
@@ -282,6 +291,7 @@ struct Trigger {
   std::vector<TriggerAction> exit_actions;    // v46：离开时
   std::vector<TriggerAction> inside_actions;  // v47：在里面时
   int inside_interval = 30;                   // v47：每 N 帧
+  std::vector<TriggerRule> rules;             // v81
 };
 
 struct Scene {

@@ -4845,6 +4845,46 @@ void DrawScenePageRight() {
       ImGui::SameLine();
       ImGui::TextDisabled("帧间隔");
     }
+    ImGui::SeparatorText("区域规则");
+    int del_rule = -1;
+    for (int ri = 0; ri < static_cast<int>(trg.rules.size()); ++ri) {
+      pgmmv::TriggerRuleDef& rule = trg.rules[static_cast<size_t>(ri)];
+      ImGui::PushID(7000 + ri);
+      if (ImGui::Checkbox("启用", &rule.enabled)) MarkDirty();
+      const char* modes[] = {"进入", "离开", "在里面"};
+      int mode = std::max(0, std::min(2, rule.mode));
+      ImGui::SetNextItemWidth(90.0f);
+      if (ImGui::Combo("##rmode", &mode, modes, 3)) {
+        rule.mode = mode;
+        MarkDirty();
+      }
+      ImGui::SameLine();
+      char var_buf[64];
+      std::snprintf(var_buf, sizeof(var_buf), "%s", rule.require_variable.c_str());
+      ImGui::SetNextItemWidth(120.0f);
+      if (ImGui::InputTextWithHint("##rvar", "变量(空=总是)", var_buf,
+                                   sizeof(var_buf))) {
+        rule.require_variable = var_buf;
+        MarkDirty();
+      }
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(60.0f);
+      if (ImGui::InputInt("##rval", &rule.require_value)) MarkDirty();
+      draw_actions("规则动作", &rule.actions, 0);
+      if (ImGui::SmallButton("删除规则")) del_rule = ri;
+      ImGui::PopID();
+    }
+    if (del_rule >= 0) {
+      PushUndo();
+      trg.rules.erase(trg.rules.begin() + del_rule);
+      MarkDirty();
+    }
+    if (ImGui::Button("+ 规则", ImVec2(-1.0f, 22.0f))) {
+      PushUndo();
+      pgmmv::TriggerRuleDef rule;
+      trg.rules.push_back(rule);
+      MarkDirty();
+    }
 
     char namebuf[64];
     std::snprintf(namebuf, sizeof(namebuf), "%s", trg.name.c_str());

@@ -41,6 +41,14 @@ struct TriggerAction {
 };
 
 // 交互点：进区域显示提示，按键执行动作（门/桌子/NPC）
+struct TriggerRuleDef {
+  bool enabled = true;
+  int mode = 0;  // 0 enter / 1 exit / 2 inside
+  std::string require_variable;
+  int require_value = 0;
+  std::vector<TriggerAction> actions;
+};
+
 struct TriggerInteraction {
   bool enabled = false;
   std::string prompt;              // 提示文字（备用）
@@ -70,6 +78,7 @@ struct TriggerDef {
   std::vector<TriggerAction> exit_actions;  // 离开时
   std::vector<TriggerAction> inside_actions;  // 在里面时（每 inside_interval 帧）
   int inside_interval = 30;                   // tick
+  std::vector<TriggerRuleDef> rules;          // 区域规则
 };
 
 struct SceneChunk {

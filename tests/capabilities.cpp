@@ -152,6 +152,32 @@ void TestModalStack() {
   CHECK(game.UiValue("done") == 1);
 }
 
+void TestZoneRule() {
+  r4::P3d p = BaseP3d();
+  r4::Trigger zone;
+  zone.x = 80;
+  zone.y = 80;
+  zone.w = 80;
+  zone.h = 80;
+  zone.once = false;
+  r4::TriggerRule rule;
+  rule.enabled = true;
+  rule.mode = 0;
+  r4::TriggerAction set_rule;
+  set_rule.type = 2;
+  set_rule.target = "g:rule";
+  set_rule.value = 9;
+  rule.actions.push_back(set_rule);
+  zone.rules.push_back(rule);
+  p.scenes[0].triggers.push_back(zone);
+
+  r4::Game game;
+  std::string err;
+  CHECK(game.Init(p, &err));
+  game.Update(1.0f / 60.0f, EmptyInput());
+  CHECK(game.UiValue("g:rule") == 9);
+}
+
 void TestTitleScreen() {
   r4::P3d p = BaseP3d();
   r4::UiScreenData title;
@@ -353,6 +379,22 @@ void TestP3dRoundTrip() {
   label.y = 10;
   hud.elements.push_back(label);
   p.title_ui = 0;
+  r4::Trigger zone;
+  zone.x = 80;
+  zone.y = 80;
+  zone.w = 80;
+  zone.h = 80;
+  zone.once = false;
+  r4::TriggerRule rule;
+  rule.enabled = true;
+  rule.mode = 0;
+  r4::TriggerAction set_rule;
+  set_rule.type = 2;
+  set_rule.target = "g:rule";
+  set_rule.value = 9;
+  rule.actions.push_back(set_rule);
+  zone.rules.push_back(rule);
+  p.scenes[0].triggers.push_back(zone);
   hud.fade_frames = 3;
   hud.fade_out_frames = 4;
   label.items.push_back("a");
@@ -378,6 +420,10 @@ void TestP3dRoundTrip() {
   CHECK(q.ui_screens[0].fade_frames == 3);
   CHECK(q.title_ui == 0);
   CHECK(q.ui_screens[0].fade_out_frames == 4);
+  CHECK(q.scenes[0].triggers.size() == 1);
+  if (!q.scenes[0].triggers.empty()) {
+    CHECK(q.scenes[0].triggers[0].rules.size() == 1);
+  }
   if (!q.ui_screens.empty()) {
     CHECK(q.ui_screens[0].elements.size() == 1);
     CHECK(q.ui_screens[0].elements[0].items.size() == 2);
@@ -541,6 +587,7 @@ int main() {
   std::printf("trigger...\n"); TestTriggerWin();
   std::printf("modal...\n"); TestModalStack();
   std::printf("save/load...\n"); TestSaveLoad();
+  std::printf("zone rule...\n"); TestZoneRule();
   std::printf("title...\n"); TestTitleScreen();
   std::printf("modal list...\n"); TestModalList();
   std::printf("camera...\n"); TestFixedCameraCenters();

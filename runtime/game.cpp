@@ -1980,8 +1980,22 @@ void Game::UpdateTriggers() {
     return !(x1 <= static_cast<float>(t.x) || x0 >= static_cast<float>(t.x + t.w) ||
              y1 <= static_cast<float>(t.y) || y0 >= static_cast<float>(t.y + t.h));
   };
+  auto rule_ok = [&](const TriggerRule& rule) {
+    if (!rule.enabled) return false;
+    if (rule.require_variable.empty()) return true;
+    auto it = variables_.find(rule.require_variable);
+    const int value = it == variables_.end() ? 0 : it->second;
+    return value == rule.require_value;
+  };
   for (size_t i = 0; i < s.triggers.size(); ++i) {
     const Trigger& t = s.triggers[i];
+    auto run_rules = [&](int mode) {
+      for (const TriggerRule& rule : t.rules) {
+        if (rule.mode != mode || !rule_ok(rule)) continue;
+        if (RunTriggerList(t, rule.actions)) return true;
+      }
+      return false;
+    };
     bool overlap = false;
     if (t.target_object >= 0) {
       for (const SceneObject& so : s.objects) {
@@ -2012,16 +2026,18 @@ void Game::UpdateTriggers() {
     if (overlap) {
       if (!was_inside) trigger_tick_[i] = 0;
       ++trigger_tick_[i];
-      if (!t.inside_actions.empty() && t.inside_interval > 0 &&
+      if (t.inside_interval > 0 &&
           (trigger_tick_[i] % static_cast<unsigned>(t.inside_interval)) == 0) {
-        if (RunTriggerInsideActions(t)) return;
+        if (run_rules(2)) return;
+        if (!t.inside_actions.empty() && RunTriggerInsideActions(t)) return;
       }
     } else {
       trigger_tick_[i] = 0;
     }
-    // 离开：跑 exit_actions（不判断 once）
-    if (!overlap && was_inside && !t.exit_actions.empty()) {
-      if (RunTriggerExitActions(t)) return;
+    // 离开：跑 exit rules / exit_actions（不判断 once）
+    if (!overlap && was_inside) {
+      if (run_rules(1)) return;
+      if (!t.exit_actions.empty() && RunTriggerExitActions(t)) return;
     }
     if (!overlap) continue;
     if (t.once && trigger_done_[i] != 0) continue;
@@ -2032,6 +2048,7 @@ void Game::UpdateTriggers() {
     }
     if (was_inside && t.once) continue;
     trigger_done_[i] = 1;
+    if (run_rules(0)) return;
     if (RunTriggerActions(t)) return;
   }
 }

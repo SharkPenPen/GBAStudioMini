@@ -434,6 +434,31 @@ bool ReadScene(Reader& r, Scene* s, std::string* error) {
     }
     t.inside_interval = r.I32();
     if (t.inside_interval < 1) t.inside_interval = 1;
+    const uint16_t rn = r.U16();
+    if (!r.ok || rn > 64) {
+      SetErr(error, "p3d: bad zone rule count");
+      return false;
+    }
+    for (uint16_t ri = 0; ri < rn; ++ri) {
+      TriggerRule rule;
+      rule.enabled = r.U8() != 0;
+      rule.mode = r.U8();
+      rule.require_variable = r.Str();
+      rule.require_value = r.I32();
+      const uint16_t an2 = r.U16();
+      if (!r.ok || an2 > 16) {
+        SetErr(error, "p3d: bad zone rule action count");
+        return false;
+      }
+      for (uint16_t ai = 0; ai < an2; ++ai) {
+        TriggerAction action;
+        action.type = r.U8();
+        action.target = r.Str();
+        action.value = r.I32();
+        rule.actions.push_back(std::move(action));
+      }
+      t.rules.push_back(std::move(rule));
+    }
     s->triggers.push_back(std::move(t));
   }
   const uint16_t lc = r.U16();
@@ -1022,6 +1047,19 @@ bool P3dSave(const std::filesystem::path& path, const P3d& p,
         w.I32(a.value);
       }
       w.I32(t.inside_interval);
+      w.U16(static_cast<uint16_t>(std::min<size_t>(64, t.rules.size())));
+      for (const TriggerRule& rule : t.rules) {
+        w.U8(rule.enabled ? 1 : 0);
+        w.U8(static_cast<uint8_t>(rule.mode));
+        w.Str(rule.require_variable);
+        w.I32(rule.require_value);
+        w.U16(static_cast<uint16_t>(std::min<size_t>(16, rule.actions.size())));
+        for (const TriggerAction& a : rule.actions) {
+          w.U8(static_cast<uint8_t>(a.type));
+          w.Str(a.target);
+          w.I32(a.value);
+        }
+      }
     }
     w.U16(static_cast<uint16_t>(s.layers.size()));
     for (const SceneLayer& layer : s.layers) {

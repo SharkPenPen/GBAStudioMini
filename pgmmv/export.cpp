@@ -959,6 +959,21 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
         rt.inside_actions.push_back(std::move(ra));
       }
       rt.inside_interval = t.inside_interval;
+      for (const TriggerRuleDef& rule : t.rules) {
+        r4::TriggerRule rr;
+        rr.enabled = rule.enabled;
+        rr.mode = rule.mode;
+        rr.require_variable = rule.require_variable;
+        rr.require_value = rule.require_value;
+        for (const TriggerAction& a : rule.actions) {
+          r4::TriggerAction ra;
+          ExportTriggerActionType(a.type, &ra.type);
+          ra.target = a.target;
+          ra.value = a.value;
+          rr.actions.push_back(std::move(ra));
+        }
+        rt.rules.push_back(std::move(rr));
+      }
       rs.triggers.push_back(std::move(rt));
     }
     if (!s.hud_ui.empty()) {

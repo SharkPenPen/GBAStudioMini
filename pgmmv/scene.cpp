@@ -726,6 +726,26 @@ bool SceneLoad(const std::filesystem::path& path, SceneDoc* out,
       int inside_n = 0;
       if (!ReadInt(tv, "inside_interval", &inside_n, &found, error)) return false;
       if (found) t.inside_interval = std::max(1, inside_n);
+      const JsonValue* rules = tv.Find("rules");
+      if (rules != nullptr && rules->IsArray()) {
+        for (const JsonValue& rv : rules->items) {
+          if (!rv.IsObject()) continue;
+          TriggerRuleDef rule;
+          if (!ReadBool(rv, "enabled", &rule.enabled, &found, error)) return false;
+          int mode = 0;
+          if (!ReadInt(rv, "mode", &mode, &found, error)) return false;
+          if (found) rule.mode = mode;
+          if (!ReadString(rv, "require_variable", &rule.require_variable, &found,
+                          error)) {
+            return false;
+          }
+          int rv_value = 0;
+          if (!ReadInt(rv, "require_value", &rv_value, &found, error)) return false;
+          if (found) rule.require_value = rv_value;
+          if (!read_actions(rv.Find("actions"), &rule.actions)) return false;
+          t.rules.push_back(std::move(rule));
+        }
+      }
       s.triggers.push_back(std::move(t));
     }
   }
@@ -930,6 +950,21 @@ void SceneSyncRaw(SceneDoc* s) {
       tv.Set("inside_actions", write_actions(t.inside_actions));
       tv.Set("inside_interval",
              JsonValue::Number(static_cast<double>(t.inside_interval)));
+    }
+    if (!t.rules.empty()) {
+      JsonValue rules = JsonValue::Array();
+      for (const TriggerRuleDef& rule : t.rules) {
+        JsonValue rv = JsonValue::Object();
+        rv.Set("enabled", JsonValue::Bool(rule.enabled));
+        rv.Set("mode", JsonValue::Number(rule.mode));
+        if (!rule.require_variable.empty()) {
+          rv.Set("require_variable", JsonValue::String(rule.require_variable));
+          rv.Set("require_value", JsonValue::Number(rule.require_value));
+        }
+        rv.Set("actions", write_actions(rule.actions));
+        rules.Push(std::move(rv));
+      }
+      tv.Set("rules", std::move(rules));
     }
     triggers.Push(std::move(tv));
   }
