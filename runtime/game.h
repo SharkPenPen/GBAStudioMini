@@ -164,6 +164,8 @@ class Game {
                      int texture_count) const;
   void OpenUiById(const std::string& id);
   void CloseUi();
+  void MoveModalFocus(int dir);
+  void ActivateModalFocus();
   void UpdateInteraction(const eng::InputState& input);
   void RunPlayerRules(const Object& o, const eng::InputState& input, float dt);
   void RunEnemyRules(const Object& o, EnemyState& e, float dt);
@@ -239,6 +241,11 @@ class Game {
   int shooter_effect_object_ = -1;
   std::map<std::string, int> variables_;
   std::vector<int> modal_stack_;
+  int modal_focus_ = -1;
+  int modal_timer_ = 0;
+  bool has_pending_ui_ = false;
+  Trigger pending_trigger_;
+  std::vector<TriggerAction> pending_actions_;
   float shooter_time_ = 0.0f;
   float hscroll_x_ = 0.0f;
   float vscroll_y_ = 0.0f;  // 纵版卷轴累计偏移（正 = 内容往下走）

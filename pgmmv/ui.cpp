@@ -64,6 +64,9 @@ void ReadElement(const JsonValue& v, UiElementDoc* e) {
   ReadStr(v, "visible_var", &e->visible_var);
   ReadInt(v, "visible_value", &e->visible_value);
   ReadInt(v, "padding", &e->padding);
+  ReadStr(v, "action", &e->action);
+  ReadStr(v, "action_target", &e->action_target);
+  ReadInt(v, "action_value", &e->action_value);
   const JsonValue* children = v.Find("children");
   if (children != nullptr && children->IsArray()) {
     for (const JsonValue& cv : children->items) {
@@ -109,6 +112,9 @@ JsonValue WriteElement(const UiElementDoc& e) {
   o.Set("visible_var", JsonValue::String(e.visible_var));
   o.Set("visible_value", JsonValue::Number(e.visible_value));
   o.Set("padding", JsonValue::Number(e.padding));
+  o.Set("action", JsonValue::String(e.action));
+  o.Set("action_target", JsonValue::String(e.action_target));
+  o.Set("action_value", JsonValue::Number(e.action_value));
   JsonValue children = JsonValue::Array();
   for (const UiElementDoc& c : e.children) children.Push(WriteElement(c));
   o.Set("children", std::move(children));
@@ -138,6 +144,8 @@ bool UiScreenLoad(const std::filesystem::path& path, UiScreenDoc* out,
   ReadStr(root, "name", &out->name);
   ReadBool(root, "modal", &out->modal);
   ReadStr(root, "layout", &out->layout);
+  ReadInt(root, "dismiss", &out->dismiss);
+  ReadInt(root, "dismiss_frames", &out->dismiss_frames);
   const JsonValue* elements = root.Find("elements");
   if (elements != nullptr && elements->IsArray()) {
     for (const JsonValue& ev : elements->items) {
@@ -158,6 +166,8 @@ bool UiScreenSave(const std::filesystem::path& path, UiScreenDoc* doc,
   root.Set("name", JsonValue::String(doc->name));
   root.Set("modal", JsonValue::Bool(doc->modal));
   root.Set("layout", JsonValue::String(doc->layout));
+  root.Set("dismiss", JsonValue::Number(doc->dismiss));
+  root.Set("dismiss_frames", JsonValue::Number(doc->dismiss_frames));
   JsonValue elements = JsonValue::Array();
   for (const UiElementDoc& e : doc->elements) elements.Push(WriteElement(e));
   root.Set("elements", std::move(elements));

@@ -48,6 +48,9 @@ struct UiElementDoc {
   std::string visible_var;
   int visible_value = 1;
   int padding = 0;
+  std::string action;         // button: close / open_ui / set_var / scene
+  std::string action_target;
+  int action_value = 0;
   std::vector<UiElementDoc> children;
 
   JsonValue raw;
@@ -58,6 +61,8 @@ struct UiScreenDoc {
   std::string name;
   bool modal = false;
   std::string layout = "screen";  // screen / safe
+  int dismiss = 0;  // 0 confirm / 1 cancel / 2 timer / 3 none
+  int dismiss_frames = 0;
   std::vector<UiElementDoc> elements;
   JsonValue raw;
 };

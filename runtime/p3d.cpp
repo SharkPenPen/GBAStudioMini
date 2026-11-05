@@ -550,6 +550,9 @@ bool ReadUiElement(Reader& r, UiElementData* e) {
   e->visible_var = r.Str();
   e->visible_value = r.I32();
   e->padding = r.I32();
+  e->action = r.Str();
+  e->action_target = r.Str();
+  e->action_value = r.I32();
   const uint16_t cn = r.U16();
   if (!r.ok || cn > 4096) return false;
   e->children.resize(cn);
@@ -564,6 +567,8 @@ bool ReadUiScreen(Reader& r, UiScreenData* s) {
   s->name = r.Str();
   s->modal = r.U8() != 0;
   s->layout = r.U8();
+  s->dismiss = r.U8();
+  s->dismiss_frames = r.I32();
   const uint16_t n = r.U16();
   if (!r.ok || n > 4096) return false;
   s->elements.resize(n);
@@ -607,6 +612,9 @@ void WriteUiElement(Writer& w, const UiElementData& e) {
   w.Str(e.visible_var);
   w.I32(e.visible_value);
   w.I32(e.padding);
+  w.Str(e.action);
+  w.Str(e.action_target);
+  w.I32(e.action_value);
   w.U16(static_cast<uint16_t>(std::min<size_t>(4096, e.children.size())));
   for (const UiElementData& c : e.children) WriteUiElement(w, c);
 }
@@ -616,6 +624,8 @@ void WriteUiScreen(Writer& w, const UiScreenData& s) {
   w.Str(s.name);
   w.U8(s.modal ? 1 : 0);
   w.U8(static_cast<uint8_t>(s.layout));
+  w.U8(static_cast<uint8_t>(s.dismiss));
+  w.I32(s.dismiss_frames);
   w.U16(static_cast<uint16_t>(std::min<size_t>(4096, s.elements.size())));
   for (const UiElementData& e : s.elements) WriteUiElement(w, e);
 }

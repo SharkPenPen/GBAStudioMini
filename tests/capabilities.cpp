@@ -113,6 +113,13 @@ void TestModalStack() {
   modal.id = "pause";
   modal.name = "Pause";
   modal.modal = true;
+  r4::UiElementData button;
+  button.kind = 7;
+  button.text = "OK";
+  button.action = "close";
+  button.w = 80;
+  button.h = 24;
+  modal.elements.push_back(button);
   p.ui_screens.push_back(modal);
   r4::Trigger trigger;
   trigger.x = 80;
@@ -124,6 +131,11 @@ void TestModalStack() {
   action.type = 9;  // open_ui
   action.target = "pause";
   trigger.actions.push_back(action);
+  r4::TriggerAction after;
+  after.type = 2;  // set_variable
+  after.target = "done";
+  after.value = 1;
+  trigger.actions.push_back(after);
   p.scenes[0].triggers.push_back(trigger);
 
   r4::Game game;
@@ -131,11 +143,13 @@ void TestModalStack() {
   CHECK(game.Init(p, &err));
   game.Update(1.0f / 60.0f, EmptyInput());
   CHECK(game.UiModalActive());
+  CHECK(game.UiValue("done") == 0);
 
   eng::InputState confirm;
   confirm.pressed[static_cast<int>(eng::Key::kA)] = true;
   game.Update(1.0f / 60.0f, confirm);
   CHECK(!game.UiModalActive());
+  CHECK(game.UiValue("done") == 1);
 }
 
 void TestCollisionBlock() {

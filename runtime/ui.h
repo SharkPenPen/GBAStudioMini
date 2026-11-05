@@ -33,6 +33,7 @@ enum class UiKind {
   kValueBar,
   kValueIcons,
   kList,
+  kButton,
 };
 
 struct UiRect {
@@ -85,6 +86,9 @@ struct UiElement {
   int visible_value = 1;
 
   int padding = 0;
+  std::string action;
+  std::string action_target;
+  int action_value = 0;
   std::vector<UiElement> children;  // 只做一层容器
 };
 
@@ -93,6 +97,8 @@ struct UiScreen {
   std::string name;
   bool modal = false;
   UiLayout layout = UiLayout::kScreen;
+  int dismiss = 0;  // 0 confirm / 1 cancel / 2 timer / 3 none
+  int dismiss_frames = 0;
   std::vector<UiElement> elements;
 };
 
@@ -102,6 +108,7 @@ struct UiDrawContext {
   int view_h = 272;
   int (*value)(void* user, const char* name) = nullptr;
   void* user = nullptr;
+  int focus = -1;  // 顶层按钮焦点
 };
 
 UiRect UiLayoutRect(UiLayout layout, int view_w, int view_h);

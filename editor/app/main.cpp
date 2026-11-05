@@ -6597,7 +6597,7 @@ std::string UniqueUiElementId(const pgmmv::UiScreenDoc& s, const char* prefix) {
   return std::string(prefix) + "x";
 }
 
-const char* kUiKinds[] = {"panel", "text", "image", "value_image", "value_bar"};
+const char* kUiKinds[] = {"panel", "text", "image", "value_image", "value_bar", "button"};
 const char* kUiAnchors[] = {"top_left",  "top_center",  "top_right",
                             "mid_left",  "center",      "mid_right",
                             "bottom_left", "bottom_center", "bottom_right"};
@@ -6902,6 +6902,15 @@ void DrawUiPageRight() {
       s->layout = layouts[layout];
       MarkDirty();
     }
+    const char* dismiss_labels[] = {"确认关闭", "取消关闭", "定时关闭", "不自动关"};
+    int dm = std::max(0, std::min(3, s->dismiss));
+    if (ImGui::Combo("关闭方式", &dm, dismiss_labels, 4)) {
+      s->dismiss = dm;
+      MarkDirty();
+    }
+    if (s->dismiss == 2) {
+      if (UndoIntField("多少帧后关", &s->dismiss_frames, 1)) MarkDirty();
+    }
     ImGui::Separator();
     ImGui::TextUnformatted("挂载");
     bool persistent = (g_project.persistent_ui == s->id);
@@ -6928,8 +6937,8 @@ void DrawUiPageRight() {
     MarkDirty();
   }
   int kind = 0;
-  for (int i = 0; i < 5; ++i) if (e->kind == kUiKinds[i]) kind = i;
-  if (ImGui::Combo("类型", &kind, kUiKinds, 5)) {
+  for (int i = 0; i < 6; ++i) if (e->kind == kUiKinds[i]) kind = i;
+  if (ImGui::Combo("类型", &kind, kUiKinds, 6)) {
     e->kind = kUiKinds[kind];
     MarkDirty();
   }
@@ -6966,7 +6975,7 @@ void DrawUiPageRight() {
   if (UndoIntField("Y", &e->y, -10000)) MarkDirty();
   if (UndoIntField("宽（0 = 内容）", &e->w, 0)) MarkDirty();
   if (UndoIntField("高（0 = 内容）", &e->h, 0)) MarkDirty();
-  if (e->kind == "text" || e->kind == "panel") {
+  if (e->kind == "text" || e->kind == "panel" || e->kind == "button") {
     char text_buf[512];
     std::snprintf(text_buf, sizeof(text_buf), "%s", e->text.c_str());
     if (ImGui::InputTextMultiline("文字", text_buf, sizeof(text_buf),
@@ -6997,6 +7006,42 @@ void DrawUiPageRight() {
                (static_cast<unsigned>(col[2] * 255.0f + 0.5f) << 8) |
                static_cast<unsigned>(col[3] * 255.0f + 0.5f);
     MarkDirty();
+  }
+  if (e->kind == "button") {
+    const char* actions[] = {"close", "open_ui", "set_var", "scene"};
+    const char* action_labels[] = {"关闭界面", "打开界面", "设变量", "切场景"};
+    int ai = 0;
+    for (int i = 0; i < 4; ++i) if (e->action == actions[i]) ai = i;
+    if (ImGui::Combo("按钮动作", &ai, action_labels, 4)) {
+      e->action = actions[ai];
+      MarkDirty();
+    }
+    if (e->action == "open_ui") {
+      const char* cur = e->action_target.empty() ? "(选界面)" : e->action_target.c_str();
+      if (ImGui::BeginCombo("目标界面", cur)) {
+        for (const pgmmv::UiScreenDoc& us : g_project.ui_screens) {
+          const std::string label = us.name.empty() ? us.id : us.name;
+          if (ImGui::Selectable(label.c_str(), e->action_target == us.id)) {
+            e->action_target = us.id;
+            MarkDirty();
+          }
+        }
+        ImGui::EndCombo();
+      }
+    } else if (e->action == "close") {
+      ImGui::TextDisabled("(确认后关闭当前界面)");
+    } else {
+      char target_buf[96];
+      std::snprintf(target_buf, sizeof(target_buf), "%s", e->action_target.c_str());
+      if (ImGui::InputText(e->action == "scene" ? "目标场景" : "变量名", target_buf,
+                           sizeof(target_buf))) {
+        e->action_target = target_buf;
+        MarkDirty();
+      }
+      if (e->action == "set_var") {
+        if (UndoIntField("变量值", &e->action_value, -10000)) MarkDirty();
+      }
+    }
   }
   if (e->kind == "value_bar" || e->kind == "value_image") {
     char var_buf[64];

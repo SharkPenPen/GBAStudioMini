@@ -170,6 +170,10 @@ void Game::SetScene(int index) {
   if (p3d_ == nullptr) return;
   if (index < 0 || index >= static_cast<int>(p3d_->scenes.size())) return;
   modal_stack_.clear();
+  modal_focus_ = -1;
+  modal_timer_ = 0;
+  has_pending_ui_ = false;
+  pending_actions_.clear();
   scene_index_ = index;
   const Scene& s = p3d_->scenes[index];
   // 场景级变量重置；全局（g: 前缀）保留
@@ -702,11 +706,13 @@ void Game::DrawUiScreens(eng::DrawList& dl, const eng::TextureId* textures,
                            eng::Vec2{static_cast<float>(view_w_),
                                      static_cast<float>(view_h_)}},
                 0x80000000u);
-    for (int idx : modal_stack_) {
+    for (size_t mi = 0; mi < modal_stack_.size(); ++mi) {
+      const int idx = modal_stack_[mi];
       if (idx < 0 || idx >= static_cast<int>(p3d_->ui_screens.size())) continue;
       const UiScreen screen =
           UiScreenFromData(p3d_->ui_screens[static_cast<size_t>(idx)], textures,
                            texture_count);
+      ctx.focus = (mi + 1 == modal_stack_.size()) ? modal_focus_ : -1;
       UiDrawScreen(screen, ctx);
     }
   }
@@ -725,6 +731,15 @@ void Game::OpenUiById(const std::string& id) {
     if (p3d_->ui_screens[static_cast<size_t>(i)].id == id) {
       if (!modal_stack_.empty() && modal_stack_.back() == i) return;
       modal_stack_.push_back(i);
+      modal_focus_ = -1;
+      const UiScreenData& screen = p3d_->ui_screens[static_cast<size_t>(i)];
+      for (int k = 0; k < static_cast<int>(screen.elements.size()); ++k) {
+        if (screen.elements[static_cast<size_t>(k)].kind == 7) {
+          modal_focus_ = k;
+          break;
+        }
+      }
+      modal_timer_ = screen.dismiss_frames;
       return;
     }
   }
@@ -732,6 +747,67 @@ void Game::OpenUiById(const std::string& id) {
 
 void Game::CloseUi() {
   if (!modal_stack_.empty()) modal_stack_.pop_back();
+  modal_focus_ = -1;
+  modal_timer_ = 0;
+  if (modal_stack_.empty() && has_pending_ui_) {
+    has_pending_ui_ = false;
+    const Trigger trigger = pending_trigger_;
+    std::vector<TriggerAction> actions = std::move(pending_actions_);
+    pending_actions_.clear();
+    RunTriggerList(trigger, actions);
+  }
+}
+
+void Game::MoveModalFocus(int dir) {
+  if (p3d_ == nullptr || modal_stack_.empty()) return;
+  const int idx = modal_stack_.back();
+  if (idx < 0 || idx >= static_cast<int>(p3d_->ui_screens.size())) return;
+  const UiScreenData& screen = p3d_->ui_screens[static_cast<size_t>(idx)];
+  std::vector<int> buttons;
+  for (int i = 0; i < static_cast<int>(screen.elements.size()); ++i) {
+    if (screen.elements[static_cast<size_t>(i)].kind == 7) buttons.push_back(i);
+  }
+  if (buttons.empty()) return;
+  int pos = 0;
+  for (int i = 0; i < static_cast<int>(buttons.size()); ++i) {
+    if (buttons[static_cast<size_t>(i)] == modal_focus_) pos = i;
+  }
+  pos = (pos + dir + static_cast<int>(buttons.size())) %
+        static_cast<int>(buttons.size());
+  modal_focus_ = buttons[static_cast<size_t>(pos)];
+}
+
+void Game::ActivateModalFocus() {
+  if (p3d_ == nullptr || modal_stack_.empty()) return;
+  const int idx = modal_stack_.back();
+  if (idx < 0 || idx >= static_cast<int>(p3d_->ui_screens.size())) return;
+  const UiScreenData& screen = p3d_->ui_screens[static_cast<size_t>(idx)];
+  if (modal_focus_ < 0 ||
+      modal_focus_ >= static_cast<int>(screen.elements.size())) {
+    return;
+  }
+  const UiElementData& e = screen.elements[static_cast<size_t>(modal_focus_)];
+  if (e.kind != 7) return;
+  if (e.action.empty() || e.action == "close") {
+    CloseUi();
+    return;
+  }
+  if (e.action == "open_ui") {
+    OpenUiById(e.action_target);
+    return;
+  }
+  if (e.action == "set_var") {
+    variables_[e.action_target] = e.action_value;
+    return;
+  }
+  if (e.action == "scene") {
+    for (int i = 0; i < static_cast<int>(p3d_->scenes.size()); ++i) {
+      if (p3d_->scenes[static_cast<size_t>(i)].id == e.action_target) {
+        SetScene(i);
+        return;
+      }
+    }
+  }
 }
 
 void Game::RenderHShooter(eng::DrawList& dl, const eng::TextureId* textures,
@@ -1532,7 +1608,8 @@ bool Game::RunTriggerList(const Trigger& trigger,
   for (const TriggerAction& a : list) {
     if (a.type == 3) has_win = true;
   }
-  for (const TriggerAction& action : list) {
+  for (size_t ai = 0; ai < list.size(); ++ai) {
+    const TriggerAction& action = list[ai];
     if (action.type == 1) {  // set_respawn
       respawn_x_ = static_cast<float>(trigger.x + trigger.w / 2);
       respawn_y_ = static_cast<float>(trigger.y + trigger.h / 2);
@@ -1545,6 +1622,17 @@ bool Game::RunTriggerList(const Trigger& trigger,
     }
     if (action.type == 9) {  // open_ui
       OpenUiById(action.target);
+      if (UiModalActive() && !modal_stack_.empty()) {
+        const int top = modal_stack_.back();
+        if (top >= 0 && top < static_cast<int>(p3d_->ui_screens.size()) &&
+            p3d_->ui_screens[static_cast<size_t>(top)].dismiss != 3) {
+          pending_trigger_ = trigger;
+          pending_actions_.assign(list.begin() + static_cast<std::ptrdiff_t>(ai) + 1,
+                                  list.end());
+          has_pending_ui_ = true;
+          return true;
+        }
+      }
       continue;
     }
     if (action.type == 10) {  // close_ui
@@ -2522,10 +2610,37 @@ void Game::Update(float dt, const eng::InputState& input) {
   if (dt < 0.0f) dt = 0.0f;
   if (dt > 0.05f) dt = 0.05f;
   if (UiModalActive()) {
-    if (input.pressed[static_cast<int>(eng::Key::kA)] ||
-        input.pressed[static_cast<int>(eng::Key::kB)] ||
-        input.pressed[static_cast<int>(eng::Key::kStart)]) {
-      CloseUi();
+    const int top = modal_stack_.back();
+    if (top >= 0 && top < static_cast<int>(p3d_->ui_screens.size())) {
+      const UiScreenData& screen = p3d_->ui_screens[static_cast<size_t>(top)];
+      if (screen.dismiss == 2) {
+        --modal_timer_;
+        if (modal_timer_ <= 0) {
+          CloseUi();
+          prev_input_ = input;
+          return;
+        }
+      }
+      if (input.pressed[static_cast<int>(eng::Key::kUp)] ||
+          input.pressed[static_cast<int>(eng::Key::kLeft)]) {
+        MoveModalFocus(-1);
+      }
+      if (input.pressed[static_cast<int>(eng::Key::kDown)] ||
+          input.pressed[static_cast<int>(eng::Key::kRight)]) {
+        MoveModalFocus(1);
+      }
+      if (input.pressed[static_cast<int>(eng::Key::kA)]) {
+        if (modal_focus_ >= 0) {
+          ActivateModalFocus();
+        } else if (screen.dismiss == 0) {
+          CloseUi();
+        }
+      }
+      if ((input.pressed[static_cast<int>(eng::Key::kB)] ||
+           input.pressed[static_cast<int>(eng::Key::kStart)]) &&
+          screen.dismiss != 3) {
+        CloseUi();
+      }
     }
     prev_input_ = input;
     return;

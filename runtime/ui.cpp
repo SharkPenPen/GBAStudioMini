@@ -246,7 +246,8 @@ void DrawText(const std::string& text, UiRect r, const UiElement& e,
   }
 }
 
-void DrawElement(const UiElement& e, UiRect parent, const UiDrawContext& ctx);
+void DrawElement(const UiElement& e, UiRect parent, const UiDrawContext& ctx,
+                  int index);
 
 void DrawValueBar(const UiElement& e, UiRect r, const UiDrawContext& ctx) {
   int raw = 0;
@@ -276,7 +277,8 @@ void DrawValueImage(const UiElement& e, UiRect r, const UiDrawContext& ctx) {
                     eng::TexRegion{e.src.x + frame * fw, e.src.y, fw, r.h});
 }
 
-void DrawElement(const UiElement& e, UiRect parent, const UiDrawContext& ctx) {
+void DrawElement(const UiElement& e, UiRect parent, const UiDrawContext& ctx,
+                  int index) {
   if (!e.visible_var.empty() && ctx.value != nullptr) {
     if (ctx.value(ctx.user, e.visible_var.c_str()) != e.visible_value) return;
   }
@@ -328,13 +330,36 @@ void DrawElement(const UiElement& e, UiRect parent, const UiDrawContext& ctx) {
       }
       break;
     }
+    case UiKind::kButton: {
+      if (e.texture != 0) {
+        DrawPanel(e, r, ctx);
+      } else {
+        ctx.dl->DrawRect(R(r.x, r.y, r.w, r.h), 0xFF303040u);
+      }
+      if (ctx.focus == index) {
+        const eng::u32 c = 0xFFFFD060u;
+        ctx.dl->DrawRect(R(r.x - 2, r.y - 2, r.w + 4, 2), c);
+        ctx.dl->DrawRect(R(r.x - 2, r.y + r.h, r.w + 4, 2), c);
+        ctx.dl->DrawRect(R(r.x - 2, r.y, 2, r.h), c);
+        ctx.dl->DrawRect(R(r.x + r.w, r.y, 2, r.h), c);
+      }
+      if (!e.text.empty()) {
+        UiElement text = e;
+        text.kind = UiKind::kText;
+        text.align = 1;
+        text.w = r.w;
+        text.h = r.h;
+        DrawText(UiFormatText(e.text, ctx), r, text, ctx);
+      }
+      break;
+    }
     default: break;
   }
   if (!e.children.empty()) {
     const int pad = e.padding;
     const UiRect content{r.x + pad, r.y + pad, std::max(0, r.w - pad * 2),
                          std::max(0, r.h - pad * 2)};
-    for (const UiElement& child : e.children) DrawElement(child, content, ctx);
+    for (const UiElement& child : e.children) DrawElement(child, content, ctx, -1);
   }
 }
 
@@ -417,7 +442,9 @@ std::vector<std::string> UiWrapText(const std::string& text, int max_w,
 void UiDrawScreen(const UiScreen& screen, const UiDrawContext& ctx) {
   if (ctx.dl == nullptr) return;
   const UiRect layout = UiLayoutRect(screen.layout, ctx.view_w, ctx.view_h);
-  for (const UiElement& e : screen.elements) DrawElement(e, layout, ctx);
+  for (int i = 0; i < static_cast<int>(screen.elements.size()); ++i) {
+    DrawElement(screen.elements[static_cast<size_t>(i)], layout, ctx, i);
+  }
 }
 void UiDrawTextLine(eng::DrawList& dl, int x, int y, const std::string& text,
                     eng::u32 color, int align, int max_w) {
@@ -464,6 +491,9 @@ UiElement UiElementFromData(const UiElementData& d, const eng::TextureId* textur
   e.visible_var = d.visible_var;
   e.visible_value = d.visible_value;
   e.padding = d.padding;
+  e.action = d.action;
+  e.action_target = d.action_target;
+  e.action_value = d.action_value;
   for (const UiElementData& child : d.children) {
     e.children.push_back(UiElementFromData(child, textures, texture_count));
   }
@@ -477,6 +507,8 @@ UiScreen UiScreenFromData(const UiScreenData& d, const eng::TextureId* textures,
   s.name = d.name;
   s.modal = d.modal;
   s.layout = static_cast<UiLayout>(d.layout);
+  s.dismiss = d.dismiss;
+  s.dismiss_frames = d.dismiss_frames;
   for (const UiElementData& e : d.elements) {
     s.elements.push_back(UiElementFromData(e, textures, texture_count));
   }
