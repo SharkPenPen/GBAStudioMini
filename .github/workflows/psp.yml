@@ -35,6 +35,9 @@ jobs:
       - name: Build
         run: cmake --build build/psp
 
+      - name: Stage PSP data
+        run: cp samples/bee/bee.p3d build/psp/game.p3d
+
       - name: Upload PSP artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -43,3 +46,4 @@ jobs:
           path: |
             build/psp/bin/game_psp.elf
             build/psp/EBOOT.PBP
+            build/psp/game.p3d
