@@ -52,24 +52,42 @@ ms0:/PSP/SAVEDATA/PocketLoom/report.txt
 
 ## 5. 构建
 
+**Windows 原生没有官方 pspdev。** 官方 Windows 方案是 WSL2 Ubuntu。
+
+### 5.1 WSL2 / Ubuntu
+
+管理员 PowerShell：
+
 ```powershell
-$env:PSPDEV = "C:/pspdev"
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-psp.ps1
+wsl --install -d Ubuntu
 ```
 
-或手动：
+重启后进 Ubuntu，在仓库目录执行：
 
-```powershell
-cmake -S . -B build/psp -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-psp.cmake
-cmake --build build/psp
+```bash
+bash tools/setup-psp-wsl.sh
+bash tools/build-psp-wsl.sh
 ```
 
-产物：
+### 5.2 Linux / CI
+
+```bash
+export PSPDEV="$HOME/pspdev"
+export PATH="$PATH:$PSPDEV/bin"
+cmake -S . -B build/psp-wsl -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-psp.cmake \
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build build/psp-wsl
+```
+
+### 5.3 产物
 
 ```text
-build/psp/bin/game_psp.elf
-build/psp/EBOOT.PBP
+build/psp-wsl/bin/game_psp.elf
+build/psp-wsl/EBOOT.PBP
 ```
+
+> 当前机器没有 WSL/pspdev，所以 EBOOT 还没实际生成。
 
 ## 6. 已知限制
 

@@ -209,6 +209,7 @@ runtime 不直接依赖 `std::filesystem` 和平台 API。
   - `tools/build-psp.ps1`
   - 状态与限制见 `docs/21-PSP后端.md`。
 - PSP 骨架尚未在真实 pspdev 上编译验证；不能把“语法检查通过”当成“能跑”。
+- Windows 原生没有官方 pspdev；WSL2 用 `tools/setup-psp-wsl.sh`，构建用 `tools/build-psp-wsl.sh`。
 
 ## 10. 收尾定义
 
