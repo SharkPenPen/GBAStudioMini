@@ -25,7 +25,7 @@ if(PSP)
     platform/_psp/platform_psp.cpp
   )
   target_link_libraries(engine_host_psp PUBLIC engine_core
-    pspgu pspgum pspctrl pspdisplay pspkernel pspdebug)
+    pspgu pspgum pspctrl pspdisplay pspkernel pspdebug pspge)
 else()
   set(ENGINE_HOST_PC_SOURCES
     render/backend_soft.cpp

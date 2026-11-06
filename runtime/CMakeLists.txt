@@ -9,7 +9,7 @@ if(PSP)
   add_executable(game_psp psp_main.cpp audio_psp.cpp)
   set_target_properties(game_psp PROPERTIES SUFFIX ".elf")
   target_link_libraries(game_psp PRIVATE runtime_core engine_host_psp
-    pspgu pspgum pspctrl pspdisplay pspkernel pspdebug m)
+    pspgu pspgum pspctrl pspdisplay pspkernel pspdebug pspge m)
   include("${CMAKE_SOURCE_DIR}/cmake/psp-package.cmake")
   psp_package(game_psp)
 else()
