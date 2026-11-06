@@ -19,10 +19,19 @@ set(ENGINE_CORE_SOURCES
 add_library(engine_core STATIC ${ENGINE_CORE_SOURCES})
 target_include_directories(engine_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-set(ENGINE_HOST_PC_SOURCES
-  render/backend_soft.cpp
-  platform/windows/platform_windows.cpp
-)
+if(PSP)
+  add_library(engine_host_psp STATIC
+    render/backend_psp.cpp
+    platform/_psp/platform_psp.cpp
+  )
+  target_link_libraries(engine_host_psp PUBLIC engine_core
+    pspgu pspgum pspctrl pspdisplay pspkernel pspdebug)
+else()
+  set(ENGINE_HOST_PC_SOURCES
+    render/backend_soft.cpp
+    platform/windows/platform_windows.cpp
+  )
 
-add_library(engine_host_pc STATIC ${ENGINE_HOST_PC_SOURCES})
-target_link_libraries(engine_host_pc PUBLIC engine_core winmm)
+  add_library(engine_host_pc STATIC ${ENGINE_HOST_PC_SOURCES})
+  target_link_libraries(engine_host_pc PUBLIC engine_core winmm)
+endif()

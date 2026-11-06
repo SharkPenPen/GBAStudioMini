@@ -200,6 +200,15 @@ runtime 不直接依赖 `std::filesystem` 和平台 API。
 - 纹理 swizzle 只放 PSP 后端。
 - 不复制 runtime，不写平台分支进 Game。
 - 同一份 p3d 跑 PC/3DS/PSP。
+- 当前已补 PSP 骨架：
+  - `engine/platform/_psp/`
+  - `engine/render/backend_psp.cpp`
+  - `runtime/psp_main.cpp`
+  - `runtime/audio_psp.cpp`
+  - `cmake/toolchain-psp.cmake`
+  - `tools/build-psp.ps1`
+  - 状态与限制见 `docs/21-PSP后端.md`。
+- PSP 骨架尚未在真实 pspdev 上编译验证；不能把“语法检查通过”当成“能跑”。
 
 ## 10. 收尾定义
 
