@@ -89,6 +89,31 @@ build/psp-wsl/EBOOT.PBP
 
 > 当前机器没有 WSL/pspdev，所以 EBOOT 还没实际生成。
 
+### 5.4 不用 WSL 的方案
+
+1. **GitHub Actions（推荐）**
+   - 仓库已有 `.github/workflows/psp.yml`；
+   - 在 GitHub Actions 手动运行 **PSP build**；
+   - 下载 artifact `pocketloom-psp`，里面有 `game_psp.elf` / `EBOOT.PBP`；
+   - 本机不需要装 WSL 或 pspdev。
+
+2. **Linux 虚拟机**
+   - VirtualBox / Hyper-V 装 Ubuntu；
+   - 在 Ubuntu 里执行 `tools/setup-psp-wsl.sh`；
+   - 仓库通过共享目录挂进去即可。
+
+3. **Docker（Hyper-V 后端）**
+   - Docker Desktop 选 Hyper-V 而不是 WSL2；
+   - 用 Ubuntu + pspdev 容器构建；
+   - 本质上仍然是 Linux 环境。
+
+4. **Windows 原生 MinPSP**
+   - 有旧的 `Minimalist-PSPSDK`；
+   - 太老，不支持当前 C++17/CMake 工程；
+   - 不推荐。
+
+**没有官方 Windows 原生 pspdev。** 不想用 WSL，就走 GitHub Actions 或 Linux VM。
+
 ## 6. 已知限制
 
 1. **纹理必须补成 2 的幂**

@@ -1,0 +1,45 @@
+name: PSP build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  psp:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pspdev dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build pkgconf \
+            libreadline8t64 libusb-0.1-4 libgpgme11t64 \
+            libarchive-tools fakeroot wget
+
+      - name: Install pspdev
+        run: |
+          wget -O /tmp/pspdev.tar.gz \
+            https://github.com/pspdev/pspdev/releases/latest/download/pspdev-ubuntu-latest-x86_64.tar.gz
+          sudo tar -xvf /tmp/pspdev.tar.gz -C /opt
+          echo "PSPDEV=/opt/pspdev" >> "$GITHUB_ENV"
+          echo "/opt/pspdev/bin" >> "$GITHUB_PATH"
+
+      - name: Configure
+        run: |
+          cmake -S . -B build/psp -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-psp.cmake \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/psp
+
+      - name: Upload PSP artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pocketloom-psp
+          if-no-files-found: error
+          path: |
+            build/psp/bin/game_psp.elf
+            build/psp/EBOOT.PBP
