@@ -87,7 +87,8 @@ build/psp-wsl/bin/game_psp.elf
 build/psp-wsl/EBOOT.PBP
 ```
 
-> 当前机器没有 WSL/pspdev，所以 EBOOT 还没实际生成。
+> 2026-11-06：GitHub Actions 已编过，生成 `game_psp.elf` 和 `EBOOT.PBP`。  
+> 还没在 PPSSPP/真机上跑过运行时。
 
 ### 5.4 不用 WSL 的方案
 
