@@ -394,9 +394,9 @@ void TestP3dRoundTrip() {
       std::filesystem::temp_directory_path() / "pocketloom_cap_test.p3d";
   std::filesystem::remove(path);
   std::string err;
-  CHECK(r4::P3dSave(path, p, &err));
+  CHECK(r4::P3dSave(path.u8string(), p, &err));
   r4::P3d q;
-  const bool loaded = r4::P3dLoadFile(path, &q, &err);
+  const bool loaded = r4::P3dLoadFile(path.u8string(), &q, &err);
   if (!loaded) std::printf("load error: %s\n", err.c_str());
   CHECK(loaded);
   CHECK(q.view_w == 480);

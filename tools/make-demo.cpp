@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
   p.scenes.push_back(sc);
 
   std::string err;
-  if (!r4::P3dSave(out, p, &err)) {
+  if (!r4::P3dSave(out.u8string(), p, &err)) {
     std::fprintf(stderr, "demo: %s\n", err.c_str());
     return 1;
   }

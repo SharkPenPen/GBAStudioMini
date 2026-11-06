@@ -109,9 +109,11 @@ int main(int argc, char** argv) {
 
   r4::Game game;
   {
-    const std::filesystem::path save_path =
-        std::filesystem::path(p3d_path).parent_path() / "save0.dat";
-    game.SetSavePath(save_path.u8string());
+    const std::string::size_type slash = p3d_path.find_last_of("/\\");
+    const std::string save_path =
+        (slash == std::string::npos ? std::string() : p3d_path.substr(0, slash + 1)) +
+        "save0.dat";
+    game.SetSavePath(save_path);
   }
   if (!game.Init(p3d, &err)) {
     std::fprintf(stderr, "game_pc: %s\n", err.c_str());

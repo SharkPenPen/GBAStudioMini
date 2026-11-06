@@ -4,7 +4,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <filesystem>
 #include <string>
 #include <map>
 #include <vector>
@@ -379,8 +378,8 @@ struct P3d {
 };
 
 bool P3dLoad(const unsigned char* data, size_t size, P3d* out, std::string* error);
-bool P3dLoadFile(const std::filesystem::path& path, P3d* out, std::string* error);
-bool P3dSave(const std::filesystem::path& path, const P3d& p3d, std::string* error);
+bool P3dLoadFile(const std::string& path, P3d* out, std::string* error);
+bool P3dSave(const std::string& path, const P3d& p3d, std::string* error);
 
 // ★ 把「左下原点、y 向上」的场景数据翻成引擎内部的屏幕系（y 向下）★
 //   这是全链路唯一一次坐标转换，见 docs/scene-format.md §0。

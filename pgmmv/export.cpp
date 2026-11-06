@@ -953,7 +953,7 @@ bool ExportP3d(const Project& project, const std::filesystem::path& out_path,
       p.audio.push_back(std::move(clip));
     }
   }
-  return r4::P3dSave(out_path, p, error);
+  return r4::P3dSave(out_path.u8string(), p, error);
 }
 
 }  // namespace pgmmv

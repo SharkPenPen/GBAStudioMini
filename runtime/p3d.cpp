@@ -680,7 +680,7 @@ bool P3dLoad(const unsigned char* data, size_t size, P3d* out,
   return true;
 }
 
-bool P3dLoadFile(const std::filesystem::path& path, P3d* out,
+bool P3dLoadFile(const std::string& path, P3d* out,
                  std::string* error) {
   std::ifstream f(path, std::ios::binary);
   if (!f) {
@@ -703,7 +703,7 @@ bool P3dLoadFile(const std::filesystem::path& path, P3d* out,
   return P3dLoad(bytes.data(), bytes.size(), out, error);
 }
 
-bool P3dSave(const std::filesystem::path& path, const P3d& p,
+bool P3dSave(const std::string& path, const P3d& p,
              std::string* error) {
   Writer w;
   w.U32(kP3dMagic);

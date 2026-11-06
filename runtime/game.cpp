@@ -1,5 +1,3 @@
-#include <filesystem>
-#include <fstream>
 // runtime/game.cpp
 #include "runtime/game.h"
 
@@ -7,6 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <iterator>
 
 #include "engine/base/rect.h"
@@ -375,8 +374,9 @@ bool Game::SaveBytes(std::string* out) const {
 }
 
 bool Game::SaveExists() const {
-  std::error_code ec;
-  return std::filesystem::exists(save_path_, ec);
+  if (save_path_.empty()) return false;
+  std::ifstream f(save_path_, std::ios::binary);
+  return f.good();
 }
 
 void Game::StartNewGame() {

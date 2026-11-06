@@ -82,10 +82,11 @@ build/psp/EBOOT.PBP
    - 当前按 `0xAABBGGRR` 传给 GU；
    - 如果红蓝反了，只改 `ToGuColor()`。
 
-3. **p3d 仍带 `<filesystem>`**
-   - `runtime/p3d.h` 里有 `P3dLoadFile` / `P3dSave`；
-   - PSP 端只用 `P3dLoad(bytes)`，但头文件仍会拉 `<filesystem>`；
-   - 如果 psp-g++ 不支持，需要把文件接口拆出 `p3d.h`。
+3. **p3d 已移除 `<filesystem>`，但文件接口仍用 iostream**
+   - `runtime/p3d.h`、`runtime/game.cpp` 已不再 include `<filesystem>`；
+   - `P3dLoadFile` / `P3dSave` 改用 `std::string` 路径；
+   - PSP 端只用 `P3dLoad(bytes)`，不依赖路径接口；
+   - 如果 psp-g++ 的 iostream 不可用，再把文件接口移到 `sceIo`。
 
 4. **存档路径还没抽象**
    - 现在 `psp_main` 直接写 `ms0:`；
@@ -116,7 +117,7 @@ build/psp/EBOOT.PBP
    - 对象
    - 输入
 4. 再接音频、存档、UI。
-5. 把 `p3d` 的文件接口与 `<filesystem>` 解耦。
+5. 把 `P3dLoadFile` / `P3dSave` 的文件访问移到平台层（`sceIo`）。
 
 ## 8. 和 3DS 的关系
 

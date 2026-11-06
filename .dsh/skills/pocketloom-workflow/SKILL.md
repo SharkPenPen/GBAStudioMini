@@ -196,7 +196,7 @@ runtime 不直接依赖 `std::filesystem` 和平台 API。
 
 - PSP 逻辑分辨率 480×272，和 PC 视口一致。
 - PSP 内存只有 32MB，资产/图集要有预算。
-- PSP 工具链可能不支持 `std::filesystem`，runtime 必须走平台读文件 + 内存 p3d。
+- runtime 已移除 `<filesystem>`；PSP 用 `P3dLoad(bytes)` + 自己的 `sceIo` 读文件。
 - 纹理 swizzle 只放 PSP 后端。
 - 不复制 runtime，不写平台分支进 Game。
 - 同一份 p3d 跑 PC/3DS/PSP。
