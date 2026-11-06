@@ -59,7 +59,7 @@ int NextPow2(int v) {
 }
 
 void* AllocAligned16(size_t size) {
-#if defined(__PSP__)
+#if defined(__psp__) || defined(_PSP) || defined(__PSP__)
   return memalign(16, size);
 #elif defined(_WIN32)
   // 仅用于 host 侧语法检查；PSP 实际走 memalign。
