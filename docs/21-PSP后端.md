@@ -1,6 +1,10 @@
 # 21 - PSP 后端（第一版骨架）
 
-> 状态：**未编译验证**。本机尚未安装 pspdev。  
+> 状态：**已在 PPSSPP 1.20.4 实跑**（2026-11-07）。EBOOT 能启动、PARAM.SFO 正确、进入
+> `user_main`，但画面全黑。根因已定位：`eng::DrawList` 实测 **360.9KB**，`psp_main` 原来把它
+> 放在 `main()` 的栈上，而主线程栈只申请了 256KB —— 进循环前就栈溢出。
+> 已改为静态区，**待 CI 重编后复验**。
+> 本机没有 pspdev（也没有 WSL），改 PSP 必须走 GitHub Actions 重编。
 > 目标：先把 PSP 相关源码和构建入口补齐，方便对照 3DS/PC 后端，也方便以后定位问题。
 
 ## 1. 文件
@@ -88,7 +92,7 @@ build/psp-wsl/EBOOT.PBP
 ```
 
 > 2026-11-06：GitHub Actions 已编过，生成 `game_psp.elf` 和 `EBOOT.PBP`。  
-> 还没在 PPSSPP/真机上跑过运行时。
+> 2026-11-07：在 PPSSPP 1.20.4 实跑 —— 启动正常、黑屏，根因是 DrawList 占栈超 256KB（见 §6.9）。
 
 ### 5.4 不用 WSL 的方案
 
@@ -114,6 +118,37 @@ build/psp-wsl/EBOOT.PBP
    - 不推荐。
 
 **没有官方 Windows 原生 pspdev。** 不想用 WSL，就走 GitHub Actions 或 Linux VM。
+
+### 5.5 本地 PPSSPP 复跑（Windows，已实测）
+
+`ppsspp_win/PPSSPPWindows64.exe` 是**便携模式**：exe 目录可写时，memstick 根目录是
+`<repo>\ppsspp_win\memstick\PSP\`，**不是** `文档\PPSSPP`。放错地方的表现是 EBOOT
+读完 p3d 失败、直接退回 PPSSPP 菜单（窗口标题没有 `- PocketLoom`）。
+
+```powershell
+# 1) 部署：注意 memstick 下面还要有 PSP 这一层
+$ms = "D:\GitHud\GameStudio\ppsspp_win\memstick\PSP"
+New-Item -ItemType Directory -Force -Path "$ms\GAME\PocketLoom" | Out-Null
+Copy-Item "dist\psp\EBOOT.PBP" "$ms\GAME\PocketLoom\" -Force
+Copy-Item "dist\psp\game.p3d"  "$ms\GAME\PocketLoom\" -Force
+
+# 2) 打开日志（第一次跑完 PPSSPP 才会生成 ini；改完重启 PPSSPP）
+#    $ms\SYSTEM\ppsspp.ini  =>  [Log] FileLogging = True
+#    日志落在 $ms\SYSTEM\DUMP\log.txt
+
+# 3) 跑
+& "D:\GitHud\GameStudio\ppsspp_win\PPSSPPWindows64.exe" "$ms\GAME\PocketLoom\EBOOT.PBP"
+```
+
+判据：
+
+- **跑通**：窗口标题带 `- PocketLoom`，画面有内容，退出后
+  `$ms\SAVEDATA\PocketLoom\report.txt` 里 `ok=1`。
+- **黑屏**：`SYSTEM\DUMP\log.txt` 里出现成片的
+  `E[MEMMAP] Bad memory access ... 00000048 (00000204A8E30048)` —— 这类
+  `0x00~0xA0` 的低地址就是「空/坏指针 + 字段偏移」，优先查栈和控制块。
+- 注意 EBOOT 里没有 `--frames` 的传参途径（PPSSPP 不透传 argv），主循环只能靠关窗口结束，
+  所以 `report.txt` 在正常退出前不会落盘 —— 判断是否活跑要看画面和标题。
 
 ## 6. 已知限制
 
@@ -144,23 +179,25 @@ build/psp-wsl/EBOOT.PBP
    - PSP 没有可直接读的 HOME 键；
    - 目前靠 PPSSPP 停止或 `--frames`。
 
-7. **EBOOT 打包未验证**
-   - `psp-fixup-imports` / `mksfo` / `pack-pbp` 的路径和参数要在真实 pspdev 上跑一次。
+7. **EBOOT 打包已验证**
+   - GitHub Actions 打出的 `EBOOT.PBP` 能被 PPSSPP 1.20.4 正常识别并启动（标题显示 PocketLoom）。
 
 8. **32MB 内存**
    - 当前 p3d/纹理还没做预算；
    - 大图集要先估内存。
 
+9. **栈预算：大对象不能放栈上（2026-11-07 已修）**
+   - `sizeof(DrawList)=369512`（`kMaxCmds=6144` × `sizeof(DrawCmd)=60` ≈ 360.9KB）；
+   - 主线程栈 `PSP_MAIN_THREAD_STACK_SIZE_KB(256)` 只有 256KB，放栈上必溢出；
+   - 现在改成 `static eng::DrawList dl;`（BSS）；
+   - 以后往 `psp_main` / `Game` 里加大缓冲，先按 256KB 算一遍栈账。
+
 ## 7. 下一步
 
-1. 安装 pspdev，跑通 `game_psp.elf`。
-2. 跑通 EBOOT.PBP。
-3. 用当前 bee demo 验证：
-   - 清屏
-   - 图块
-   - 对象
-   - 输入
-4. 再接音频、存档、UI。
+1. ~~安装 pspdev，跑通 `game_psp.elf`~~ → 走 CI 编出 EBOOT（已完成）。
+2. ~~跑通 EBOOT.PBP~~ → PPSSPP 能启动，**黑屏待修**（§6.9 已改，等重编复验）。
+3. 重编后复验：清屏、图块、对象三条依次确认。
+4. 再接输入、音频、存档、UI。
 5. 把 `P3dLoadFile` / `P3dSave` 的文件访问移到平台层（`sceIo`）。
 
 ## 8. 和 3DS 的关系

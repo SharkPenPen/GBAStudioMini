@@ -151,7 +151,13 @@ int main(int argc, char** argv) {
     return 6;
   }
 
-  eng::DrawList dl;
+  // ★ 必须放静态区，不能放栈上 ★
+  //   DrawList 有 kMaxCmds=6144 个 DrawCmd 槽，sizeof(DrawCmd)=60，
+  //   实测 sizeof(DrawList)=369512（360.9KB）；而本线程栈只有 256KB
+  //   （见上面的 PSP_MAIN_THREAD_STACK_SIZE_KB(256)）。
+  //   放栈上会在进入循环前就压爆栈：纹理表/Game 被踩坏，
+  //   PPSSPP 里表现为整屏黑 + 一批 0x00~0xA0 的低地址非法访问。
+  static eng::DrawList dl;
   dl.ResetScreenSizes();
   dl.SetScreenSize(480, 272);
 
