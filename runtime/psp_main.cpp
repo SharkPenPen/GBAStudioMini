@@ -38,6 +38,7 @@ constexpr const char* kReportPath = "ms0:/PSP/SAVEDATA/PocketLoom/report.txt";
 
 bool ReadFile(const char* path, std::vector<unsigned char>* out) {
   const SceUID fd = sceIoOpen(path, PSP_O_RDONLY, 0);
+  Trace("read_open", fd, 0);
   if (fd < 0) return false;
 
   const SceOff size = sceIoLseek(fd, 0, PSP_SEEK_END);
@@ -45,6 +46,7 @@ bool ReadFile(const char* path, std::vector<unsigned char>* out) {
     sceIoClose(fd);
     return false;
   }
+  Trace("read_seek", (long)size, 0);
   sceIoLseek(fd, 0, PSP_SEEK_SET);
 
   out->resize(static_cast<size_t>(size));
@@ -57,6 +59,7 @@ bool ReadFile(const char* path, std::vector<unsigned char>* out) {
   }
   sceIoClose(fd);
   out->resize(static_cast<size_t>(read_total));
+  Trace("read_done", read_total, (long)size);
   return read_total == static_cast<int>(size);
 }
 
@@ -116,6 +119,7 @@ int main(int argc, char** argv) {
     p3d_path = "game.p3d";
   }
 
+  Trace("pre_load", (long)bytes.size(), 0);
   r4::P3d p3d;
   std::string err;
   if (!r4::P3dLoad(bytes.data(), bytes.size(), &p3d, &err)) {
@@ -124,6 +128,7 @@ int main(int argc, char** argv) {
   }
 
   Trace("p3d_load", (long)p3d.scenes.size(), (long)p3d.images.size());
+  Trace("mirror", p3d.view_w, p3d.view_h);
   // p3d 是左下原点、y 向上；引擎内部是屏幕系，这里翻一次。
   r4::MirrorSceneYUp(p3d, p3d.view_h);
 
