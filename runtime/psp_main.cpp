@@ -79,6 +79,13 @@ void WriteReport(const r4::Game& game, int frames, const char* p3d_path) {
 
 }  // namespace
 
+static void Trace(const char* tag, long a, long b) {
+  std::FILE* f = std::fopen("ms0:/PL_TRACE.txt", "ab");
+  if (f == nullptr) return;
+  std::fprintf(f, "%s a=%ld b=%ld\n", tag, a, b);
+  std::fclose(f);
+}
+
 int main(int argc, char** argv) {
   std::string p3d_path = kDefaultP3d;
   int frames_limit = 0;
@@ -108,6 +115,7 @@ int main(int argc, char** argv) {
     return 3;
   }
 
+  Trace("p3d_load", (long)p3d.scenes.size(), (long)p3d.images.size());
   // p3d 是左下原点、y 向上；引擎内部是屏幕系，这里翻一次。
   r4::MirrorSceneYUp(p3d, p3d.view_h);
 
@@ -119,12 +127,14 @@ int main(int argc, char** argv) {
     std::fprintf(stderr, "psp: platform init failed\n");
     return 4;
   }
+  Trace("platform_ok", 0, 0);
   if (!eng::RenderBackend().init()) {
     std::fprintf(stderr, "psp: render init failed\n");
     eng::Platform().shutdown();
     return 5;
   }
 
+  Trace("render_ok", 0, 0);
   sceIoMkdir("ms0:/PSP/SAVEDATA", 0777);
   sceIoMkdir(kSaveDir, 0777);
 
@@ -138,6 +148,7 @@ int main(int argc, char** argv) {
     textures[i] = eng::TextureCreate(img.rgba.data(), img.width, img.height);
   }
 
+  Trace("textures_ok", texture_count, 0);
   r4::Game game;
   game.SetSavePath(kSavePath);
   if (!game.Init(p3d, &err)) {
@@ -157,6 +168,7 @@ int main(int argc, char** argv) {
   //   （见上面的 PSP_MAIN_THREAD_STACK_SIZE_KB(256)）。
   //   放栈上会在进入循环前就压爆栈：纹理表/Game 被踩坏，
   //   PPSSPP 里表现为整屏黑 + 一批 0x00~0xA0 的低地址非法访问。
+  Trace("game_ok", 0, 0);
   static eng::DrawList dl;
   dl.ResetScreenSizes();
   dl.SetScreenSize(480, 272);
@@ -175,6 +187,7 @@ int main(int argc, char** argv) {
     eng::RenderBackend().submit(dl);
     eng::Platform().end_frame();
 
+    if (frames < 3 || frames % 120 == 0) Trace("frame", frames, dl.count());
     ++frames;
     if (frames_limit > 0 && frames >= frames_limit) break;
   }
