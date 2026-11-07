@@ -5,28 +5,6 @@
 #include <cstring>
 #include <fstream>
 
-#if defined(__psp__)
-#include <pspiofilemgr.h>
-static void PT(const char* tag, unsigned n) {
-  char b[80];
-  int i = 0;
-  while (tag[i] != '\0' && i < 40) { b[i] = tag[i]; ++i; }
-  b[i++] = ' ';
-  char d[12];
-  int dn = 0;
-  if (n == 0) d[dn++] = '0';
-  while (n > 0) { d[dn++] = static_cast<char>('0' + (n % 10)); n /= 10; }
-  while (dn > 0) b[i++] = d[--dn];
-  b[i++] = '\n';
-  const SceUID fd = sceIoOpen("ms0:/PL_TRACE.txt", PSP_O_WRONLY | PSP_O_CREAT | PSP_O_APPEND, 0777);
-  if (fd < 0) return;
-  sceIoWrite(fd, b, static_cast<unsigned int>(i));
-  sceIoClose(fd);
-}
-#define PT_MARK(tag) PT(tag, 0)
-#else
-#define PT_MARK(tag) ((void)0)
-#endif
 namespace r4 {
 
 namespace {
@@ -190,7 +168,6 @@ bool ReadAction(Reader& r, Action* a, std::string* error) {
 }
 
 bool ReadObject(Reader& r, Object* o, std::string* error) {
-  PT_MARK("obj_in");
   o->id = r.Str();
   o->name = r.Str();
   o->type = r.Str();
@@ -212,9 +189,7 @@ bool ReadObject(Reader& r, Object* o, std::string* error) {
   o->attack_h = r.I32();
   o->speed = r.I32();
   o->gravity = r.I32();
-  PT_MARK("obj_head");
   const uint16_t ac = r.U16();
-  PT("obj_ac", static_cast<unsigned>(ac));
   if (!r.ok || ac > 32) {
     SetErr(error, "p3d: bad object action count");
     return false;
@@ -223,7 +198,6 @@ bool ReadObject(Reader& r, Object* o, std::string* error) {
   for (uint16_t i = 0; i < ac; ++i) {
     if (!ReadAction(r, &o->actions[i], error)) return false;
   }
-  PT("obj_acts", ac);
   o->default_action = r.I32();
   const uint16_t rn = r.U16();
   if (!r.ok || rn > 64) {
@@ -255,10 +229,8 @@ bool ReadObject(Reader& r, Object* o, std::string* error) {
       rl.effects.push_back(std::move(re));
     }
   }
-  PT("obj_rules", rn);
   o->limit_screen = r.U8();
   o->pushable = r.U8();
-  PT_MARK("obj_tail");
   if (!r.ok || o->frame_w <= 0 || o->frame_h <= 0 || o->col_w <= 0 ||
       o->col_h <= 0) {
     SetErr(error, "p3d: bad object frame/collision");
@@ -595,7 +567,6 @@ bool P3dLoad(const unsigned char* data, size_t size, P3d* out,
     SetErr(error, "p3d: null input");
     return false;
   }
-  PT_MARK("load_enter");
   Reader r{data, size, 0, true};
   if (r.U32() != kP3dMagic) {
     SetErr(error, "p3d: bad magic");
@@ -621,30 +592,24 @@ bool P3dLoad(const unsigned char* data, size_t size, P3d* out,
     if (!ReadImage(r, &p.images[i], error)) return false;
   }
 
-  PT_MARK("images_ok");
   if (!ReadCount(r, &count, 1024, error, "objects")) return false;
-  PT("obj_resized", count);
+  p.objects.resize(count);
   for (uint32_t i = 0; i < count; ++i) {
-    PT("obj_begin", i);
     if (!ReadObject(r, &p.objects[i], error)) return false;
-    PT("obj_end", i);
   }
 
-  PT_MARK("objects_ok");
   if (!ReadCount(r, &count, 512, error, "tilesets")) return false;
   p.tilesets.resize(count);
   for (uint32_t i = 0; i < count; ++i) {
     if (!ReadTileset(r, &p.tilesets[i], error)) return false;
   }
 
-  PT_MARK("tilesets_ok");
   if (!ReadCount(r, &count, 2048, error, "scenes")) return false;
   p.scenes.resize(count);
   for (uint32_t i = 0; i < count; ++i) {
     if (!ReadScene(r, &p.scenes[i], error)) return false;
   }
 
-  PT_MARK("scenes_ok");
   if (!ReadCount(r, &count, 4096, error, "transitions")) return false;
   p.transitions.resize(count);
   for (uint32_t i = 0; i < count; ++i) {

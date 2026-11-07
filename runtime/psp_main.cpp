@@ -31,31 +31,6 @@ PSP_MAIN_THREAD_STACK_SIZE_KB(256);
 
 namespace {
 
-static void TraceErr(const char* s) {
-  if (s == nullptr) return;
-  const SceUID fd = sceIoOpen("ms0:/PL_TRACE.txt", PSP_O_WRONLY | PSP_O_CREAT | PSP_O_APPEND, 0777);
-  if (fd < 0) return;
-  int n = 0;
-  while (s[n] != '\0' && n < 200) ++n;
-  sceIoWrite(fd, "ERR ", 4);
-  if (n > 0) sceIoWrite(fd, s, static_cast<unsigned int>(n));
-  sceIoWrite(fd, "\n", 1);
-  sceIoClose(fd);
-}
-static void Trace(const char* tag, long a, long b) {
-  char buf[96];
-  const int n = std::snprintf(buf, sizeof(buf), "%s a=%ld b=%ld\n", tag, a, b);
-  if (n <= 0) return;
-  const char* paths[2] = {"ms0:/PL_TRACE.txt", "ms0:/PSP/PL_TRACE.txt"};
-  for (int i = 0; i < 2; ++i) {
-    const SceUID fd = sceIoOpen(paths[i], PSP_O_WRONLY | PSP_O_CREAT | PSP_O_APPEND, 0777);
-    if (fd < 0) continue;
-    sceIoWrite(fd, buf, static_cast<unsigned int>(n));
-    sceIoClose(fd);
-    return;
-  }
-}
-
 constexpr const char* kDefaultP3d = "ms0:/PSP/GAME/PocketLoom/game.p3d";
 constexpr const char* kSaveDir = "ms0:/PSP/SAVEDATA/PocketLoom";
 constexpr const char* kSavePath = "ms0:/PSP/SAVEDATA/PocketLoom/save0.dat";
@@ -63,7 +38,6 @@ constexpr const char* kReportPath = "ms0:/PSP/SAVEDATA/PocketLoom/report.txt";
 
 bool ReadFile(const char* path, std::vector<unsigned char>* out) {
   const SceUID fd = sceIoOpen(path, PSP_O_RDONLY, 0);
-  Trace("read_open", fd, 0);
   if (fd < 0) return false;
 
   const SceOff size = sceIoLseek(fd, 0, PSP_SEEK_END);
@@ -71,7 +45,6 @@ bool ReadFile(const char* path, std::vector<unsigned char>* out) {
     sceIoClose(fd);
     return false;
   }
-  Trace("read_seek", (long)size, 0);
   sceIoLseek(fd, 0, PSP_SEEK_SET);
 
   out->resize(static_cast<size_t>(size));
@@ -84,7 +57,6 @@ bool ReadFile(const char* path, std::vector<unsigned char>* out) {
   }
   sceIoClose(fd);
   out->resize(static_cast<size_t>(read_total));
-  Trace("read_done", read_total, (long)size);
   return read_total == static_cast<int>(size);
 }
 
@@ -108,7 +80,6 @@ void WriteReport(const r4::Game& game, int frames, const char* p3d_path) {
 }  // namespace
 
 int main(int argc, char** argv) {
-  Trace("main_enter", argc, 0);
   std::string p3d_path = kDefaultP3d;
   int frames_limit = 0;
 
@@ -130,17 +101,13 @@ int main(int argc, char** argv) {
     p3d_path = "game.p3d";
   }
 
-  Trace("pre_load", (long)bytes.size(), 0);
   r4::P3d p3d;
   std::string err;
   if (!r4::P3dLoad(bytes.data(), bytes.size(), &p3d, &err)) {
-    TraceErr(err.c_str());
     std::fprintf(stderr, "psp: %s\n", err.c_str());
     return 3;
   }
 
-  Trace("p3d_load", (long)p3d.scenes.size(), (long)p3d.images.size());
-  Trace("mirror", p3d.view_w, p3d.view_h);
   // p3d 是左下原点、y 向上；引擎内部是屏幕系，这里翻一次。
   r4::MirrorSceneYUp(p3d, p3d.view_h);
 
@@ -152,14 +119,12 @@ int main(int argc, char** argv) {
     std::fprintf(stderr, "psp: platform init failed\n");
     return 4;
   }
-  Trace("platform_ok", 0, 0);
   if (!eng::RenderBackend().init()) {
     std::fprintf(stderr, "psp: render init failed\n");
     eng::Platform().shutdown();
     return 5;
   }
 
-  Trace("render_ok", 0, 0);
   sceIoMkdir("ms0:/PSP/SAVEDATA", 0777);
   sceIoMkdir(kSaveDir, 0777);
 
@@ -173,7 +138,6 @@ int main(int argc, char** argv) {
     textures[i] = eng::TextureCreate(img.rgba.data(), img.width, img.height);
   }
 
-  Trace("textures_ok", texture_count, 0);
   r4::Game game;
   game.SetSavePath(kSavePath);
   if (!game.Init(p3d, &err)) {
@@ -193,7 +157,6 @@ int main(int argc, char** argv) {
   //   （见上面的 PSP_MAIN_THREAD_STACK_SIZE_KB(256)）。
   //   放栈上会在进入循环前就压爆栈：纹理表/Game 被踩坏，
   //   PPSSPP 里表现为整屏黑 + 一批 0x00~0xA0 的低地址非法访问。
-  Trace("game_ok", 0, 0);
   static eng::DrawList dl;
   dl.ResetScreenSizes();
   dl.SetScreenSize(480, 272);
@@ -212,7 +175,6 @@ int main(int argc, char** argv) {
     eng::RenderBackend().submit(dl);
     eng::Platform().end_frame();
 
-    if (frames < 3 || frames % 120 == 0) Trace("frame", frames, dl.count());
     ++frames;
     if (frames_limit > 0 && frames >= frames_limit) break;
   }

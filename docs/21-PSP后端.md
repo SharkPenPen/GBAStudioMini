@@ -191,11 +191,21 @@ Copy-Item "dist\psp\game.p3d"  "$ms\GAME\PocketLoom\" -Force
    - 主线程栈 `PSP_MAIN_THREAD_STACK_SIZE_KB(256)` 只有 256KB，放栈上必溢出；
    - 现在改成 `static eng::DrawList dl;`（BSS）；
    - 以后往 `psp_main` / `Game` 里加大缓冲，先按 256KB 算一遍栈账。
+   - 注：这一条是真实隐患，但**不是黑屏的原因** —— 改完仍黑屏，见 §7.2。
 
 ## 7. 下一步
 
 1. ~~安装 pspdev，跑通 `game_psp.elf`~~ → 走 CI 编出 EBOOT（已完成）。
-2. ~~跑通 EBOOT.PBP~~ → PPSSPP 能启动，**黑屏待修**（§6.9 已改，等重编复验）。
+2. ~~跑通 EBOOT.PBP~~ → PPSSPP 1.20.4 能启动，**黑屏待修**。修复栈之后仍黑屏，2026-11-07 在
+   EBOOT 里打点（写 `ms0:/PL_TRACE.txt`）定位到的实际死点：
+   - `main` 进入、`ReadFile` 读到 32955 字节（bee.p3d）→ 到 `P3dLoad` 之前全部正常；
+   - `P3dLoad` 内：magic / version / images 全过，object 0 的头部字段全过，读到 `ac=2`；
+   - **随后在 object 0 的 actions 解析处直接死掉**：没有错误串、没有后续打点，
+     PPSSPP 进程也随之退出（`psp_main` 的 `return 3` 分支没被执行，说明不是解析返回 false）；
+   - 同一份 `game.p3d` 在 PC 上 `PocketLoom-Play --frames 2` 正常。
+   → 下一个怀疑点：`o->actions.resize(ac)` / `ReadAction()` 在 32 位 PSP 上触发 abort
+     （PSP 构建带 `-fno-exceptions`，`std::__throw_*` 会直接 abort）。下一步在 `ReadAction`
+     内部继续打点（name / frames.resize / fps 三段）。
 3. 重编后复验：清屏、图块、对象三条依次确认。
 4. 再接输入、音频、存档、UI。
 5. 把 `P3dLoadFile` / `P3dSave` 的文件访问移到平台层（`sceIo`）。
