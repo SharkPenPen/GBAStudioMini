@@ -5,6 +5,28 @@
 #include <cstring>
 #include <fstream>
 
+#if defined(__psp__)
+#include <pspiofilemgr.h>
+static void PT(const char* tag, unsigned n) {
+  char b[80];
+  int i = 0;
+  while (tag[i] != '\0' && i < 40) { b[i] = tag[i]; ++i; }
+  b[i++] = ' ';
+  char d[12];
+  int dn = 0;
+  if (n == 0) d[dn++] = '0';
+  while (n > 0) { d[dn++] = static_cast<char>('0' + (n % 10)); n /= 10; }
+  while (dn > 0) b[i++] = d[--dn];
+  b[i++] = '\n';
+  const SceUID fd = sceIoOpen("ms0:/PL_TRACE.txt", PSP_O_WRONLY | PSP_O_CREAT | PSP_O_APPEND, 0777);
+  if (fd < 0) return;
+  sceIoWrite(fd, b, static_cast<unsigned int>(i));
+  sceIoClose(fd);
+}
+#define PT_MARK(tag) PT(tag, 0)
+#else
+#define PT_MARK(tag) ((void)0)
+#endif
 namespace r4 {
 
 namespace {
@@ -567,6 +589,7 @@ bool P3dLoad(const unsigned char* data, size_t size, P3d* out,
     SetErr(error, "p3d: null input");
     return false;
   }
+  PT_MARK("load_enter");
   Reader r{data, size, 0, true};
   if (r.U32() != kP3dMagic) {
     SetErr(error, "p3d: bad magic");
@@ -592,24 +615,28 @@ bool P3dLoad(const unsigned char* data, size_t size, P3d* out,
     if (!ReadImage(r, &p.images[i], error)) return false;
   }
 
+  PT_MARK("images_ok");
   if (!ReadCount(r, &count, 1024, error, "objects")) return false;
   p.objects.resize(count);
   for (uint32_t i = 0; i < count; ++i) {
     if (!ReadObject(r, &p.objects[i], error)) return false;
   }
 
+  PT_MARK("objects_ok");
   if (!ReadCount(r, &count, 512, error, "tilesets")) return false;
   p.tilesets.resize(count);
   for (uint32_t i = 0; i < count; ++i) {
     if (!ReadTileset(r, &p.tilesets[i], error)) return false;
   }
 
+  PT_MARK("tilesets_ok");
   if (!ReadCount(r, &count, 2048, error, "scenes")) return false;
   p.scenes.resize(count);
   for (uint32_t i = 0; i < count; ++i) {
     if (!ReadScene(r, &p.scenes[i], error)) return false;
   }
 
+  PT_MARK("scenes_ok");
   if (!ReadCount(r, &count, 4096, error, "transitions")) return false;
   p.transitions.resize(count);
   for (uint32_t i = 0; i < count; ++i) {
