@@ -80,13 +80,21 @@ void WriteReport(const r4::Game& game, int frames, const char* p3d_path) {
 }  // namespace
 
 static void Trace(const char* tag, long a, long b) {
-  std::FILE* f = std::fopen("ms0:/PL_TRACE.txt", "ab");
-  if (f == nullptr) return;
-  std::fprintf(f, "%s a=%ld b=%ld\n", tag, a, b);
-  std::fclose(f);
+  char buf[96];
+  const int n = std::snprintf(buf, sizeof(buf), "%s a=%ld b=%ld\n", tag, a, b);
+  if (n <= 0) return;
+  const char* paths[2] = {"ms0:/PL_TRACE.txt", "ms0:/PSP/PL_TRACE.txt"};
+  for (int i = 0; i < 2; ++i) {
+    const SceUID fd = sceIoOpen(paths[i], PSP_O_WRONLY | PSP_O_CREAT | PSP_O_APPEND, 0777);
+    if (fd < 0) continue;
+    sceIoWrite(fd, buf, static_cast<unsigned int>(n));
+    sceIoClose(fd);
+    return;
+  }
 }
 
 int main(int argc, char** argv) {
+  Trace("main_enter", argc, 0);
   std::string p3d_path = kDefaultP3d;
   int frames_limit = 0;
 
