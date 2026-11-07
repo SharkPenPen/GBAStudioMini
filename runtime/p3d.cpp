@@ -214,6 +214,7 @@ bool ReadObject(Reader& r, Object* o, std::string* error) {
   o->gravity = r.I32();
   PT_MARK("obj_head");
   const uint16_t ac = r.U16();
+  PT("obj_ac", static_cast<unsigned>(ac));
   if (!r.ok || ac > 32) {
     SetErr(error, "p3d: bad object action count");
     return false;

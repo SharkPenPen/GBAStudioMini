@@ -31,6 +31,17 @@ PSP_MAIN_THREAD_STACK_SIZE_KB(256);
 
 namespace {
 
+static void TraceErr(const char* s) {
+  if (s == nullptr) return;
+  const SceUID fd = sceIoOpen("ms0:/PL_TRACE.txt", PSP_O_WRONLY | PSP_O_CREAT | PSP_O_APPEND, 0777);
+  if (fd < 0) return;
+  int n = 0;
+  while (s[n] != '\0' && n < 200) ++n;
+  sceIoWrite(fd, "ERR ", 4);
+  if (n > 0) sceIoWrite(fd, s, static_cast<unsigned int>(n));
+  sceIoWrite(fd, "\n", 1);
+  sceIoClose(fd);
+}
 static void Trace(const char* tag, long a, long b) {
   char buf[96];
   const int n = std::snprintf(buf, sizeof(buf), "%s a=%ld b=%ld\n", tag, a, b);
@@ -123,6 +134,7 @@ int main(int argc, char** argv) {
   r4::P3d p3d;
   std::string err;
   if (!r4::P3dLoad(bytes.data(), bytes.size(), &p3d, &err)) {
+    TraceErr(err.c_str());
     std::fprintf(stderr, "psp: %s\n", err.c_str());
     return 3;
   }
